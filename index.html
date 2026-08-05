@@ -103,14 +103,24 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwqUUo-avmoBoj9ZqmdGUTM
 // =================================================================
 async function apiGet(action, params = {}) {
   const qs = new URLSearchParams({ action, ...params }).toString();
-  const res = await fetch(`${API_URL}?${qs}`);
-  return res.json();
+  try {
+    const res = await fetch(`${API_URL}?${qs}`);
+    return await res.json();
+  } catch (err) {
+    console.error("apiGet failed:", action, err);
+    return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
+  }
 }
 async function apiPost(action, payload) {
   // NOTE: no explicit Content-Type header — keeps this a "simple request"
   // so the browser skips the CORS preflight, which Apps Script can't answer.
-  const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload }) });
-  return res.json();
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload }) });
+    return await res.json();
+  } catch (err) {
+    console.error("apiPost failed:", action, err);
+    return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
+  }
 }
 function currentMonth() {
   const d = new Date();
@@ -171,18 +181,28 @@ function renderLogin() {
 async function doLogin() {
   const pin = document.getElementById("pin-input").value.trim();
   if (!pin) return;
-  document.getElementById("login-error").textContent = "";
-  const res = await apiGet("login", { pin });
-  if (!res.found) {
-    document.getElementById("login-error").textContent = "PIN tidak ditemukan.";
-    return;
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "Menghubungkan...";
+  try {
+    const res = await apiGet("login", { pin });
+    if (res.error) {
+      errEl.textContent = "Server error: " + res.error;
+      return;
+    }
+    if (!res.found) {
+      errEl.textContent = "PIN tidak ditemukan.";
+      return;
+    }
+    state.user = res;
+    if (res.role === "Staff") state.screen = "self";
+    else if (res.role === "Leader") state.screen = "leaderList";
+    else if (res.role === "HR") state.screen = "hrList";
+    else if (res.role === "GM") state.screen = "gm";
+    render();
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
   }
-  state.user = res;
-  if (res.role === "Staff") state.screen = "self";
-  else if (res.role === "Leader") state.screen = "leaderList";
-  else if (res.role === "HR") state.screen = "hrList";
-  else if (res.role === "GM") state.screen = "gm";
-  render();
 }
 
 function logout() {
@@ -239,6 +259,15 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       </div>
     </div>`;
 
+  const bonusRow = (item, points, idx) => `
+    <div class="criterion-row">
+      <div class="name">${item} <span style="font-weight:600; color:${points > 0 ? "var(--green)" : "var(--red)"};">${points > 0 ? "+" : ""}${points} pts</span></div>
+      <div class="row-flex" style="align-items:center;">
+        <input type="number" min="0" class="bonus-count" data-idx="${idx}" value="0" style="margin-bottom:0; flex:0 0 80px;" />
+        <input type="text" class="bonus-notes" data-idx="${idx}" placeholder="Evidence / notes (opsional)" style="margin-bottom:0;" />
+      </div>
+    </div>`;
+
   app.innerHTML = topbar("Appraisal — " + target.name) + `
     <div class="card">
       <div class="hint">${target.department} · ${evaluatorType.toUpperCase()} appraisal · ${state.month}</div>
@@ -251,6 +280,10 @@ async function renderAppraisalForm({ evaluatorType, target }) {
 
       <div class="section-title">Section C — Performance KPI</div>
       ${cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
+
+      <div class="section-title">Section D — Bonus &amp; Deduction</div>
+      <div class="hint">Isi jumlah kejadian bulan ini. Biarkan 0 kalau tidak ada.</div>
+      ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i)).join("")}
 
       <div class="error" id="form-error"></div>
       <button class="primary" onclick="submitForm('${evaluatorType}')" style="margin-top: 14px;">Submit Appraisal</button>
@@ -282,6 +315,16 @@ async function submitForm(evaluatorType) {
     document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
     return;
   }
+  const bonusEntries = [];
+  cfg.bonus.forEach((b, i) => {
+    const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
+    const count = Number(countInput ? countInput.value : 0) || 0;
+    if (count > 0) {
+      const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
+      bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
+    }
+  });
+
   const target = state.targetStaff;
   const payload = {
     month: state.month,
@@ -293,7 +336,7 @@ async function submitForm(evaluatorType) {
     attitudeScores: cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
     disciplineScores: cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
     kpiScores: cfg.kpi.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
-    bonusEntries: [],
+    bonusEntries,
   };
   document.getElementById("form-error").textContent = "Menyimpan...";
   const res = await apiPost("submitAppraisal", payload);

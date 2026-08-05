@@ -131,10 +131,10 @@ function currentMonth() {
 // App state
 // =================================================================
 let state = {
-  screen: "login",       // login | self | leaderList | leaderForm | hrList | hrForm | gm
-  user: null,            // {staffId, name, department, role, reportsTo}
+  screen: "login",       // login | roleMenu | self | myEvaluations | form | gm
+  user: null,            // {staffId, name, department, tier, oversees, reportsTo, isLeader, isManagement, isExecutive, isHR}
   month: currentMonth(),
-  targetStaff: null,     // staff being appraised (for leader/hr forms)
+  targetStaff: null,     // person being appraised (for non-self forms)
   kpiConfig: null,
   scores: {},            // criterion -> score
 };
@@ -145,8 +145,7 @@ function render() {
   if (state.screen === "login") return renderLogin();
   if (state.screen === "roleMenu") return renderRoleMenu();
   if (state.screen === "self") return renderAppraisalForm({ evaluatorType: "self", target: state.user });
-  if (state.screen === "leaderList") return renderStaffList("leader");
-  if (state.screen === "hrList") return renderStaffList("hr");
+  if (state.screen === "myEvaluations") return renderMyEvaluations();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
 }
@@ -208,11 +207,18 @@ async function doLogin() {
 function availableScreens(user) {
   const options = [];
   if (user.department && user.department !== "-") options.push({ key: "self", label: "Appraisal saya sendiri" });
-  if (user.isLeader) options.push({ key: "leaderList", label: "Leader — appraisal staff" });
-  if (user.isManagement) options.push({ key: "leaderList", label: "Management — appraisal staff/leader di area saya" });
-  if (user.isHR) options.push({ key: "hrList", label: "HR — appraisal & review semua staff" });
+  if (user.isLeader) options.push({ key: "myEvaluations", label: "Appraisal staff di tim saya" });
+  if (user.isManagement) options.push({ key: "myEvaluations", label: "Appraisal staff/leader di area saya" });
+  if (user.isExecutive) options.push({ key: "myEvaluations", label: "Appraisal management" });
+  if (user.isHR) options.push({ key: "myEvaluations", label: "Appraisal & review (HR)" });
   if (user.isExecutive) options.push({ key: "gm", label: "Executive — approval & Service Charge" });
-  return options;
+  // De-dupe "myEvaluations" if someone somehow has more than one of those flags.
+  const seen = new Set();
+  return options.filter(o => {
+    if (seen.has(o.key)) return false;
+    seen.add(o.key);
+    return true;
+  });
 }
 
 function goToRoleMenu() {
@@ -222,8 +228,8 @@ function goToRoleMenu() {
       <div class="card">
         <div class="hint" style="font-size:14px;">
           NIK <strong>${state.user.staffId}</strong> (${state.user.name}) berhasil login, tapi belum ada akses
-          apapun yang diaktifkan (bukan Staff dengan department, bukan Leader/HR/GM). Cek kolom
-          <strong>Is Leader / Is HR / Is GM / Reports To</strong> untuk NIK ini di HR Sheet.
+          apapun yang diaktifkan. Cek Job Title untuk NIK ini di HR Sheet — pastikan ada di Config_PositionMap
+          dengan Tier yang sesuai.
         </div>
         <button class="secondary" onclick="logout()" style="margin-top:12px;">Kembali ke login</button>
       </div>`;
@@ -258,26 +264,28 @@ function logout() {
 }
 
 // =================================================================
-// Staff list (Leader / HR view)
+// My Evaluations — unified todo list for Leader / Management / Executive / HR.
+// Each target already comes back from the backend with the correct `slot`
+// (leader/hr) for THIS viewer, so the frontend doesn't need to know the
+// tier rules itself.
 // =================================================================
-async function renderStaffList(evaluatorType) {
-  app.innerHTML = topbar(evaluatorType === "leader" ? "Leader Appraisal" : "HR Appraisal") + `<div class="loading">Memuat daftar staff...</div>`;
-  const params = { month: state.month, evaluatorType, evaluatorName: state.user.name };
-  const res = await apiGet("getStaffProgress", params);
-  const list = res.staff || [];
+async function renderMyEvaluations() {
+  app.innerHTML = topbar("Appraisal Saya") + `<div class="loading">Memuat daftar...</div>`;
+  const res = await apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId });
+  const list = res.targets || [];
   const showMenuLink = availableScreens(state.user).length > 1;
-  app.innerHTML = topbar(evaluatorType === "leader" ? "Leader Appraisal" : "HR Appraisal") + `
+  app.innerHTML = topbar("Appraisal Saya") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
-    <div class="hint">${list.length} staff — klik untuk isi appraisal</div>
+    <div class="hint">${list.length} orang — klik untuk isi appraisal</div>
     ${list.map(s => `
-      <div class="staff-row" onclick="openForm('${evaluatorType}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}')">
+      <div class="staff-row" onclick="openForm('${s.slot}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}')">
         <div>
           <div class="name">${s.name}</div>
-          <div class="dept">${s.department}</div>
+          <div class="dept">${s.department !== "-" ? s.department : s.tier} · ${s.tier}</div>
         </div>
         <span class="badge ${s.status === 'Submitted' ? 'done' : 'pending'}">${s.status}</span>
       </div>`).join("")}
-    ${!list.length ? '<div class="hint">Tidak ada staff ditemukan.</div>' : ""}
+    ${!list.length ? '<div class="hint">Tidak ada yang perlu di-appraisal saat ini.</div>' : ""}
   `;
 }
 
@@ -291,7 +299,7 @@ function openForm(evaluatorType, staffId, name, department) {
 }
 
 // =================================================================
-// Appraisal form (shared by Self / Leader / HR)
+// Appraisal form (shared by Self / Leader / Management / Executive / HR)
 // =================================================================
 async function renderAppraisalForm({ evaluatorType, target }) {
   app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="loading">Memeriksa akses...</div>`;
@@ -321,7 +329,13 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   }
 
   app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="loading">Memuat form...</div>`;
-  const cfg = await apiGet("getKpiConfig", { department: target.department });
+  const cfg = await apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId });
+  if (cfg.error) {
+    app.innerHTML = topbar("Appraisal — " + target.name) + `
+      <div class="card"><div class="error">Server error: ${cfg.error}</div>
+      <button class="secondary" onclick="goBack()">Kembali</button></div>`;
+    return;
+  }
   state.kpiConfig = cfg;
   state.scores = {};
 
@@ -347,7 +361,7 @@ async function renderAppraisalForm({ evaluatorType, target }) {
 
   app.innerHTML = topbar("Appraisal — " + target.name) + `
     <div class="card">
-      <div class="hint">${target.department} · ${evaluatorType.toUpperCase()} appraisal · ${state.month}</div>
+      <div class="hint">${target.department !== "-" ? target.department : target.tier} · ${evaluatorType.toUpperCase()} appraisal · ${state.month}</div>
 
       <div class="section-title">Section A — Attitude</div>
       ${cfg.attitude.map(c => scoreRow(c.name, c.description)).join("")}
@@ -356,7 +370,9 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       ${cfg.discipline.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
 
       <div class="section-title">Section C — Performance KPI</div>
-      ${cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
+      ${cfg.placeholder
+        ? `<div class="hint" style="background:var(--surface-2); padding:12px; border-radius:8px;">${cfg.placeholderNote}</div>`
+        : cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
 
       ${isSelf ? "" : `
         <div class="section-title">Section D — Bonus &amp; Deduction</div>
@@ -382,15 +398,15 @@ function selectScore(el, criterion, value) {
 function goBack() {
   const options = availableScreens(state.user);
   if (options.length > 1) state.screen = "roleMenu";
-  else if (state.user.isLeader || state.user.isManagement) state.screen = "leaderList";
-  else if (state.user.isHR) state.screen = "hrList";
+  else if (state.user.isLeader || state.user.isManagement || state.user.isExecutive || state.user.isHR) state.screen = "myEvaluations";
   else state.screen = "login";
   render();
 }
 
 async function submitForm(evaluatorType) {
   const cfg = state.kpiConfig;
-  const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...cfg.kpi.map(c => c.name)];
+  const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
+  const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];
   const missing = allCriteria.filter(c => !(c in state.scores));
   if (missing.length) {
     document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
@@ -411,13 +427,10 @@ async function submitForm(evaluatorType) {
   const target = state.targetStaff;
   const payload = {
     staffId: target.staffId,
-    staffName: target.name,
-    department: target.department,
-    evaluatorType,
-    evaluatorName: state.user.name,
+    evaluatorId: state.user.staffId,
     attitudeScores: cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
     disciplineScores: cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
-    kpiScores: cfg.kpi.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+    kpiScores: kpiCriteria.map(c => ({ criterion: c, score: state.scores[c] })),
     bonusEntries,
   };
   document.getElementById("form-error").textContent = "Menyimpan...";
@@ -425,7 +438,7 @@ async function submitForm(evaluatorType) {
   if (res.success) {
     goBack();
   } else {
-    document.getElementById("form-error").textContent = "Gagal menyimpan: " + (res.error || "unknown error");
+    document.getElementById("form-error").textContent = "Gagal menyimpan: " + (res.error || res.reason || "unknown error");
   }
 }
 

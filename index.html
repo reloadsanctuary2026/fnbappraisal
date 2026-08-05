@@ -310,6 +310,8 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       </div>
     </div>`;
 
+  const isSelf = evaluatorType === "self";
+
   app.innerHTML = topbar("Appraisal — " + target.name) + `
     <div class="card">
       <div class="hint">${target.department} · ${evaluatorType.toUpperCase()} appraisal · ${state.month}</div>
@@ -323,9 +325,11 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       <div class="section-title">Section C — Performance KPI</div>
       ${cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
 
-      <div class="section-title">Section D — Bonus &amp; Deduction</div>
-      <div class="hint">Isi jumlah kejadian bulan ini. Biarkan 0 kalau tidak ada.</div>
-      ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i)).join("")}
+      ${isSelf ? "" : `
+        <div class="section-title">Section D — Bonus &amp; Deduction</div>
+        <div class="hint">Isi jumlah kejadian bulan ini. Biarkan 0 kalau tidak ada.</div>
+        ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i)).join("")}
+      `}
 
       <div class="error" id="form-error"></div>
       <button class="primary" onclick="submitForm('${evaluatorType}')" style="margin-top: 14px;">Submit Appraisal</button>
@@ -360,14 +364,16 @@ async function submitForm(evaluatorType) {
     return;
   }
   const bonusEntries = [];
-  cfg.bonus.forEach((b, i) => {
-    const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
-    const count = Number(countInput ? countInput.value : 0) || 0;
-    if (count > 0) {
-      const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
-      bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
-    }
-  });
+  if (evaluatorType !== "self") {
+    cfg.bonus.forEach((b, i) => {
+      const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
+      const count = Number(countInput ? countInput.value : 0) || 0;
+      if (count > 0) {
+        const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
+        bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
+      }
+    });
+  }
 
   const target = state.targetStaff;
   const payload = {

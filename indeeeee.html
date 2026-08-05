@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reload F&amp;B Appraisal</title>
+<style>
+  :root {
+    --navy: #1F2A44;
+    --navy-dark: #141b2e;
+    --bg: #F5F6F8;
+    --card: #FFFFFF;
+    --border: #E1E4E9;
+    --text: #1A1D24;
+    --text-muted: #6B7280;
+    --green: #1D9E75;
+    --green-bg: #E1F5EE;
+    --red: #E24B4A;
+    --red-bg: #FCEBEB;
+    --amber: #BA7517;
+    --amber-bg: #FAEEDA;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+  }
+  #app { max-width: 720px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--navy); color: #fff; padding: 14px 16px; margin: -16px -16px 16px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  .topbar .sub { font-size: 12px; color: #B9C0D4; }
+  .topbar button { background: transparent; border: 1px solid #3A4460; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; }
+  label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; padding: 10px 12px; font-size: 15px; border: 1px solid var(--border);
+    border-radius: 8px; background: #fff; color: var(--text); margin-bottom: 14px;
+  }
+  button.primary {
+    width: 100%; padding: 12px; font-size: 14px; font-weight: 600; color: #fff;
+    background: var(--navy); border: none; border-radius: 8px; cursor: pointer;
+  }
+  button.primary:disabled { opacity: 0.5; }
+  button.secondary {
+    padding: 8px 14px; font-size: 13px; border: 1px solid var(--border);
+    background: #fff; border-radius: 8px; cursor: pointer;
+  }
+  button.ghost { background: transparent; border: none; color: var(--navy); font-size: 13px; cursor: pointer; text-decoration: underline; }
+
+  .staff-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer;
+  }
+  .staff-row .name { font-size: 14px; font-weight: 500; }
+  .staff-row .dept { font-size: 12px; color: var(--text-muted); }
+  .badge { font-size: 11px; padding: 3px 9px; border-radius: 6px; font-weight: 500; }
+  .badge.done { background: var(--green-bg); color: var(--green); }
+  .badge.pending { background: #EEE; color: var(--text-muted); }
+  .badge.performer { background: var(--green-bg); color: var(--green); }
+  .badge.underperform { background: var(--red-bg); color: var(--red); }
+  .badge.flag { background: var(--amber-bg); color: var(--amber); }
+
+  .criterion-row { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .criterion-row:last-child { border-bottom: none; }
+  .criterion-row .name { font-size: 13px; margin-bottom: 6px; }
+  .criterion-row .desc { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .score-select { display: flex; gap: 6px; }
+  .score-opt {
+    flex: 1; text-align: center; padding: 8px 0; border: 1px solid var(--border);
+    border-radius: 6px; font-size: 13px; cursor: pointer; user-select: none;
+  }
+  .score-opt.selected { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+  .section-title { font-size: 13px; font-weight: 600; color: var(--navy); margin: 18px 0 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .error { color: var(--red); font-size: 13px; margin-bottom: 10px; }
+  .center { text-align: center; }
+  .row-flex { display: flex; gap: 8px; }
+  .row-flex > * { flex: 1; }
+  table.mini { width: 100%; font-size: 13px; border-collapse: collapse; }
+  table.mini td { padding: 5px 0; border-bottom: 1px solid var(--border); }
+  table.mini td:last-child { text-align: right; }
+  .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// =================================================================
+// CONFIG — set this to your Apps Script Web App URL
+// =================================================================
+const API_URL = "https://script.google.com/macros/s/AKfycbwqUUo-avmoBoj9ZqmdGUTMQtswX4Rj6aYoHc21oDLD6LfUsEluTLA2ccn4g3pUYaXLUw/exec";
+
+// =================================================================
+// API helpers
+// =================================================================
+async function apiGet(action, params = {}) {
+  const qs = new URLSearchParams({ action, ...params }).toString();
+  const res = await fetch(`${API_URL}?${qs}`);
+  return res.json();
+}
+async function apiPost(action, payload) {
+  // NOTE: no explicit Content-Type header — keeps this a "simple request"
+  // so the browser skips the CORS preflight, which Apps Script can't answer.
+  const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload }) });
+  return res.json();
+}
+function currentMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// =================================================================
+// App state
+// =================================================================
+let state = {
+  screen: "login",       // login | self | leaderList | leaderForm | hrList | hrForm | gm
+  user: null,            // {staffId, name, department, role, reportsTo}
+  month: currentMonth(),
+  targetStaff: null,     // staff being appraised (for leader/hr forms)
+  kpiConfig: null,
+  scores: {},            // criterion -> score
+};
+
+const app = document.getElementById("app");
+
+function render() {
+  if (state.screen === "login") return renderLogin();
+  if (state.screen === "self") return renderAppraisalForm({ evaluatorType: "self", target: state.user });
+  if (state.screen === "leaderList") return renderStaffList("leader");
+  if (state.screen === "hrList") return renderStaffList("hr");
+  if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
+  if (state.screen === "gm") return renderGm();
+}
+
+function topbar(title) {
+  return `
+    <div class="topbar">
+      <div>
+        <h1>${title}</h1>
+        <div class="sub">${state.user ? state.user.name + " · " + state.month : ""}</div>
+      </div>
+      ${state.user ? '<button onclick="logout()">Keluar</button>' : ""}
+    </div>`;
+}
+
+// =================================================================
+// Login
+// =================================================================
+function renderLogin() {
+  app.innerHTML = `
+    <div class="topbar"><h1>Reload F&amp;B Appraisal</h1></div>
+    <div class="card">
+      <h2>Masuk dengan PIN</h2>
+      <label>PIN</label>
+      <input type="password" id="pin-input" inputmode="numeric" placeholder="••••" maxlength="6" />
+      <div class="error" id="login-error"></div>
+      <button class="primary" onclick="doLogin()">Masuk</button>
+    </div>`;
+  document.getElementById("pin-input").focus();
+  document.getElementById("pin-input").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+}
+
+async function doLogin() {
+  const pin = document.getElementById("pin-input").value.trim();
+  if (!pin) return;
+  document.getElementById("login-error").textContent = "";
+  const res = await apiGet("login", { pin });
+  if (!res.found) {
+    document.getElementById("login-error").textContent = "PIN tidak ditemukan.";
+    return;
+  }
+  state.user = res;
+  if (res.role === "Staff") state.screen = "self";
+  else if (res.role === "Leader") state.screen = "leaderList";
+  else if (res.role === "HR") state.screen = "hrList";
+  else if (res.role === "GM") state.screen = "gm";
+  render();
+}
+
+function logout() {
+  state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {} };
+  render();
+}
+
+// =================================================================
+// Staff list (Leader / HR view)
+// =================================================================
+async function renderStaffList(evaluatorType) {
+  app.innerHTML = topbar(evaluatorType === "leader" ? "Leader Appraisal" : "HR Appraisal") + `<div class="loading">Memuat daftar staff...</div>`;
+  const params = { month: state.month, evaluatorType, evaluatorName: state.user.name };
+  const res = await apiGet("getStaffProgress", params);
+  const list = res.staff || [];
+  app.innerHTML = topbar(evaluatorType === "leader" ? "Leader Appraisal" : "HR Appraisal") + `
+    <div class="hint">${list.length} staff — klik untuk isi appraisal</div>
+    ${list.map(s => `
+      <div class="staff-row" onclick="openForm('${evaluatorType}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}')">
+        <div>
+          <div class="name">${s.name}</div>
+          <div class="dept">${s.department}</div>
+        </div>
+        <span class="badge ${s.status === 'Submitted' ? 'done' : 'pending'}">${s.status}</span>
+      </div>`).join("")}
+    ${!list.length ? '<div class="hint">Tidak ada staff ditemukan.</div>' : ""}
+  `;
+}
+
+function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
+
+function openForm(evaluatorType, staffId, name, department) {
+  state.evaluatorType = evaluatorType;
+  state.targetStaff = { staffId, name, department };
+  state.screen = "form";
+  render();
+}
+
+// =================================================================
+// Appraisal form (shared by Self / Leader / HR)
+// =================================================================
+async function renderAppraisalForm({ evaluatorType, target }) {
+  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="loading">Memuat form...</div>`;
+  const cfg = await apiGet("getKpiConfig", { department: target.department });
+  state.kpiConfig = cfg;
+  state.scores = {};
+
+  const scoreRow = (criterion, desc) => `
+    <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
+      <div class="name">${criterion}</div>
+      ${desc ? `<div class="desc">${desc}</div>` : ""}
+      <div class="score-select">
+        ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
+      </div>
+    </div>`;
+
+  app.innerHTML = topbar("Appraisal — " + target.name) + `
+    <div class="card">
+      <div class="hint">${target.department} · ${evaluatorType.toUpperCase()} appraisal · ${state.month}</div>
+
+      <div class="section-title">Section A — Attitude</div>
+      ${cfg.attitude.map(c => scoreRow(c.name, c.description)).join("")}
+
+      <div class="section-title">Section B — Discipline</div>
+      ${cfg.discipline.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
+
+      <div class="section-title">Section C — Performance KPI</div>
+      ${cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
+
+      <div class="error" id="form-error"></div>
+      <button class="primary" onclick="submitForm('${evaluatorType}')" style="margin-top: 14px;">Submit Appraisal</button>
+      <div class="center" style="margin-top: 10px;">
+        <button class="ghost" onclick="goBack()">Batal</button>
+      </div>
+    </div>`;
+}
+
+function selectScore(el, criterion, value) {
+  const row = el.closest(".criterion-row");
+  row.querySelectorAll(".score-opt").forEach(o => o.classList.remove("selected"));
+  el.classList.add("selected");
+  state.scores[criterion] = value;
+}
+
+function goBack() {
+  if (state.user.role === "Leader") state.screen = "leaderList";
+  else if (state.user.role === "HR") state.screen = "hrList";
+  else state.screen = "login";
+  render();
+}
+
+async function submitForm(evaluatorType) {
+  const cfg = state.kpiConfig;
+  const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...cfg.kpi.map(c => c.name)];
+  const missing = allCriteria.filter(c => !(c in state.scores));
+  if (missing.length) {
+    document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
+    return;
+  }
+  const target = state.targetStaff;
+  const payload = {
+    month: state.month,
+    staffId: target.staffId,
+    staffName: target.name,
+    department: target.department,
+    evaluatorType,
+    evaluatorName: state.user.name,
+    attitudeScores: cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+    disciplineScores: cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+    kpiScores: cfg.kpi.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+    bonusEntries: [],
+  };
+  document.getElementById("form-error").textContent = "Menyimpan...";
+  const res = await apiPost("submitAppraisal", payload);
+  if (res.success) {
+    goBack();
+  } else {
+    document.getElementById("form-error").textContent = "Gagal menyimpan: " + (res.error || "unknown error");
+  }
+}
+
+// =================================================================
+// GM Approval dashboard
+// =================================================================
+async function renderGm() {
+  app.innerHTML = topbar("GM Approval") + `<div class="loading">Memuat data...</div>`;
+  const pool = await apiGet("getScPool", { month: state.month });
+  const final = await apiGet("getFinalAppraisal", { month: state.month });
+  const list = final.staff || [];
+  const flagged = list.filter(s => s.status === "Underperform" && s.approvalStatus !== "Approved");
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+
+  app.innerHTML = topbar("GM Approval") + `
+    <div class="card">
+      <h2>Total Service Charge — ${state.month}</h2>
+      <label>Total SC bulan ini (Rp)</label>
+      <input type="number" id="sc-input" value="${pool.found ? pool.totalSC : ""}" placeholder="150000000" />
+      <button class="secondary" onclick="saveTotalSC()">Simpan Total SC</button>
+      ${pool.found ? `
+        <table class="mini" style="margin-top:12px;">
+          <tr><td>Base share / staff</td><td>${idr(pool.baseShare)}</td></tr>
+          <tr><td>Pool total</td><td>${idr(pool.poolTotal)}</td></tr>
+          <tr><td># Performer</td><td>${pool.performerCount}</td></tr>
+          <tr><td>Pool share / performer</td><td>${idr(pool.poolShare)}</td></tr>
+        </table>` : ""}
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
+        <button class="secondary" onclick="approveAll()">Approve semua (kecuali flagged)</button>
+      </div>
+      ${list.map(s => `
+        <div class="staff-row" style="cursor:default; ${s.status === 'Underperform' ? 'border-color:var(--amber);' : ''}">
+          <div>
+            <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department})</span></div>
+            <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)} · Final SC ${idr(s.finalSC)}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
+            ${s.approvalStatus === 'Approved'
+              ? `<span class="badge done">Approved</span>`
+              : `<button class="secondary" onclick="approveOne('${s.staffId}')">Approve</button>`}
+          </div>
+        </div>`).join("")}
+      ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini.</div>' : ""}
+    </div>`;
+}
+
+async function saveTotalSC() {
+  const val = document.getElementById("sc-input").value;
+  if (!val) return;
+  await apiPost("setTotalSC", { month: state.month, totalSC: Number(val), inputBy: state.user.name });
+  renderGm();
+}
+async function approveOne(staffId) {
+  await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name });
+  renderGm();
+}
+async function approveAll() {
+  await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
+  renderGm();
+}
+
+// =================================================================
+render();
+</script>
+</body>
+</html>

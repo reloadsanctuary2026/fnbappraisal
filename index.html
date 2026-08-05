@@ -143,6 +143,7 @@ const app = document.getElementById("app");
 
 function render() {
   if (state.screen === "login") return renderLogin();
+  if (state.screen === "roleMenu") return renderRoleMenu();
   if (state.screen === "self") return renderAppraisalForm({ evaluatorType: "self", target: state.user });
   if (state.screen === "leaderList") return renderStaffList("leader");
   if (state.screen === "hrList") return renderStaffList("hr");
@@ -194,15 +195,54 @@ async function doLogin() {
       return;
     }
     state.user = res;
-    if (res.role === "Staff") state.screen = "self";
-    else if (res.role === "Leader") state.screen = "leaderList";
-    else if (res.role === "HR") state.screen = "hrList";
-    else if (res.role === "GM") state.screen = "gm";
-    render();
+    goToRoleMenu();
   } catch (err) {
     console.error(err);
     errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
   }
+}
+
+// A person can have several capabilities at once (e.g. a Floor Supervisor is
+// both a Staff who gets self-appraised AND a Leader who appraises their team).
+// If only one screen applies, skip straight to it; otherwise show a picker.
+function availableScreens(user) {
+  const options = [];
+  if (user.department) options.push({ key: "self", label: "Appraisal saya sendiri" });
+  if (user.isLeader) options.push({ key: "leaderList", label: "Leader — appraisal tim saya" });
+  if (user.isHR) options.push({ key: "hrList", label: "HR — appraisal semua staff" });
+  if (user.isGM) options.push({ key: "gm", label: "GM — approval & Service Charge" });
+  return options;
+}
+
+function goToRoleMenu() {
+  const options = availableScreens(state.user);
+  if (options.length === 0) {
+    state.screen = "login";
+    state.user = null;
+    render();
+    return;
+  }
+  if (options.length === 1) {
+    state.screen = options[0].key;
+    render();
+    return;
+  }
+  state.screen = "roleMenu";
+  render();
+}
+
+function renderRoleMenu() {
+  const options = availableScreens(state.user);
+  app.innerHTML = topbar("Pilih menu") + `
+    <div class="card">
+      <div class="hint">${state.user.name} punya lebih dari satu akses:</div>
+      ${options.map(o => `<div class="staff-row" onclick="goToScreen('${o.key}')"><div class="name">${o.label}</div></div>`).join("")}
+    </div>`;
+}
+
+function goToScreen(key) {
+  state.screen = key;
+  render();
 }
 
 function logout() {
@@ -218,7 +258,9 @@ async function renderStaffList(evaluatorType) {
   const params = { month: state.month, evaluatorType, evaluatorName: state.user.name };
   const res = await apiGet("getStaffProgress", params);
   const list = res.staff || [];
+  const showMenuLink = availableScreens(state.user).length > 1;
   app.innerHTML = topbar(evaluatorType === "leader" ? "Leader Appraisal" : "HR Appraisal") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
     <div class="hint">${list.length} staff — klik untuk isi appraisal</div>
     ${list.map(s => `
       <div class="staff-row" onclick="openForm('${evaluatorType}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}')">
@@ -301,8 +343,10 @@ function selectScore(el, criterion, value) {
 }
 
 function goBack() {
-  if (state.user.role === "Leader") state.screen = "leaderList";
-  else if (state.user.role === "HR") state.screen = "hrList";
+  const options = availableScreens(state.user);
+  if (options.length > 1) state.screen = "roleMenu";
+  else if (state.user.isLeader) state.screen = "leaderList";
+  else if (state.user.isHR) state.screen = "hrList";
   else state.screen = "login";
   render();
 }
@@ -357,8 +401,10 @@ async function renderGm() {
   const list = final.staff || [];
   const flagged = list.filter(s => s.status === "Underperform" && s.approvalStatus !== "Approved");
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+  const showMenuLink = availableScreens(state.user).length > 1;
 
   app.innerHTML = topbar("GM Approval") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <h2>Total Service Charge — ${state.month}</h2>
       <label>Total SC bulan ini (Rp)</label>

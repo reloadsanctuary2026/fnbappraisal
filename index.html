@@ -278,7 +278,7 @@ async function renderMyEvaluations() {
     ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
     <div class="hint">${list.length} orang — klik untuk isi appraisal</div>
     ${list.map(s => `
-      <div class="staff-row" onclick="openForm('${s.slot}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}')">
+      <div class="staff-row" onclick="openForm('${s.slot}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}', '${s.tier}')">
         <div>
           <div class="name">${s.name}</div>
           <div class="dept">${s.department !== "-" ? s.department : s.tier} · ${s.tier}</div>
@@ -291,9 +291,9 @@ async function renderMyEvaluations() {
 
 function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
 
-function openForm(evaluatorType, staffId, name, department) {
+function openForm(evaluatorType, staffId, name, department, tier) {
   state.evaluatorType = evaluatorType;
-  state.targetStaff = { staffId, name, department };
+  state.targetStaff = { staffId, name, department, tier };
   state.screen = "form";
   render();
 }
@@ -302,11 +302,12 @@ function openForm(evaluatorType, staffId, name, department) {
 // Appraisal form (shared by Self / Leader / Management / Executive / HR)
 // =================================================================
 async function renderAppraisalForm({ evaluatorType, target }) {
-  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="loading">Memeriksa akses...</div>`;
+  const subtitle = `${target.department && target.department !== "-" ? target.department : ""}${target.tier ? (target.department && target.department !== "-" ? " · " : "") + target.tier + " tier" : ""}`;
+  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memeriksa akses...</div>`;
 
   const access = await apiGet("checkAccess", { staffId: target.staffId, evaluatorType });
   if (access.error) {
-    app.innerHTML = topbar("Appraisal — " + target.name) + `
+    app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
       <div class="card"><div class="error">Server error: ${access.error}</div>
       <button class="secondary" onclick="goBack()">Kembali</button></div>`;
     return;
@@ -320,7 +321,7 @@ async function renderAppraisalForm({ evaluatorType, target }) {
     } else {
       msg = "Data kontrak untuk staff ini tidak ditemukan. Hubungi HR.";
     }
-    app.innerHTML = topbar("Appraisal — " + target.name) + `
+    app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
       <div class="card">
         <div class="hint" style="font-size:14px;">${msg}</div>
         <button class="secondary" onclick="goBack()" style="margin-top:12px;">Kembali</button>
@@ -328,10 +329,10 @@ async function renderAppraisalForm({ evaluatorType, target }) {
     return;
   }
 
-  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="loading">Memuat form...</div>`;
+  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memuat form...</div>`;
   const cfg = await apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId });
   if (cfg.error) {
-    app.innerHTML = topbar("Appraisal — " + target.name) + `
+    app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
       <div class="card"><div class="error">Server error: ${cfg.error}</div>
       <button class="secondary" onclick="goBack()">Kembali</button></div>`;
     return;

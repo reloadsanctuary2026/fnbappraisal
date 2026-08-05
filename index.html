@@ -207,7 +207,7 @@ async function doLogin() {
 // If only one screen applies, skip straight to it; otherwise show a picker.
 function availableScreens(user) {
   const options = [];
-  if (user.department) options.push({ key: "self", label: "Appraisal saya sendiri" });
+  if (user.department && user.department !== "-") options.push({ key: "self", label: "Appraisal saya sendiri" });
   if (user.isLeader) options.push({ key: "leaderList", label: "Leader — appraisal tim saya" });
   if (user.isHR) options.push({ key: "hrList", label: "HR — appraisal semua staff" });
   if (user.isGM) options.push({ key: "gm", label: "GM — approval & Service Charge" });

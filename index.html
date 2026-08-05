@@ -146,6 +146,7 @@ function render() {
   if (state.screen === "roleMenu") return renderRoleMenu();
   if (state.screen === "self") return renderAppraisalForm({ evaluatorType: "self", target: state.user });
   if (state.screen === "myEvaluations") return renderMyEvaluations();
+  if (state.screen === "review") return renderReview();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
 }
@@ -211,8 +212,10 @@ function availableScreens(user) {
   if (user.isManagement) options.push({ key: "myEvaluations", label: "Appraisal staff/leader di area saya" });
   if (user.isExecutive) options.push({ key: "myEvaluations", label: "Appraisal management" });
   if (user.isHR) options.push({ key: "myEvaluations", label: "Appraisal & review (HR)" });
+  if (user.isManagement) options.push({ key: "review", label: "Review appraisal di area saya" });
+  if (user.isHR) options.push({ key: "review", label: "Review semua appraisal" });
   if (user.isExecutive) options.push({ key: "gm", label: "Executive — approval & Service Charge" });
-  // De-dupe "myEvaluations" if someone somehow has more than one of those flags.
+  // De-dupe (someone could have more than one flag pointing at the same key).
   const seen = new Set();
   return options.filter(o => {
     if (seen.has(o.key)) return false;
@@ -290,6 +293,36 @@ async function renderMyEvaluations() {
 }
 
 function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
+
+// =================================================================
+// Review — read-only, scoped by Tier/Oversees (Management sees their
+// area, HR & Executive see everyone). No approve buttons here; approval
+// stays on the Executive-only GM dashboard.
+// =================================================================
+async function renderReview() {
+  app.innerHTML = topbar("Review Appraisal") + `<div class="loading">Memuat data...</div>`;
+  const res = await apiGet("getReviewData", { reviewerId: state.user.staffId });
+  const rows = res.rows || [];
+  const showMenuLink = availableScreens(state.user).length > 1;
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+
+  app.innerHTML = topbar("Review Appraisal") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
+    <div class="hint">${rows.length} appraisal record — read only</div>
+    ${rows.map(r => `
+      <div class="staff-row" style="cursor:default;">
+        <div>
+          <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
+          <div class="dept">${r.month} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+          <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
+          <span class="badge ${r.approvalStatus === 'Approved' ? 'done' : 'pending'}">${r.approvalStatus || 'Pending'}</span>
+        </div>
+      </div>`).join("")}
+    ${!rows.length ? '<div class="hint">Belum ada data appraisal di scope kamu.</div>' : ""}
+  `;
+}
 
 function openForm(evaluatorType, staffId, name, department, tier) {
   state.evaluatorType = evaluatorType;

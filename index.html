@@ -208,9 +208,10 @@ async function doLogin() {
 function availableScreens(user) {
   const options = [];
   if (user.department && user.department !== "-") options.push({ key: "self", label: "Appraisal saya sendiri" });
-  if (user.isLeader) options.push({ key: "leaderList", label: "Leader — appraisal tim saya" });
-  if (user.isHR) options.push({ key: "hrList", label: "HR — appraisal semua staff" });
-  if (user.isGM) options.push({ key: "gm", label: "GM — approval & Service Charge" });
+  if (user.isLeader) options.push({ key: "leaderList", label: "Leader — appraisal staff" });
+  if (user.isManagement) options.push({ key: "leaderList", label: "Management — appraisal staff/leader di area saya" });
+  if (user.isHR) options.push({ key: "hrList", label: "HR — appraisal & review semua staff" });
+  if (user.isExecutive) options.push({ key: "gm", label: "Executive — approval & Service Charge" });
   return options;
 }
 
@@ -381,7 +382,7 @@ function selectScore(el, criterion, value) {
 function goBack() {
   const options = availableScreens(state.user);
   if (options.length > 1) state.screen = "roleMenu";
-  else if (state.user.isLeader) state.screen = "leaderList";
+  else if (state.user.isLeader || state.user.isManagement) state.screen = "leaderList";
   else if (state.user.isHR) state.screen = "hrList";
   else state.screen = "login";
   render();

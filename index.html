@@ -169,9 +169,9 @@ function renderLogin() {
   app.innerHTML = `
     <div class="topbar"><h1>Reload F&amp;B Appraisal</h1></div>
     <div class="card">
-      <h2>Masuk dengan PIN</h2>
-      <label>PIN</label>
-      <input type="password" id="pin-input" inputmode="numeric" placeholder="••••" maxlength="6" />
+      <h2>Masuk dengan NIK</h2>
+      <label>NIK (Nomor Induk Karyawan)</label>
+      <input type="text" id="pin-input" inputmode="numeric" placeholder="Contoh: 1096" maxlength="10" />
       <div class="error" id="login-error"></div>
       <button class="primary" onclick="doLogin()">Masuk</button>
     </div>`;
@@ -180,18 +180,18 @@ function renderLogin() {
 }
 
 async function doLogin() {
-  const pin = document.getElementById("pin-input").value.trim();
-  if (!pin) return;
+  const nik = document.getElementById("pin-input").value.trim();
+  if (!nik) return;
   const errEl = document.getElementById("login-error");
   errEl.textContent = "Menghubungkan...";
   try {
-    const res = await apiGet("login", { pin });
+    const res = await apiGet("login", { nik });
     if (res.error) {
       errEl.textContent = "Server error: " + res.error;
       return;
     }
     if (!res.found) {
-      errEl.textContent = "PIN tidak ditemukan.";
+      errEl.textContent = "NIK tidak ditemukan.";
       return;
     }
     state.user = res;
@@ -287,6 +287,32 @@ function openForm(evaluatorType, staffId, name, department) {
 // Appraisal form (shared by Self / Leader / HR)
 // =================================================================
 async function renderAppraisalForm({ evaluatorType, target }) {
+  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="loading">Memeriksa akses...</div>`;
+
+  const access = await apiGet("checkAccess", { staffId: target.staffId, evaluatorType });
+  if (access.error) {
+    app.innerHTML = topbar("Appraisal — " + target.name) + `
+      <div class="card"><div class="error">Server error: ${access.error}</div>
+      <button class="secondary" onclick="goBack()">Kembali</button></div>`;
+    return;
+  }
+  if (!access.allowed) {
+    let msg;
+    if (access.reason === "too_early") {
+      msg = `Belum waktunya. Coba lagi mulai <strong>${access.retryDateLabel}</strong>.`;
+    } else if (access.reason === "too_late") {
+      msg = "Waktu untuk mengisi appraisal ini sudah lewat.";
+    } else {
+      msg = "Data kontrak untuk staff ini tidak ditemukan. Hubungi HR.";
+    }
+    app.innerHTML = topbar("Appraisal — " + target.name) + `
+      <div class="card">
+        <div class="hint" style="font-size:14px;">${msg}</div>
+        <button class="secondary" onclick="goBack()" style="margin-top:12px;">Kembali</button>
+      </div>`;
+    return;
+  }
+
   app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="loading">Memuat form...</div>`;
   const cfg = await apiGet("getKpiConfig", { department: target.department });
   state.kpiConfig = cfg;
@@ -377,7 +403,6 @@ async function submitForm(evaluatorType) {
 
   const target = state.targetStaff;
   const payload = {
-    month: state.month,
     staffId: target.staffId,
     staffName: target.name,
     department: target.department,

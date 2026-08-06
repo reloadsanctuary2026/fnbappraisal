@@ -331,6 +331,10 @@ function logout() {
 async function renderMyEvaluations() {
   app.innerHTML = topbar("Appraisal Saya") + `<div class="loading">Memuat daftar...</div>`;
   const res = await apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId });
+  if (res.error) {
+    app.innerHTML = topbar("Appraisal Saya") + `<div class="card"><div class="error">Server error: ${res.error}</div></div>`;
+    return;
+  }
   const list = res.targets || [];
   const showMenuLink = availableScreens(state.user).length > 1;
   app.innerHTML = topbar("Appraisal Saya") + `
@@ -358,6 +362,10 @@ function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
 async function renderReview() {
   app.innerHTML = topbar("Review Appraisal") + `<div class="loading">Memuat data...</div>`;
   const res = await apiGet("getReviewData", { reviewerId: state.user.staffId });
+  if (res.error) {
+    app.innerHTML = topbar("Review Appraisal") + `<div class="card"><div class="error">Server error: ${res.error}</div></div>`;
+    return;
+  }
   const rows = res.rows || [];
   const showMenuLink = availableScreens(state.user).length > 1;
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
@@ -462,7 +470,7 @@ async function renderAppraisalForm({ evaluatorType, target }) {
 
       <div class="section-title">Section C — Performance KPI</div>
       ${cfg.placeholder
-        ? `<div class="hint" style="background:var(--surface-2); padding:12px; border-radius:8px;">${cfg.placeholderNote}</div>`
+        ? `<div class="hint" style="background:var(--sand); padding:12px; border-radius:8px;">${cfg.placeholderNote}</div>`
         : cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
 
       ${isSelf ? "" : `
@@ -550,6 +558,10 @@ async function renderGm() {
   app.innerHTML = topbar("GM Approval") + `<div class="loading">Memuat data...</div>`;
   const pool = await apiGet("getScPool", { month: state.month });
   const final = await apiGet("getFinalAppraisal", { month: state.month });
+  if (final.error) {
+    app.innerHTML = topbar("GM Approval") + `<div class="card"><div class="error">Server error: ${final.error}</div></div>`;
+    return;
+  }
   const list = final.staff || [];
   const flagged = list.filter(s => s.status === "Underperform" && s.approvalStatus !== "Approved");
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
@@ -557,6 +569,11 @@ async function renderGm() {
 
   app.innerHTML = topbar("GM Approval") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <label>Bulan appraisal (siklus kontrak jatuh di bulan ini)</label>
+      <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
+      <div class="hint">Tiap staff siklus appraisal-nya beda-beda sesuai tanggal kontrak masing-masing — geser bulan ini kalau list di bawah kosong.</div>
+    </div>
     <div class="card">
       <h2>Total Service Charge — ${state.month}</h2>
       <label>Total SC bulan ini (Rp)</label>
@@ -589,22 +606,31 @@ async function renderGm() {
               : `<button class="secondary" onclick="approveOne('${s.staffId}')">Approve</button>`}
           </div>
         </div>`).join("")}
-      ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini.</div>' : ""}
+      ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.</div>' : ""}
     </div>`;
+}
+
+function changeGmMonth(value) {
+  if (!value) return;
+  state.month = value;
+  renderGm();
 }
 
 async function saveTotalSC() {
   const val = document.getElementById("sc-input").value;
   if (!val) return;
-  await apiPost("setTotalSC", { month: state.month, totalSC: Number(val), inputBy: state.user.name });
+  const res = await apiPost("setTotalSC", { month: state.month, totalSC: Number(val), inputBy: state.user.name });
+  if (res.error) { alert("Gagal simpan Total SC: " + res.error); return; }
   renderGm();
 }
 async function approveOne(staffId) {
-  await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name });
+  const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name });
+  if (res.error || res.success === false) { alert("Gagal approve: " + (res.error || "unknown")); return; }
   renderGm();
 }
 async function approveAll() {
-  await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
+  const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
+  if (res.error) { alert("Gagal approve semua: " + res.error); return; }
   renderGm();
 }
 

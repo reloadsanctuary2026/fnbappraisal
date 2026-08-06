@@ -65,7 +65,7 @@
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 18px;
-    padding: 18px; margin-bottom: 14px;
+    padding: 18px; margin-bottom: 14px; overflow: hidden;
     box-shadow: 0 2px 10px rgba(32, 48, 47, 0.04);
   }
   .card h2 { font-size: 15px; margin: 0 0 12px; font-weight: 700; }
@@ -137,9 +137,11 @@
   }
 
   .section-title {
-    font-size: 12px; font-weight: 800; color: var(--teal); margin: 20px 0 8px;
+    font-size: 12px; font-weight: 800; color: #fff; margin: 26px -18px 16px; padding: 11px 18px;
     text-transform: uppercase; letter-spacing: 0.06em;
+    background: linear-gradient(90deg, var(--teal), var(--teal-dark));
   }
+  .section-title:first-of-type { margin-top: 4px; }
   .hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
   .error { color: var(--red); font-size: 13px; margin-bottom: 10px; font-weight: 600; }
   .center { text-align: center; }
@@ -511,6 +513,8 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       msg = "Waktu untuk mengisi appraisal ini sudah lewat.";
     } else if (access.reason === "max_attempts_reached") {
       msg = `Appraisal ini sudah diisi ${access.submissionCount}× (maksimal ${access.submissionCount}×). Tidak bisa diisi ulang lagi. Hubungi HR kalau butuh koreksi.`;
+    } else if (access.reason === "deferred_to_previous_cycle") {
+      msg = "Kontrak staff ini berakhir terlalu awal bulan ini untuk siklus appraisal baru — keputusan appraisal bulan lalu yang berlaku untuk periode ini.";
     } else {
       msg = "Data kontrak untuk staff ini tidak ditemukan. Hubungi HR.";
     }

@@ -149,6 +149,16 @@
   table.mini td { padding: 6px 0; border-bottom: 1px solid var(--border); }
   table.mini td:last-child { text-align: right; font-weight: 600; }
   .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
+    background: var(--teal); color: #fff; padding: 13px 22px; border-radius: 14px;
+    font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+    z-index: 100; opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
+    max-width: 88%; text-align: center; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
 </style>
 </head>
 <body>
@@ -189,6 +199,21 @@ function currentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function showToast(message, type = "success") {
+  const existing = document.getElementById("toast");
+  if (existing) existing.remove();
+  const el = document.createElement("div");
+  el.id = "toast";
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 300);
+  }, 2400);
+}
+
 // =================================================================
 // App state
 // =================================================================
@@ -199,6 +224,7 @@ let state = {
   targetStaff: null,     // person being appraised (for non-self forms)
   kpiConfig: null,
   scores: {},            // criterion -> score
+  submissionCount: 0,    // how many times this target/slot has already been submitted
 };
 
 const app = document.getElementById("app");
@@ -329,7 +355,7 @@ function goToScreen(key) {
 }
 
 function logout() {
-  state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {} };
+  state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {}, submissionCount: 0 };
   render();
 }
 
@@ -427,6 +453,8 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       msg = `Belum waktunya. Coba lagi mulai <strong>${access.retryDateLabel}</strong>.`;
     } else if (access.reason === "too_late") {
       msg = "Waktu untuk mengisi appraisal ini sudah lewat.";
+    } else if (access.reason === "max_attempts_reached") {
+      msg = `Appraisal ini sudah diisi ${access.submissionCount}× (maksimal ${access.submissionCount}×). Tidak bisa diisi ulang lagi. Hubungi HR kalau butuh koreksi.`;
     } else {
       msg = "Data kontrak untuk staff ini tidak ditemukan. Hubungi HR.";
     }
@@ -437,6 +465,7 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       </div>`;
     return;
   }
+  state.submissionCount = access.submissionCount || 0;
 
   app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memuat form...</div>`;
   const cfg = await apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId });
@@ -475,6 +504,11 @@ async function renderAppraisalForm({ evaluatorType, target }) {
         <span class="mode-label">${evaluatorType === "self" ? "Self Appraisal" : evaluatorType === "hr" ? "HR Appraisal" : "Leader / Management Appraisal"}</span>
         <span class="mode-meta">${target.department !== "-" ? target.department : target.tier} · ${state.month}</span>
       </div>
+
+      ${state.submissionCount >= 1 ? `
+        <div class="hint" style="background:var(--amber-bg); color:var(--amber); padding:10px 14px; border-radius:12px; font-weight:600; margin-bottom:14px;">
+          ⚠️ Sudah pernah diisi ${state.submissionCount}× sebelumnya. Ini akan jadi isian ke-${state.submissionCount + 1} (maks 2×) dan akan menimpa data yang lama.
+        </div>` : ""}
 
       <div class="section-title">Section A — Attitude</div>
       ${cfg.attitude.map(c => scoreRow(c.name, c.description)).join("")}
@@ -518,6 +552,15 @@ function goBack() {
 
 async function submitForm(evaluatorType) {
   try {
+    if (state.submissionCount >= 1) {
+      const ok = confirm(
+        `Appraisal ini sudah pernah diisi ${state.submissionCount}× sebelumnya.\n\n` +
+        `Lanjut akan MENIMPA isian yang lama (ini isian ke-${state.submissionCount + 1}, maksimal 2×).\n\n` +
+        `Yakin mau lanjut?`
+      );
+      if (!ok) return;
+    }
+
     const cfg = state.kpiConfig;
     const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
     const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];
@@ -554,6 +597,7 @@ async function submitForm(evaluatorType) {
     document.getElementById("form-error").textContent = "Menyimpan...";
     const res = await apiPost("submitAppraisal", payload);
     if (res.success) {
+      showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
       goBack();
     } else {
       document.getElementById("form-error").textContent = "Gagal menyimpan: " + (res.error || res.reason || "unknown error");
@@ -653,17 +697,20 @@ async function saveTotalSC() {
   const val = document.getElementById("sc-input").value;
   if (!val) return;
   const res = await apiPost("setTotalSC", { month: state.month, totalSC: Number(val), inputBy: state.user.name });
-  if (res.error) { alert("Gagal simpan Total SC: " + res.error); return; }
-  renderGm();
+  if (res.error) { showToast("Gagal simpan Total SC: " + res.error, "error"); return; }
+  showToast("Total SC tersimpan!");
+  renderScInput();
 }
 async function approveOne(staffId) {
   const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name });
-  if (res.error || res.success === false) { alert("Gagal approve: " + (res.error || "unknown")); return; }
+  if (res.error || res.success === false) { showToast("Gagal approve: " + (res.error || "unknown"), "error"); return; }
+  showToast("Approved!");
   renderGm();
 }
 async function approveAll() {
   const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
-  if (res.error) { alert("Gagal approve semua: " + res.error); return; }
+  if (res.error) { showToast("Gagal approve semua: " + res.error, "error"); return; }
+  showToast(`${res.approvedCount || 0} appraisal ter-approve!`);
   renderGm();
 }
 

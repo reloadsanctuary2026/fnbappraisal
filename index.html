@@ -225,6 +225,8 @@ let state = {
   kpiConfig: null,
   scores: {},            // criterion -> score
   submissionCount: 0,    // how many times this target/slot has already been submitted
+  unreadCount: 0,
+  prevScreen: null,
 };
 
 const app = document.getElementById("app");
@@ -238,9 +240,11 @@ function render() {
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
   if (state.screen === "sc") return renderScInput();
+  if (state.screen === "notifications") return renderNotifications();
 }
 
 function topbar(title) {
+  const unread = state.unreadCount || 0;
   return `
     <div class="topbar">
       <div style="display:flex; align-items:center; gap:10px;">
@@ -250,8 +254,59 @@ function topbar(title) {
           <div class="sub">${state.user ? state.user.name + " · " + state.month : ""}</div>
         </div>
       </div>
-      ${state.user ? '<button onclick="logout()">Keluar</button>' : ""}
+      <div style="display:flex; align-items:center; gap:8px;">
+        ${state.user ? `<button onclick="openNotifications()" style="position:relative;">🔔${unread > 0 ? `<span style="position:absolute; top:-6px; right:-6px; background:var(--coral); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:800;">${unread}</span>` : ""}</button>` : ""}
+        ${state.user ? '<button onclick="logout()">Keluar</button>' : ""}
+      </div>
     </div>`;
+}
+
+async function refreshUnreadCount() {
+  if (!state.user) return;
+  const res = await apiGet("getNotifications", { staffId: state.user.staffId });
+  const list = res.notifications || [];
+  state.unreadCount = list.filter(n => !n.read).length;
+}
+
+function openNotifications() {
+  state.prevScreen = state.screen;
+  state.screen = "notifications";
+  render();
+}
+
+async function renderNotifications() {
+  app.innerHTML = topbar("Notifikasi") + `<div class="loading">Memuat...</div>`;
+  const res = await apiGet("getNotifications", { staffId: state.user.staffId });
+  if (res.error) {
+    app.innerHTML = topbar("Notifikasi") + `<div class="card"><div class="error">Server error: ${res.error}</div></div>`;
+    return;
+  }
+  const list = res.notifications || [];
+  state.unreadCount = list.filter(n => !n.read).length;
+
+  app.innerHTML = topbar("Notifikasi") + `
+    <button class="ghost" onclick="goBackFromNotifications()">&larr; Kembali</button>
+    <div class="hint" style="margin-top:8px;">${list.length} notifikasi</div>
+    ${list.map(n => `
+      <div class="staff-row" style="cursor:default; ${n.read ? "" : "border-color:var(--coral);"}" ${n.read ? "" : `onclick="markRead('${n.id}')"`}>
+        <div>
+          <div class="name" style="font-weight:${n.read ? "500" : "700"};">${n.message}</div>
+          <div class="dept">${new Date(n.timestamp).toLocaleDateString("id-ID")} · ${n.month}</div>
+        </div>
+        ${n.read ? "" : `<span class="badge pending">Baru</span>`}
+      </div>`).join("")}
+    ${!list.length ? '<div class="hint">Belum ada notifikasi.</div>' : ""}
+  `;
+}
+
+async function markRead(id) {
+  await apiPost("markNotificationRead", { notificationId: id });
+  renderNotifications();
+}
+
+function goBackFromNotifications() {
+  state.screen = state.prevScreen || "login";
+  render();
 }
 
 // =================================================================
@@ -287,6 +342,7 @@ async function doLogin() {
       return;
     }
     state.user = res;
+    await refreshUnreadCount();
     goToRoleMenu();
   } catch (err) {
     console.error(err);
@@ -623,34 +679,78 @@ async function renderGm() {
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
   const showMenuLink = availableScreens(state.user).length > 1;
 
+  // Decision options depend on the target's tier — fetch once per distinct tier present.
+  const tiers = [...new Set(list.map(s => s.tier).filter(Boolean))];
+  state.decisionOptionsByTier = state.decisionOptionsByTier || {};
+  for (const t of tiers) {
+    if (!state.decisionOptionsByTier[t]) {
+      const res = await apiGet("getDecisionOptions", { tier: t });
+      state.decisionOptionsByTier[t] = res.options || [];
+    }
+  }
+
+  const decisionForm = (s) => {
+    const opts = state.decisionOptionsByTier[s.tier] || [];
+    return `
+      <div id="decision-form-${s.staffId}" style="display:none; padding:12px; margin-top:8px; background:var(--sand); border-radius:12px;">
+        <label>Decision (wajib)</label>
+        <select id="decision-select-${s.staffId}">
+          <option value="">— pilih —</option>
+          ${opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
+        </select>
+        <label>Catatan (opsional, tapi disaranin diisi)</label>
+        <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
+        <button class="primary" style="margin-top:10px;" onclick="submitDecision('${s.staffId}')">Konfirmasi Approval</button>
+      </div>`;
+  };
+
   app.innerHTML = topbar("Executive Approval") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
-      <label>Bulan appraisal (siklus kontrak jatuh di bulan ini)</label>
+      <label>Bulan appraisal</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
-      <div class="hint">Tiap staff siklus appraisal-nya beda-beda sesuai tanggal kontrak masing-masing — geser bulan ini kalau list di bawah kosong.</div>
+      <div class="hint">Approval cuma bisa dilakukan tanggal 22–28 tiap bulan.</div>
     </div>
 
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
         <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
-        <button class="secondary" onclick="approveAll()">Approve semua (kecuali flagged)</button>
+        <button class="secondary" onclick="approveAll()">Approve semua (kecuali flagged) — default "Approved, Lanjut"</button>
       </div>
       ${list.map(s => `
-        <div class="staff-row" style="cursor:default; ${s.status === 'Underperform' ? 'border-color:var(--amber);' : ''}">
-          <div>
-            <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department})</span></div>
-            <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)} · Final SC ${idr(s.finalSC)}</div>
+        <div style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px;">
+          <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
+            <div>
+              <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
+              <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)} · Final SC ${idr(s.finalSC)}</div>
+              ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${s.decision}</strong>${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
+              ${s.approvalStatus === 'Approved'
+                ? `<span class="badge done">Approved</span>`
+                : `<button class="secondary" onclick="toggleDecisionForm('${s.staffId}')">Approve</button>`}
+            </div>
           </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
-            ${s.approvalStatus === 'Approved'
-              ? `<span class="badge done">Approved</span>`
-              : `<button class="secondary" onclick="approveOne('${s.staffId}')">Approve</button>`}
-          </div>
+          ${s.approvalStatus !== 'Approved' ? decisionForm(s) : ""}
         </div>`).join("")}
       ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.</div>' : ""}
     </div>`;
+}
+
+function toggleDecisionForm(staffId) {
+  const el = document.getElementById(`decision-form-${staffId}`);
+  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+async function submitDecision(staffId) {
+  const decision = document.getElementById(`decision-select-${staffId}`).value;
+  const notes = document.getElementById(`decision-notes-${staffId}`).value;
+  if (!decision) { showToast("Decision wajib dipilih dulu.", "error"); return; }
+  const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name, decision, notes });
+  if (res.error || res.success === false) { showToast("Gagal approve: " + (res.error || "unknown"), "error"); return; }
+  showToast("Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.");
+  renderGm();
 }
 
 // =================================================================
@@ -701,16 +801,10 @@ async function saveTotalSC() {
   showToast("Total SC tersimpan!");
   renderScInput();
 }
-async function approveOne(staffId) {
-  const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name });
-  if (res.error || res.success === false) { showToast("Gagal approve: " + (res.error || "unknown"), "error"); return; }
-  showToast("Approved!");
-  renderGm();
-}
 async function approveAll() {
   const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
   if (res.error) { showToast("Gagal approve semua: " + res.error, "error"); return; }
-  showToast(`${res.approvedCount || 0} appraisal ter-approve!`);
+  showToast(`${res.approvedCount || 0} appraisal ter-approve! Notifikasi terkirim.`);
   renderGm();
 }
 

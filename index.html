@@ -391,6 +391,7 @@ function openForm(evaluatorType, staffId, name, department, tier) {
 // Appraisal form (shared by Self / Leader / Management / Executive / HR)
 // =================================================================
 async function renderAppraisalForm({ evaluatorType, target }) {
+  state.targetStaff = target; // always keep this in sync so submitForm can read it reliably
   const subtitle = `${target.department && target.department !== "-" ? target.department : ""}${target.tier ? (target.department && target.department !== "-" ? " · " : "") + target.tier + " tier" : ""}`;
   app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memeriksa akses...</div>`;
 
@@ -494,41 +495,51 @@ function goBack() {
 }
 
 async function submitForm(evaluatorType) {
-  const cfg = state.kpiConfig;
-  const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
-  const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];
-  const missing = allCriteria.filter(c => !(c in state.scores));
-  if (missing.length) {
-    document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
-    return;
-  }
-  const bonusEntries = [];
-  if (evaluatorType !== "self") {
-    cfg.bonus.forEach((b, i) => {
-      const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
-      const count = Number(countInput ? countInput.value : 0) || 0;
-      if (count > 0) {
-        const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
-        bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
-      }
-    });
-  }
+  try {
+    const cfg = state.kpiConfig;
+    const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
+    const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];
+    const missing = allCriteria.filter(c => !(c in state.scores));
+    if (missing.length) {
+      document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
+      return;
+    }
+    const bonusEntries = [];
+    if (evaluatorType !== "self") {
+      cfg.bonus.forEach((b, i) => {
+        const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
+        const count = Number(countInput ? countInput.value : 0) || 0;
+        if (count > 0) {
+          const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
+          bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
+        }
+      });
+    }
 
-  const target = state.targetStaff;
-  const payload = {
-    staffId: target.staffId,
-    evaluatorId: state.user.staffId,
-    attitudeScores: cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
-    disciplineScores: cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
-    kpiScores: kpiCriteria.map(c => ({ criterion: c, score: state.scores[c] })),
-    bonusEntries,
-  };
-  document.getElementById("form-error").textContent = "Menyimpan...";
-  const res = await apiPost("submitAppraisal", payload);
-  if (res.success) {
-    goBack();
-  } else {
-    document.getElementById("form-error").textContent = "Gagal menyimpan: " + (res.error || res.reason || "unknown error");
+    const target = state.targetStaff;
+    if (!target || !target.staffId) {
+      document.getElementById("form-error").textContent = "Error internal: target appraisal tidak ditemukan. Coba kembali dan buka ulang form ini.";
+      return;
+    }
+    const payload = {
+      staffId: target.staffId,
+      evaluatorId: state.user.staffId,
+      attitudeScores: cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+      disciplineScores: cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+      kpiScores: kpiCriteria.map(c => ({ criterion: c, score: state.scores[c] })),
+      bonusEntries,
+    };
+    document.getElementById("form-error").textContent = "Menyimpan...";
+    const res = await apiPost("submitAppraisal", payload);
+    if (res.success) {
+      goBack();
+    } else {
+      document.getElementById("form-error").textContent = "Gagal menyimpan: " + (res.error || res.reason || "unknown error");
+    }
+  } catch (err) {
+    console.error("submitForm crashed:", err);
+    const el = document.getElementById("form-error");
+    if (el) el.textContent = "Terjadi error tak terduga: " + err.message + " (cek Console F12 untuk detail)";
   }
 }
 

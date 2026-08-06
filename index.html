@@ -211,6 +211,7 @@ function render() {
   if (state.screen === "review") return renderReview();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
+  if (state.screen === "sc") return renderScInput();
 }
 
 function topbar(title) {
@@ -279,7 +280,8 @@ function availableScreens(user) {
   if (user.isHR) options.push({ key: "myEvaluations", label: "Appraisal & review (HR)" });
   if (user.isManagement) options.push({ key: "review", label: "Review appraisal di area saya" });
   if (user.isHR) options.push({ key: "review", label: "Review semua appraisal" });
-  if (user.isExecutive) options.push({ key: "gm", label: "Executive — approval & Service Charge" });
+  if (user.isExecutive) options.push({ key: "gm", label: "Executive Approval" });
+  if (user.isHR) options.push({ key: "sc", label: "Input Total Service Charge" });
   // De-dupe (someone could have more than one flag pointing at the same key).
   const seen = new Set();
   return options.filter(o => {
@@ -564,40 +566,25 @@ async function submitForm(evaluatorType) {
 }
 
 // =================================================================
-// GM Approval dashboard
+// Executive Approval dashboard (approve only — no Service Charge here)
 // =================================================================
 async function renderGm() {
-  app.innerHTML = topbar("GM Approval") + `<div class="loading">Memuat data...</div>`;
-  const pool = await apiGet("getScPool", { month: state.month });
+  app.innerHTML = topbar("Executive Approval") + `<div class="loading">Memuat data...</div>`;
   const final = await apiGet("getFinalAppraisal", { month: state.month });
   if (final.error) {
-    app.innerHTML = topbar("GM Approval") + `<div class="card"><div class="error">Server error: ${final.error}</div></div>`;
+    app.innerHTML = topbar("Executive Approval") + `<div class="card"><div class="error">Server error: ${final.error}</div></div>`;
     return;
   }
   const list = final.staff || [];
-  const flagged = list.filter(s => s.status === "Underperform" && s.approvalStatus !== "Approved");
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
   const showMenuLink = availableScreens(state.user).length > 1;
 
-  app.innerHTML = topbar("GM Approval") + `
+  app.innerHTML = topbar("Executive Approval") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan appraisal (siklus kontrak jatuh di bulan ini)</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
       <div class="hint">Tiap staff siklus appraisal-nya beda-beda sesuai tanggal kontrak masing-masing — geser bulan ini kalau list di bawah kosong.</div>
-    </div>
-    <div class="card">
-      <h2>Total Service Charge — ${state.month}</h2>
-      <label>Total SC bulan ini (Rp)</label>
-      <input type="number" id="sc-input" value="${pool.found ? pool.totalSC : ""}" placeholder="150000000" />
-      <button class="secondary" onclick="saveTotalSC()">Simpan Total SC</button>
-      ${pool.found ? `
-        <table class="mini" style="margin-top:12px;">
-          <tr><td>Base share / staff</td><td>${idr(pool.baseShare)}</td></tr>
-          <tr><td>Pool total</td><td>${idr(pool.poolTotal)}</td></tr>
-          <tr><td># Performer</td><td>${pool.performerCount}</td></tr>
-          <tr><td>Pool share / performer</td><td>${idr(pool.poolShare)}</td></tr>
-        </table>` : ""}
     </div>
 
     <div class="card">
@@ -619,6 +606,40 @@ async function renderGm() {
           </div>
         </div>`).join("")}
       ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.</div>' : ""}
+    </div>`;
+}
+
+// =================================================================
+// Total Service Charge input — HR only
+// =================================================================
+async function renderScInput() {
+  app.innerHTML = topbar("Input Total Service Charge") + `<div class="loading">Memuat data...</div>`;
+  const pool = await apiGet("getScPool", { month: state.month });
+  if (pool.error) {
+    app.innerHTML = topbar("Input Total Service Charge") + `<div class="card"><div class="error">Server error: ${pool.error}</div></div>`;
+    return;
+  }
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  app.innerHTML = topbar("Input Total Service Charge") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <label>Bulan</label>
+      <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
+    </div>
+    <div class="card">
+      <h2>Total Service Charge — ${state.month}</h2>
+      <label>Total SC bulan ini (Rp)</label>
+      <input type="number" id="sc-input" value="${pool.found ? pool.totalSC : ""}" placeholder="150000000" />
+      <button class="secondary" onclick="saveTotalSC()">Simpan Total SC</button>
+      ${pool.found ? `
+        <table class="mini" style="margin-top:12px;">
+          <tr><td>Base share / staff</td><td>${idr(pool.baseShare)}</td></tr>
+          <tr><td>Pool total</td><td>${idr(pool.poolTotal)}</td></tr>
+          <tr><td># Performer</td><td>${pool.performerCount}</td></tr>
+          <tr><td>Pool share / performer</td><td>${idr(pool.poolShare)}</td></tr>
+        </table>` : ""}
     </div>`;
 }
 

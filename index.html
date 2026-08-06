@@ -693,6 +693,10 @@ async function renderGm() {
       state.decisionOptionsByTier[t] = res.options || [];
     }
   }
+  if (!state.oneOnOneOptions) {
+    const oneOnOneRes = await apiGet("getOneOnOneOptions", {});
+    state.oneOnOneOptions = oneOnOneRes.options || [];
+  }
 
   const decisionForm = (s) => {
     const opts = state.decisionOptionsByTier[s.tier] || [];
@@ -702,6 +706,11 @@ async function renderGm() {
         <select id="decision-select-${s.staffId}">
           <option value="">— pilih —</option>
           ${opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
+        </select>
+        <label>1-on-1 Status (wajib)</label>
+        <select id="oneonone-select-${s.staffId}">
+          <option value="">— pilih —</option>
+          ${state.oneOnOneOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
         </select>
         <label>Catatan (opsional, tapi disaranin diisi)</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
@@ -728,7 +737,7 @@ async function renderGm() {
             <div>
               <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
               <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)} · Final SC ${idr(s.finalSC)}</div>
-              ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${s.decision}</strong>${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
+              ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${s.decision}</strong> · 1-on-1: <strong>${s.oneOnOneStatus || "-"}</strong>${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
               <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
@@ -750,9 +759,11 @@ function toggleDecisionForm(staffId) {
 
 async function submitDecision(staffId) {
   const decision = document.getElementById(`decision-select-${staffId}`).value;
+  const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
   if (!decision) { showToast("Decision wajib dipilih dulu.", "error"); return; }
-  const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name, decision, notes });
+  if (!oneOnOneStatus) { showToast("1-on-1 Status wajib dipilih dulu.", "error"); return; }
+  const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name, decision, oneOnOneStatus, notes });
   if (res.error || res.success === false) { showToast("Gagal approve: " + (res.error || "unknown"), "error"); return; }
   showToast("Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.");
   renderGm();

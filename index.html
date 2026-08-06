@@ -69,6 +69,15 @@
     box-shadow: 0 2px 10px rgba(32, 48, 47, 0.04);
   }
   .card h2 { font-size: 15px; margin: 0 0 12px; font-weight: 700; }
+  .mode-banner {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+    padding: 10px 14px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .mode-banner .mode-label { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .mode-banner .mode-meta { font-size: 12px; opacity: 0.85; }
+  .mode-banner.mode-self { background: var(--green-bg); color: var(--green); }
+  .mode-banner.mode-leader { background: var(--amber-bg); color: var(--amber); }
+  .mode-banner.mode-hr { background: #E8E3F5; color: #6C4FB6; }
   label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px; }
   input[type=text], input[type=password], input[type=number], select {
     width: 100%; padding: 11px 14px; font-size: 15px; border: 1.5px solid var(--border);
@@ -460,7 +469,10 @@ async function renderAppraisalForm({ evaluatorType, target }) {
 
   app.innerHTML = topbar("Appraisal — " + target.name) + `
     <div class="card">
-      <div class="hint">${target.department !== "-" ? target.department : target.tier} · ${evaluatorType.toUpperCase()} appraisal · ${state.month}</div>
+      <div class="mode-banner mode-${evaluatorType}">
+        <span class="mode-label">${evaluatorType === "self" ? "Self Appraisal" : evaluatorType === "hr" ? "HR Appraisal" : "Leader / Management Appraisal"}</span>
+        <span class="mode-meta">${target.department !== "-" ? target.department : target.tier} · ${state.month}</span>
+      </div>
 
       <div class="section-title">Section A — Attitude</div>
       ${cfg.attitude.map(c => scoreRow(c.name, c.description)).join("")}

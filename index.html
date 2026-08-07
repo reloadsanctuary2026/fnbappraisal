@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-16</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-17</div>
 
 <script>
 // =================================================================
@@ -563,6 +563,72 @@ async function copyLeaderToHr(staffId, name) {
 // =================================================================
 // Appraisal form (shared by Self / Leader / Management / Executive / HR)
 // =================================================================
+async function renderMyAppraisalStatus(target) {
+  app.innerHTML = topbar("Status Appraisal Saya") + `<div class="loading">Memuat status...</div>`;
+  const res = await apiGet("getMyAppraisalStatus", { staffId: target.staffId });
+  if (!res.found) {
+    app.innerHTML = topbar("Status Appraisal Saya") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+
+  const checklistRow = (label, done) => `<span>${done ? "✅" : "⏳"} ${label}</span>`;
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+
+  let decisionBlock = "";
+  if (res.executiveDone && res.details) {
+    const d = res.details;
+    if (!state.decisionOptionsByTier || !state.decisionOptionsByTier[res.tier]) {
+      const dRes = await apiGet("getDecisionOptions", { tier: res.tier });
+      state.decisionOptionsByTier = state.decisionOptionsByTier || {};
+      state.decisionOptionsByTier[res.tier] = dRes.options || [];
+    }
+    if (!state.oneOnOneOptions) {
+      const oRes = await apiGet("getOneOnOneOptions", {});
+      state.oneOnOneOptions = oRes.options || [];
+    }
+    const decisionLabel = findLabel(state.decisionOptionsByTier[res.tier], d.decision);
+    const oneOnOneLabel = findLabel(state.oneOnOneOptions, d.oneOnOneStatus);
+    decisionBlock = `
+      <div class="card">
+        <h2>Hasil Appraisal Bulan Ini</h2>
+        <table class="mini">
+          <tr><td>Skor Self</td><td>${Number(d.selfTotal || 0).toFixed(1)}</td></tr>
+          <tr><td>Skor Leader/Management</td><td>${Number(d.leaderTotal || 0).toFixed(1)}</td></tr>
+          <tr><td>Skor HR</td><td>${Number(d.hrTotal || 0).toFixed(1)}</td></tr>
+          <tr><td>Skor Akhir</td><td>${Number(d.finalScore || 0).toFixed(1)}</td></tr>
+        </table>
+        <div class="mode-banner" style="background:var(--sand); margin-top:14px;">
+          <span class="mode-label" style="color:var(--teal);">Decision</span>
+        </div>
+        <div class="hint" style="font-size:14px; color:var(--text);"><strong>${decisionLabel}</strong></div>
+        ${d.mutationToPosition ? `<div class="hint" style="font-size:14px;">Mutasi: ${d.mutationFromPosition} → ${d.mutationToPosition}</div>` : ""}
+        ${d.extensionDuration ? `<div class="hint" style="font-size:14px;">Perpanjangan Probation/Kontrak: ${d.extensionDuration}</div>` : ""}
+        <div class="hint" style="font-size:14px; margin-top:8px;">1-on-1: <strong>${oneOnOneLabel}</strong></div>
+        ${d.decisionNotes ? `<div class="hint" style="font-size:14px; margin-top:8px;">Catatan: "${d.decisionNotes}"</div>` : ""}
+        <div class="hint" style="margin-top:10px; font-size:12px;">Disetujui oleh ${d.approvedBy || "-"}</div>
+      </div>`;
+  }
+
+  app.innerHTML = topbar("Status Appraisal Saya") + `
+    <div class="card">
+      <div class="hint" style="font-size:14px; margin-bottom:12px;">Appraisal kamu bulan ini (${res.month}) sudah terkirim dan sedang berjalan lewat proses berikut:</div>
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:14px;">
+        ${checklistRow("Self", res.selfDone)}
+        <span style="color:var(--border);">|</span>
+        ${checklistRow("Leader/Mgmt", res.leaderDone)}
+        <span style="color:var(--border);">|</span>
+        ${checklistRow("HR", res.hrDone)}
+        <span style="color:var(--border);">|</span>
+        ${checklistRow("Executive", res.executiveDone)}
+      </div>
+      ${!res.executiveDone ? '<div class="hint" style="margin-top:12px; font-size:13px;">Kamu akan dapat notifikasi (🔔) begitu semua tahap selesai dan hasilnya keluar.</div>' : ""}
+    </div>
+    ${decisionBlock}
+    <div class="card center">
+      <button class="secondary" onclick="logout()">Keluar</button>
+    </div>`;
+}
+
 async function renderAppraisalForm({ evaluatorType, target }) {
   state.targetStaff = target; // always keep this in sync so submitForm can read it reliably
   const subtitle = `${target.department && target.department !== "-" ? target.department : ""}${target.tier ? (target.department && target.department !== "-" ? " · " : "") + target.tier + " tier" : ""}`;
@@ -576,6 +642,10 @@ async function renderAppraisalForm({ evaluatorType, target }) {
     return;
   }
   if (!access.allowed) {
+    if (evaluatorType === "self" && access.reason === "max_attempts_reached") {
+      renderMyAppraisalStatus(target);
+      return;
+    }
     let msg;
     if (access.reason === "too_early") {
       msg = `Belum waktunya. Coba lagi mulai <strong>${access.retryDateLabel}</strong>.`;

@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-4</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-5</div>
 
 <script>
 // =================================================================
@@ -385,7 +385,7 @@ async function doLogin() {
 // If only one screen applies, skip straight to it; otherwise show a picker.
 function availableScreens(user) {
   const options = [];
-  if (user.department && user.department !== "-") options.push({ key: "self", label: "Appraisal saya sendiri" });
+  if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1) options.push({ key: "self", label: "Appraisal saya sendiri" });
   if (user.isLeader) options.push({ key: "myEvaluations", label: "Appraisal staff di tim saya" });
   if (user.isManagement) options.push({ key: "myEvaluations", label: "Appraisal staff/leader di area saya" });
   if (user.isExecutive) options.push({ key: "myEvaluations", label: "Appraisal management" });

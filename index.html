@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-6</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-7</div>
 
 <script>
 // =================================================================
@@ -782,7 +782,12 @@ async function confirmAndSubmit(evaluatorType) {
     showToast("Menyimpan...");
     const res = await apiPost("submitAppraisal", payload);
     if (res.success) {
-      showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
+      if (res.computeError) {
+        console.error("computeEvaluatorTotal error:", res.computeError);
+        showToast("Tersimpan, TAPI ada error hitung skor: " + res.computeError.slice(0, 150), "error");
+      } else {
+        showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
+      }
       state.scores = {};
       state._pendingBonusEntries = null;
       const options = availableScreens(state.user);

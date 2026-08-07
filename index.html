@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-2</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-3</div>
 
 <script>
 // =================================================================
@@ -698,19 +698,28 @@ function reviewBeforeSubmit(evaluatorType) {
   state._pendingBonusEntries = bonusEntries;
 
   const target = state.targetStaff;
-  const allRows = [
-    ...cfg.attitude.map(c => ({ label: c.name, score: state.scores[c.name] })),
-    ...cfg.discipline.map(c => ({ label: c.name, score: state.scores[c.name] })),
-    ...kpiCriteria.map(c => ({ label: c, score: state.scores[c] })),
-  ];
+  const sectionTable = (rows) => `<table class="mini">${rows.map(r => `<tr><td>${r.label}</td><td>${r.score}</td></tr>`).join("")}</table>`;
 
   app.innerHTML = topbar("Cek Jawaban — " + target.name) + `
     <div class="card">
       <div class="hint" style="font-size:14px; margin-bottom:14px;">Cek lagi jawaban di bawah sebelum kirim final. Appraisal ini <strong>cuma bisa dikirim 1 kali</strong> dan tidak bisa diubah lagi setelah terkirim.</div>
-      <table class="mini">
-        ${allRows.map(r => `<tr><td>${r.label}</td><td>${r.score}</td></tr>`).join("")}
-        ${bonusEntries.length ? bonusEntries.map(b => `<tr><td>${b.item}</td><td>${b.count}×</td></tr>`).join("") : ""}
-      </table>
+
+      <div class="section-title" style="margin-top:8px;">Section A — Attitude</div>
+      ${sectionTable(cfg.attitude.map(c => ({ label: c.name, score: state.scores[c.name] })))}
+
+      <div class="section-title">Section B — Discipline</div>
+      ${sectionTable(cfg.discipline.map(c => ({ label: c.name, score: state.scores[c.name] })))}
+
+      <div class="section-title">Section C — Performance KPI</div>
+      ${cfg.placeholder
+        ? `<div class="hint" style="background:var(--sand); padding:12px; border-radius:8px;">${cfg.placeholderNote}</div>`
+        : sectionTable(kpiCriteria.map(c => ({ label: c, score: state.scores[c] })))}
+
+      ${bonusEntries.length ? `
+        <div class="section-title">Section D — Bonus &amp; Deduction</div>
+        <table class="mini">${bonusEntries.map(b => `<tr><td>${b.item}</td><td>${b.count}×</td></tr>`).join("")}</table>
+      ` : ""}
+
       <div class="row-flex" style="margin-top:16px;">
         <button class="secondary" onclick="backToEditForm('${evaluatorType}')">&larr; Kembali, Cek Lagi</button>
         <button class="primary" onclick="confirmAndSubmit('${evaluatorType}')">Ya, Kirim Sekarang</button>

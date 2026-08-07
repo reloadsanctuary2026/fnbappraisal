@@ -603,11 +603,9 @@ function selectScore(el, criterion, value) {
 }
 
 function goBack() {
-  const options = availableScreens(state.user);
-  if (options.length > 1) state.screen = "roleMenu";
-  else if (state.user.isLeader || state.user.isManagement || state.user.isExecutive || state.user.isHR) state.screen = "myEvaluations";
-  else state.screen = "login";
-  render();
+  // Reuse the exact same routing logic as right after login — it already handles
+  // 0 / 1 / multi available screens correctly for every role combination.
+  goToRoleMenu();
 }
 
 async function submitForm(evaluatorType) {
@@ -712,7 +710,7 @@ async function renderGm() {
           <option value="">— pilih —</option>
           ${state.oneOnOneOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
         </select>
-        <label>Catatan (opsional, tapi disaranin diisi)</label>
+        <label>Catatan (wajib)</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
         <button class="primary" style="margin-top:10px;" onclick="submitDecision('${s.staffId}')">Konfirmasi Approval</button>
       </div>`;
@@ -763,6 +761,7 @@ async function submitDecision(staffId) {
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
   if (!decision) { showToast("Decision wajib dipilih dulu.", "error"); return; }
   if (!oneOnOneStatus) { showToast("1-on-1 Status wajib dipilih dulu.", "error"); return; }
+  if (!notes || !notes.trim()) { showToast("Catatan wajib diisi.", "error"); return; }
   const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name, decision, oneOnOneStatus, notes });
   if (res.error || res.success === false) { showToast("Gagal approve: " + (res.error || "unknown"), "error"); return; }
   showToast("Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.");

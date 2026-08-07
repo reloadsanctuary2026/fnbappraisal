@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-15</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-16</div>
 
 <script>
 // =================================================================
@@ -867,15 +867,36 @@ async function renderGm() {
     state.oneOnOneOptions = oneOnOneRes.options || [];
   }
 
+  if (!state.allPositionTitles) {
+    const posRes = await apiGet("getAllPositionTitles", {});
+    state.allPositionTitles = posRes.titles || [];
+  }
+
   const decisionForm = (s) => {
     const opts = state.decisionOptionsByTier[s.tier] || [];
     return `
       <div id="decision-form-${s.staffId}" style="display:none; padding:12px; margin-top:8px; background:var(--sand); border-radius:12px;">
         <label>Decision (wajib)</label>
-        <select id="decision-select-${s.staffId}">
+        <select id="decision-select-${s.staffId}" onchange="toggleDecisionExtras('${s.staffId}')">
           <option value="">— pilih —</option>
           ${opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
         </select>
+
+        <div id="extend-fields-${s.staffId}" style="display:none;">
+          <label>Berapa lama extend probation/kontrak-nya? (wajib)</label>
+          <input type="text" id="extension-duration-${s.staffId}" placeholder="Contoh: 3 bulan" />
+        </div>
+
+        <div id="mutation-fields-${s.staffId}" style="display:none;">
+          <label>Dari Posisi</label>
+          <input type="text" value="${s.jobTitle || s.department || s.tier}" disabled style="background:var(--border); opacity:0.7;" />
+          <label>Ke Posisi (wajib)</label>
+          <select id="mutation-to-${s.staffId}">
+            <option value="">— pilih —</option>
+            ${state.allPositionTitles.map(t => `<option value="${t}">${t}</option>`).join("")}
+          </select>
+        </div>
+
         <label>1-on-1 Status (wajib)</label>
         <select id="oneonone-select-${s.staffId}">
           <option value="">— pilih —</option>
@@ -912,7 +933,7 @@ async function renderGm() {
                 <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">Self ${Number(s.selfTotal || 0).toFixed(1)} · Leader/Mgmt ${Number(s.leaderTotal || 0).toFixed(1)} · HR ${Number(s.hrTotal || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">Dinilai Leader/Mgmt: <strong>${s.leaderEvaluatorName || "-"}</strong> · HR: <strong>${s.hrEvaluatorName || "-"}</strong></div>
-                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong> · ${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
+                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong>${s.mutationToPosition ? ` (${s.mutationFromPosition} → ${s.mutationToPosition})` : ""}${s.extensionDuration ? ` (perpanjangan: ${s.extensionDuration})` : ""} · ${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -963,6 +984,14 @@ function toggleDecisionForm(staffId) {
   if (el) el.style.display = el.style.display === "none" ? "block" : "none";
 }
 
+function toggleDecisionExtras(staffId) {
+  const decision = document.getElementById(`decision-select-${staffId}`).value;
+  const extendEl = document.getElementById(`extend-fields-${staffId}`);
+  const mutationEl = document.getElementById(`mutation-fields-${staffId}`);
+  if (extendEl) extendEl.style.display = decision === "extend_probation" ? "block" : "none";
+  if (mutationEl) mutationEl.style.display = decision === "demotion_mutation" ? "block" : "none";
+}
+
 async function submitDecision(staffId) {
   const decision = document.getElementById(`decision-select-${staffId}`).value;
   const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
@@ -970,7 +999,21 @@ async function submitDecision(staffId) {
   if (!decision) { showToast("Decision wajib dipilih dulu.", "error"); return; }
   if (!oneOnOneStatus) { showToast("1-on-1 Status wajib dipilih dulu.", "error"); return; }
   if (!notes || !notes.trim()) { showToast("Catatan wajib diisi.", "error"); return; }
-  const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name, decision, oneOnOneStatus, notes });
+
+  const payload = { month: state.month, staffId, approvedBy: state.user.name, decision, oneOnOneStatus, notes };
+
+  if (decision === "extend_probation") {
+    const extensionDuration = document.getElementById(`extension-duration-${staffId}`).value;
+    if (!extensionDuration || !extensionDuration.trim()) { showToast("Durasi extend wajib diisi.", "error"); return; }
+    payload.extensionDuration = extensionDuration;
+  }
+  if (decision === "demotion_mutation") {
+    const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
+    if (!mutationToPosition) { showToast("Posisi tujuan mutasi wajib dipilih.", "error"); return; }
+    payload.mutationToPosition = mutationToPosition;
+  }
+
+  const res = await apiPost("approveStaff", payload);
   if (res.error || res.success === false) { showToast("Gagal approve: " + friendlyError(res.error), "error"); return; }
   showToast("Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.");
   renderGm();

@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-13</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-14</div>
 
 <script>
 // =================================================================
@@ -905,11 +905,11 @@ async function renderGm() {
         <div data-search="${escapeAttr(s.name.toLowerCase())}" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px;">
           <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
             <div style="display:flex; align-items:flex-start; gap:10px;">
-              <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />
+              <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none; cursor:pointer;" onerror="this.style.display='none';" onclick="event.stopPropagation(); showPhotoModal(this.src, '${escapeAttr(s.name)}')" />
               <div id="photo-fallback-${s.staffId}" style="width:44px; height:44px; border-radius:10px; background:var(--sand); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:16px;">${s.name.charAt(0)}</div>
               <div>
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
-                <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)} · Final SC ${idr(s.finalSC)}</div>
+                <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong> · ${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
               </div>
             </div>
@@ -939,6 +939,21 @@ async function loadStaffPhotos(staffIds) {
       if (fallback) fallback.style.display = "none";
     }).catch(() => {});
   }
+}
+
+function showPhotoModal(src, name) {
+  const existing = document.getElementById("photo-modal");
+  if (existing) existing.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "photo-modal";
+  overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px;";
+  overlay.onclick = () => overlay.remove();
+  overlay.innerHTML = `
+    <div style="max-width:90%; max-height:90%; text-align:center;">
+      <img src="${src}" alt="${name}" style="max-width:100%; max-height:80vh; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.5);" />
+      <div style="color:#fff; margin-top:12px; font-weight:700;">${name}</div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 function toggleDecisionForm(staffId) {

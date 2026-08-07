@@ -565,11 +565,6 @@ async function renderAppraisalForm({ evaluatorType, target }) {
         <span class="mode-meta">${target.department !== "-" ? target.department : target.tier} · ${state.month}</span>
       </div>
 
-      ${state.submissionCount >= 1 ? `
-        <div class="hint" style="background:var(--amber-bg); color:var(--amber); padding:10px 14px; border-radius:12px; font-weight:600; margin-bottom:14px;">
-          ⚠️ Sudah pernah diisi ${state.submissionCount}× sebelumnya. Ini akan jadi isian ke-${state.submissionCount + 1} (maks 2×) dan akan menimpa data yang lama.
-        </div>` : ""}
-
       <div class="section-title">Section A — Attitude</div>
       ${cfg.attitude.map(c => scoreRow(c.name, c.description)).join("")}
 
@@ -610,15 +605,6 @@ function goBack() {
 
 async function submitForm(evaluatorType) {
   try {
-    if (state.submissionCount >= 1) {
-      const ok = confirm(
-        `Appraisal ini sudah pernah diisi ${state.submissionCount}× sebelumnya.\n\n` +
-        `Lanjut akan MENIMPA isian yang lama (ini isian ke-${state.submissionCount + 1}, maksimal 2×).\n\n` +
-        `Yakin mau lanjut?`
-      );
-      if (!ok) return;
-    }
-
     const cfg = state.kpiConfig;
     const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
     const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];

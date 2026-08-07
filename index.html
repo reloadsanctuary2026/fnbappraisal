@@ -597,6 +597,16 @@ function selectScore(el, criterion, value) {
   state.scores[criterion] = value;
 }
 
+function renderDoneScreen() {
+  app.innerHTML = topbar("Selesai") + `
+    <div class="card" style="text-align:center;">
+      <div style="font-size:40px; margin-bottom:8px;">✅</div>
+      <h2>Appraisal tersimpan!</h2>
+      <div class="hint" style="font-size:14px;">Tidak ada lagi yang perlu diisi bulan ini. Terima kasih!</div>
+      <button class="secondary" onclick="logout()" style="margin-top:16px;">Keluar</button>
+    </div>`;
+}
+
 function goBack() {
   // Reuse the exact same routing logic as right after login — it already handles
   // 0 / 1 / multi available screens correctly for every role combination.
@@ -643,7 +653,12 @@ async function submitForm(evaluatorType) {
     const res = await apiPost("submitAppraisal", payload);
     if (res.success) {
       showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
-      goBack();
+      const options = availableScreens(state.user);
+      if (options.length <= 1) {
+        renderDoneScreen();
+      } else {
+        goBack();
+      }
     } else {
       document.getElementById("form-error").textContent = "Gagal menyimpan: " + (res.error || res.reason || "unknown error");
     }

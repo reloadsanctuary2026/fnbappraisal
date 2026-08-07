@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-14</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-15</div>
 
 <script>
 // =================================================================
@@ -910,6 +910,8 @@ async function renderGm() {
               <div>
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
                 <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
+                <div class="dept" style="margin-top:2px;">Self ${Number(s.selfTotal || 0).toFixed(1)} · Leader/Mgmt ${Number(s.leaderTotal || 0).toFixed(1)} · HR ${Number(s.hrTotal || 0).toFixed(1)}</div>
+                <div class="dept" style="margin-top:2px;">Dinilai Leader/Mgmt: <strong>${s.leaderEvaluatorName || "-"}</strong> · HR: <strong>${s.hrEvaluatorName || "-"}</strong></div>
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong> · ${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
               </div>
             </div>

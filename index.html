@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-7</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-8</div>
 
 <script>
 // =================================================================
@@ -473,7 +473,15 @@ async function renderMyEvaluations() {
         <div>
           <div class="name">${s.name} <span style="font-weight:700; font-size:11px; color:var(--coral); text-transform:uppercase;">· ${s.slot === "hr" ? "HR" : "Leader/Mgmt"}</span></div>
           <div class="dept">${s.department !== "-" ? s.department : s.tier} · ${s.tier}</div>
-          <div class="dept" style="margin-top:2px;">Self appraisal orang ini: <strong style="color:${s.selfStatus === 'Submitted' ? 'var(--green)' : 'var(--amber)'};">${s.selfStatus === 'Submitted' ? 'Sudah' : 'Belum'}</strong></div>
+          <div class="dept" style="margin-top:4px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+            <span>${s.selfDone ? "✅" : "❌"} Self</span>
+            <span style="color:var(--border);">|</span>
+            <span>${s.leaderDone ? "✅" : "❌"} Leader/Mgmt</span>
+            <span style="color:var(--border);">|</span>
+            <span>${s.hrDone ? "✅" : "❌"} HR</span>
+            <span style="color:var(--border);">|</span>
+            <span>${s.executiveDone ? "✅" : "❌"} Executive</span>
+          </div>
         </div>
         <span class="badge ${s.status === 'Submitted' ? 'done' : 'pending'}">${statusLabelID(s.status)}</span>
       </div>`).join("")}

@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-1</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-2</div>
 
 <script>
 // =================================================================
@@ -202,6 +202,26 @@ function currentMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function statusLabelID(status) {
+  const map = { "Submitted": "Sudah Diisi", "Not started": "Belum Diisi", "Approved": "Disetujui", "Pending": "Menunggu" };
+  return map[status] || status;
+}
+
+function friendlyError(code) {
+  const map = {
+    decision_required: "Decision belum dipilih.",
+    one_on_one_status_required: "1-on-1 Status belum dipilih.",
+    notes_required: "Catatan belum diisi.",
+    outside_approval_window: "Belum waktunya approval (tanggal 22-28 tiap bulan).",
+    not_authorized: "Anda tidak punya akses untuk appraisal ini.",
+    evaluator_or_target_not_found: "Data tidak ditemukan, coba refresh halaman.",
+    appraisal_not_found: "Appraisal untuk staff ini belum lengkap.",
+    access_denied: "Akses ditolak.",
+    max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
+  };
+  return map[code] || code || "Terjadi kendala tidak dikenal";
+}
+
 function showToast(message, type = "success") {
   const existing = document.getElementById("toast");
   if (existing) existing.remove();
@@ -230,6 +250,8 @@ let state = {
   submissionCount: 0,    // how many times this target/slot has already been submitted
   unreadCount: 0,
   prevScreen: null,
+  _preserveScores: false,
+  _pendingBonusEntries: null,
 };
 
 const app = document.getElementById("app");
@@ -281,7 +303,7 @@ async function renderNotifications() {
   app.innerHTML = topbar("Notifikasi") + `<div class="loading">Memuat...</div>`;
   const res = await apiGet("getNotifications", { staffId: state.user.staffId });
   if (res.error) {
-    app.innerHTML = topbar("Notifikasi") + `<div class="card"><div class="error">Server error: ${res.error}</div></div>`;
+    app.innerHTML = topbar("Notifikasi") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const list = res.notifications || [];
@@ -337,7 +359,7 @@ async function doLogin() {
   try {
     const res = await apiGet("login", { nik });
     if (res.error) {
-      errEl.textContent = "Server error: " + res.error;
+      errEl.textContent = friendlyError(res.error);
       return;
     }
     if (!res.found) {
@@ -366,7 +388,7 @@ function availableScreens(user) {
   if (user.isManagement) options.push({ key: "review", label: "Review appraisal di area saya" });
   if (user.isHR) options.push({ key: "review", label: "Review semua appraisal" });
   if (user.isExecutive) options.push({ key: "gm", label: "Executive Approval" });
-  if (user.isHR) options.push({ key: "sc", label: "Input Total Service Charge" });
+  if (user.isHR) options.push({ key: "sc", label: "Input Total Service Charge (Bulanan)" });
   // De-dupe (someone could have more than one flag pointing at the same key).
   const seen = new Set();
   return options.filter(o => {
@@ -425,15 +447,19 @@ function logout() {
 // tier rules itself.
 // =================================================================
 async function renderMyEvaluations() {
-  app.innerHTML = topbar("Appraisal Saya") + `<div class="loading">Memuat daftar...</div>`;
+  app.innerHTML = topbar("Tugas Appraisal Saya") + `<div class="loading">Memuat daftar...</div>`;
   const res = await apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId });
   if (res.error) {
-    app.innerHTML = topbar("Appraisal Saya") + `<div class="card"><div class="error">Server error: ${res.error}</div></div>`;
+    app.innerHTML = topbar("Tugas Appraisal Saya") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const list = res.targets || [];
+  list.sort((a, b) => {
+    if (a.status === b.status) return a.name.localeCompare(b.name);
+    return a.status === "Not started" ? -1 : 1;
+  });
   const showMenuLink = availableScreens(state.user).length > 1;
-  app.innerHTML = topbar("Appraisal Saya") + `
+  app.innerHTML = topbar("Tugas Appraisal Saya") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
     <div class="hint">${list.length} orang — klik untuk isi appraisal</div>
     ${list.map(s => `
@@ -442,7 +468,7 @@ async function renderMyEvaluations() {
           <div class="name">${s.name} <span style="font-weight:700; font-size:11px; color:var(--coral); text-transform:uppercase;">· ${s.slot === "hr" ? "HR" : "Leader/Mgmt"}</span></div>
           <div class="dept">${s.department !== "-" ? s.department : s.tier} · ${s.tier}</div>
         </div>
-        <span class="badge ${s.status === 'Submitted' ? 'done' : 'pending'}">${s.status}</span>
+        <span class="badge ${s.status === 'Submitted' ? 'done' : 'pending'}">${statusLabelID(s.status)}</span>
       </div>`).join("")}
     ${!list.length ? '<div class="hint">Tidak ada yang perlu di-appraisal saat ini.</div>' : ""}
   `;
@@ -459,7 +485,7 @@ async function renderReview() {
   app.innerHTML = topbar("Review Appraisal") + `<div class="loading">Memuat data...</div>`;
   const res = await apiGet("getReviewData", { reviewerId: state.user.staffId });
   if (res.error) {
-    app.innerHTML = topbar("Review Appraisal") + `<div class="card"><div class="error">Server error: ${res.error}</div></div>`;
+    app.innerHTML = topbar("Review Appraisal") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const rows = res.rows || [];
@@ -477,7 +503,7 @@ async function renderReview() {
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
           <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
-          <span class="badge ${r.approvalStatus === 'Approved' ? 'done' : 'pending'}">${r.approvalStatus || 'Pending'}</span>
+          <span class="badge ${r.approvalStatus === 'Approved' ? 'done' : 'pending'}">${statusLabelID(r.approvalStatus || 'Pending')}</span>
         </div>
       </div>`).join("")}
     ${!rows.length ? '<div class="hint">Belum ada data appraisal di scope kamu.</div>' : ""}
@@ -502,7 +528,7 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   const access = await apiGet("checkAccess", { staffId: target.staffId, evaluatorType });
   if (access.error) {
     app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
-      <div class="card"><div class="error">Server error: ${access.error}</div>
+      <div class="card"><div class="error">${friendlyError(access.error)}</div>
       <button class="secondary" onclick="goBack()">Kembali</button></div>`;
     return;
   }
@@ -532,13 +558,17 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   const cfg = await apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId });
   if (cfg.error) {
     app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
-      <div class="card"><div class="error">Server error: ${cfg.error}</div>
+      <div class="card"><div class="error">${friendlyError(cfg.error)}</div>
       <button class="secondary" onclick="goBack()">Kembali</button></div>`;
     return;
   }
   state.kpiConfig = cfg;
-  state.scores = {};
+  if (!state._preserveScores) state.scores = {};
+  state._preserveScores = false;
+  renderFormBody(evaluatorType, target, cfg);
+}
 
+function renderFormBody(evaluatorType, target, cfg) {
   const scoreRow = (criterion, desc) => `
     <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
       <div class="name">${criterion}</div>
@@ -584,11 +614,31 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       `}
 
       <div class="error" id="form-error"></div>
-      <button class="primary" onclick="submitForm('${evaluatorType}')" style="margin-top: 14px;">Submit Appraisal</button>
+      <button class="primary" onclick="reviewBeforeSubmit('${evaluatorType}')" style="margin-top: 14px;">Submit Appraisal</button>
       <div class="center" style="margin-top: 10px;">
-        <button class="ghost" onclick="goBack()">Batal</button>
+        <button class="ghost" onclick="cancelForm()">Batal</button>
       </div>
     </div>`;
+
+  // Re-apply previously selected pills + bonus values (used when returning from the review screen).
+  Object.keys(state.scores).forEach(criterion => {
+    const row = app.querySelector(`.criterion-row[data-criterion="${CSS.escape(criterion)}"]`);
+    if (!row) return;
+    const val = state.scores[criterion];
+    row.querySelectorAll(".score-opt").forEach(opt => {
+      if (Number(opt.textContent) === val) opt.classList.add("selected");
+    });
+  });
+  if (state._pendingBonusEntries) {
+    state._pendingBonusEntries.forEach((b, i) => {
+      const idx = cfg.bonus.findIndex(bc => bc.item === b.item);
+      if (idx === -1) return;
+      const countEl = document.querySelector(`.bonus-count[data-idx="${idx}"]`);
+      const notesEl = document.querySelector(`.bonus-notes[data-idx="${idx}"]`);
+      if (countEl) countEl.value = b.count;
+      if (notesEl) notesEl.value = b.notes || "";
+    });
+  }
 }
 
 function selectScore(el, criterion, value) {
@@ -603,7 +653,7 @@ function renderDoneScreen() {
     <div class="card" style="text-align:center;">
       <div style="font-size:40px; margin-bottom:8px;">✅</div>
       <h2>Appraisal tersimpan!</h2>
-      <div class="hint" style="font-size:14px;">Tidak ada lagi yang perlu diisi bulan ini. Terima kasih!</div>
+      <div class="hint" style="font-size:14px;">Jawaban Anda sudah tercatat dan akan diproses ke tahap berikutnya secara otomatis. Anda akan dapat notifikasi (🔔) kalau ada keputusan appraisal yang keluar. Tidak ada lagi yang perlu diisi bulan ini — terima kasih!</div>
       <button class="secondary" onclick="logout()" style="margin-top:16px;">Keluar</button>
     </div>`;
 }
@@ -614,31 +664,72 @@ function goBack() {
   goToRoleMenu();
 }
 
-async function submitForm(evaluatorType) {
+function cancelForm() {
+  if (Object.keys(state.scores).length > 0) {
+    const ok = confirm("Jawaban yang sudah diisi akan hilang kalau keluar sekarang. Yakin mau keluar?");
+    if (!ok) return;
+  }
+  state.scores = {};
+  state._pendingBonusEntries = null;
+  goBack();
+}
+
+function reviewBeforeSubmit(evaluatorType) {
+  const cfg = state.kpiConfig;
+  const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
+  const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];
+  const missing = allCriteria.filter(c => !(c in state.scores));
+  if (missing.length) {
+    document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
+    return;
+  }
+
+  const bonusEntries = [];
+  if (evaluatorType !== "self") {
+    cfg.bonus.forEach((b, i) => {
+      const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
+      const count = Number(countInput ? countInput.value : 0) || 0;
+      if (count > 0) {
+        const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
+        bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
+      }
+    });
+  }
+  state._pendingBonusEntries = bonusEntries;
+
+  const target = state.targetStaff;
+  const allRows = [
+    ...cfg.attitude.map(c => ({ label: c.name, score: state.scores[c.name] })),
+    ...cfg.discipline.map(c => ({ label: c.name, score: state.scores[c.name] })),
+    ...kpiCriteria.map(c => ({ label: c, score: state.scores[c] })),
+  ];
+
+  app.innerHTML = topbar("Cek Jawaban — " + target.name) + `
+    <div class="card">
+      <div class="hint" style="font-size:14px; margin-bottom:14px;">Cek lagi jawaban di bawah sebelum kirim final. Appraisal ini <strong>cuma bisa dikirim 1 kali</strong> dan tidak bisa diubah lagi setelah terkirim.</div>
+      <table class="mini">
+        ${allRows.map(r => `<tr><td>${r.label}</td><td>${r.score}</td></tr>`).join("")}
+        ${bonusEntries.length ? bonusEntries.map(b => `<tr><td>${b.item}</td><td>${b.count}×</td></tr>`).join("") : ""}
+      </table>
+      <div class="row-flex" style="margin-top:16px;">
+        <button class="secondary" onclick="backToEditForm('${evaluatorType}')">&larr; Kembali, Cek Lagi</button>
+        <button class="primary" onclick="confirmAndSubmit('${evaluatorType}')">Ya, Kirim Sekarang</button>
+      </div>
+    </div>`;
+}
+
+function backToEditForm(evaluatorType) {
+  state._preserveScores = true;
+  renderFormBody(evaluatorType, state.targetStaff, state.kpiConfig);
+}
+
+async function confirmAndSubmit(evaluatorType) {
   try {
     const cfg = state.kpiConfig;
     const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
-    const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];
-    const missing = allCriteria.filter(c => !(c in state.scores));
-    if (missing.length) {
-      document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
-      return;
-    }
-    const bonusEntries = [];
-    if (evaluatorType !== "self") {
-      cfg.bonus.forEach((b, i) => {
-        const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
-        const count = Number(countInput ? countInput.value : 0) || 0;
-        if (count > 0) {
-          const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
-          bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
-        }
-      });
-    }
-
     const target = state.targetStaff;
     if (!target || !target.staffId) {
-      document.getElementById("form-error").textContent = "Error internal: target appraisal tidak ditemukan. Coba kembali dan buka ulang form ini.";
+      showToast("Error internal: target appraisal tidak ditemukan. Coba kembali dan buka ulang form ini.", "error");
       return;
     }
     const payload = {
@@ -648,12 +739,14 @@ async function submitForm(evaluatorType) {
       attitudeScores: cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
       disciplineScores: cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
       kpiScores: kpiCriteria.map(c => ({ criterion: c, score: state.scores[c] })),
-      bonusEntries,
+      bonusEntries: state._pendingBonusEntries || [],
     };
-    document.getElementById("form-error").textContent = "Menyimpan...";
+    showToast("Menyimpan...");
     const res = await apiPost("submitAppraisal", payload);
     if (res.success) {
       showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
+      state.scores = {};
+      state._pendingBonusEntries = null;
       const options = availableScreens(state.user);
       if (options.length <= 1) {
         renderDoneScreen();
@@ -661,12 +754,11 @@ async function submitForm(evaluatorType) {
         goBack();
       }
     } else {
-      document.getElementById("form-error").textContent = "Gagal menyimpan: " + (res.error || res.reason || "unknown error");
+      showToast("Gagal menyimpan: " + friendlyError(res.error || res.reason), "error");
     }
   } catch (err) {
-    console.error("submitForm crashed:", err);
-    const el = document.getElementById("form-error");
-    if (el) el.textContent = "Terjadi error tak terduga: " + err.message + " (cek Console F12 untuk detail)";
+    console.error("confirmAndSubmit crashed:", err);
+    showToast("Terjadi error tak terduga: " + err.message, "error");
   }
 }
 
@@ -677,7 +769,7 @@ async function renderGm() {
   app.innerHTML = topbar("Executive Approval") + `<div class="loading">Memuat data...</div>`;
   const final = await apiGet("getFinalAppraisal", { month: state.month });
   if (final.error) {
-    app.innerHTML = topbar("Executive Approval") + `<div class="card"><div class="error">Server error: ${final.error}</div></div>`;
+    app.innerHTML = topbar("Executive Approval") + `<div class="card"><div class="error">${friendlyError(final.error)}</div></div>`;
     return;
   }
   const list = final.staff || [];
@@ -729,7 +821,7 @@ async function renderGm() {
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
         <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
-        <button class="secondary" onclick="approveAll()">Approve semua (kecuali flagged) — default "Approved, Lanjut"</button>
+        <button class="secondary" onclick="approveAll()">Approve Semua (kecuali yang di bawah standar) — default "Approved, Lanjut"</button>
       </div>
       ${list.map(s => `
         <div style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px;">
@@ -742,7 +834,7 @@ async function renderGm() {
             <div style="display:flex; align-items:center; gap:8px;">
               <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
               ${s.approvalStatus === 'Approved'
-                ? `<span class="badge done">Approved</span>`
+                ? `<span class="badge done">Disetujui</span>`
                 : `<button class="secondary" onclick="toggleDecisionForm('${s.staffId}')">Approve</button>`}
             </div>
           </div>
@@ -765,7 +857,7 @@ async function submitDecision(staffId) {
   if (!oneOnOneStatus) { showToast("1-on-1 Status wajib dipilih dulu.", "error"); return; }
   if (!notes || !notes.trim()) { showToast("Catatan wajib diisi.", "error"); return; }
   const res = await apiPost("approveStaff", { month: state.month, staffId, approvedBy: state.user.name, decision, oneOnOneStatus, notes });
-  if (res.error || res.success === false) { showToast("Gagal approve: " + (res.error || "unknown"), "error"); return; }
+  if (res.error || res.success === false) { showToast("Gagal approve: " + friendlyError(res.error), "error"); return; }
   showToast("Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.");
   renderGm();
 }
@@ -774,16 +866,16 @@ async function submitDecision(staffId) {
 // Total Service Charge input — HR only
 // =================================================================
 async function renderScInput() {
-  app.innerHTML = topbar("Input Total Service Charge") + `<div class="loading">Memuat data...</div>`;
+  app.innerHTML = topbar("Input Total Service Charge (Bulanan)") + `<div class="loading">Memuat data...</div>`;
   const pool = await apiGet("getScPool", { month: state.month });
   if (pool.error) {
-    app.innerHTML = topbar("Input Total Service Charge") + `<div class="card"><div class="error">Server error: ${pool.error}</div></div>`;
+    app.innerHTML = topbar("Input Total Service Charge (Bulanan)") + `<div class="card"><div class="error">${friendlyError(pool.error)}</div></div>`;
     return;
   }
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
   const showMenuLink = availableScreens(state.user).length > 1;
 
-  app.innerHTML = topbar("Input Total Service Charge") + `
+  app.innerHTML = topbar("Input Total Service Charge (Bulanan)") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan</label>
@@ -814,13 +906,13 @@ async function saveTotalSC() {
   const val = document.getElementById("sc-input").value;
   if (!val) return;
   const res = await apiPost("setTotalSC", { month: state.month, totalSC: Number(val), inputBy: state.user.name });
-  if (res.error) { showToast("Gagal simpan Total SC: " + res.error, "error"); return; }
+  if (res.error) { showToast("Gagal simpan Total SC: " + friendlyError(res.error), "error"); return; }
   showToast("Total SC tersimpan!");
   renderScInput();
 }
 async function approveAll() {
   const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
-  if (res.error) { showToast("Gagal approve semua: " + res.error, "error"); return; }
+  if (res.error) { showToast("Gagal approve semua: " + friendlyError(res.error), "error"); return; }
   showToast(`${res.approvedCount || 0} appraisal ter-approve! Notifikasi terkirim.`);
   renderGm();
 }

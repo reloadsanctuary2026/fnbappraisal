@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-8</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-11</div>
 
 <script>
 // =================================================================
@@ -386,12 +386,12 @@ async function doLogin() {
 function availableScreens(user) {
   const options = [];
   if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1) options.push({ key: "self", label: "Appraisal saya sendiri" });
-  if (user.isLeader) options.push({ key: "myEvaluations", label: "Appraisal staff di tim saya" });
-  if (user.isManagement) options.push({ key: "myEvaluations", label: "Appraisal staff/leader di area saya" });
-  if (user.isExecutive) options.push({ key: "myEvaluations", label: "Appraisal management" });
-  if (user.isHR) options.push({ key: "myEvaluations", label: "Appraisal & review (HR)" });
-  if (user.isManagement) options.push({ key: "review", label: "Review appraisal di area saya" });
-  if (user.isHR) options.push({ key: "review", label: "Review semua appraisal" });
+  if (user.isLeader) options.push({ key: "myEvaluations", label: "Isi Appraisal Staff di Tim Saya" });
+  if (user.isManagement) options.push({ key: "myEvaluations", label: "Isi Appraisal Staff/Leader di Area Saya" });
+  if (user.isExecutive) options.push({ key: "myEvaluations", label: "Isi Appraisal Management" });
+  if (user.isHR) options.push({ key: "myEvaluations", label: "Isi Appraisal (Tugas HR)" });
+  if (user.isManagement) options.push({ key: "review", label: "Lihat Hasil Appraisal di Area Saya (Read-Only)" });
+  if (user.isHR) options.push({ key: "review", label: "Lihat Semua Hasil Appraisal (Read-Only)" });
   if (user.isExecutive) options.push({ key: "gm", label: "Executive Approval" });
   if (user.isHR) options.push({ key: "sc", label: "Input Total Service Charge (Bulanan)" });
   // De-dupe (someone could have more than one flag pointing at the same key).
@@ -483,7 +483,12 @@ async function renderMyEvaluations() {
             <span>${s.executiveDone ? "✅" : "❌"} Executive</span>
           </div>
         </div>
-        <span class="badge ${s.status === 'Submitted' ? 'done' : 'pending'}">${statusLabelID(s.status)}</span>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+          <span class="badge ${s.status === 'Submitted' ? 'done' : 'pending'}">${statusLabelID(s.status)}</span>
+          ${s.slot === "hr" && s.leaderDone && s.status !== "Submitted" ? `
+            <button class="secondary" style="font-size:11px; padding:6px 10px; white-space:nowrap;" onclick="event.stopPropagation(); copyLeaderToHr('${s.staffId}', '${escapeAttr(s.name)}')">Samakan dgn Leader/Mgmt</button>
+          ` : ""}
+        </div>
       </div>`).join("")}
     ${!list.length ? '<div class="hint">Tidak ada yang perlu di-appraisal saat ini.</div>' : ""}
   `;
@@ -538,6 +543,21 @@ function openForm(evaluatorType, staffId, name, department, tier) {
   state.targetStaff = { staffId, name, department, tier };
   state.screen = "form";
   render();
+}
+
+async function copyLeaderToHr(staffId, name) {
+  const ok = confirm(`Yakin mau samakan appraisal HR untuk ${name} dengan hasil Leader/Management?\n\nIni langsung submit tanpa isi form manual, dan cuma bisa dipakai 1x (sama seperti appraisal biasa).`);
+  if (!ok) return;
+  showToast("Menyalin...");
+  const res = await apiPost("copyLeaderToHr", { staffId, evaluatorId: state.user.staffId });
+  if (res.error || res.success === false) { showToast("Gagal: " + friendlyError(res.error || res.reason), "error"); return; }
+  if (res.computeError) {
+    console.error("computeEvaluatorTotal error:", res.computeError);
+    showToast("Tersalin, TAPI ada error hitung skor: " + res.computeError.slice(0, 150), "error");
+  } else {
+    showToast(`Appraisal HR untuk ${name} disamakan dengan Leader/Management!`);
+  }
+  renderMyEvaluations();
 }
 
 // =================================================================
@@ -798,11 +818,17 @@ async function confirmAndSubmit(evaluatorType) {
       }
       state.scores = {};
       state._pendingBonusEntries = null;
-      const options = availableScreens(state.user);
-      if (options.length <= 1) {
-        renderDoneScreen();
+      if (evaluatorType !== "self") {
+        // Came from "Tugas Appraisal Saya" — land back there directly so the person
+        // can keep appraising the next staff quickly, instead of bouncing to the menu.
+        renderMyEvaluations();
       } else {
-        goBack();
+        const options = availableScreens(state.user);
+        if (options.length <= 1) {
+          renderDoneScreen();
+        } else {
+          goBack();
+        }
       }
     } else {
       showToast("Gagal menyimpan: " + friendlyError(res.error || res.reason), "error");

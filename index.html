@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-23</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-24</div>
 
 <script>
 // =================================================================
@@ -675,6 +675,13 @@ async function renderMyAppraisalStatus(target) {
           <tr><td>Skor HR</td><td>${Number(d.hrTotal || 0).toFixed(1)}</td></tr>
           <tr><td>Skor Akhir</td><td>${Number(d.finalScore || 0).toFixed(1)}</td></tr>
         </table>
+        <div class="hint" style="font-weight:700; color:var(--teal); margin:14px 0 6px;">Breakdown per Section (biar tau bagian mana yang lemah)</div>
+        <table class="mini">
+          <tr><td>Section A — Attitude</td><td>${Number(d.sectionABlend || 0).toFixed(1)} / 30</td></tr>
+          <tr><td>Section B — Discipline</td><td>${Number(d.sectionBBlend || 0).toFixed(1)} / 30</td></tr>
+          <tr><td>Section C — Performance KPI</td><td>${Number(d.sectionCBlend || 0).toFixed(1)} / 40</td></tr>
+          <tr><td>Section D — Bonus/Deduction</td><td>${Number(d.sectionDBlend || 0) >= 0 ? "+" : ""}${Number(d.sectionDBlend || 0).toFixed(1)}</td></tr>
+        </table>
         <div class="mode-banner" style="background:var(--sand); margin-top:14px;">
           <span class="mode-label" style="color:var(--teal);">Decision</span>
         </div>
@@ -736,6 +743,7 @@ async function renderMyAppraisalHistory(staffId) {
         <div>
           <div class="name">${h.month}</div>
           <div class="dept">Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}</div>
+          <div class="dept" style="margin-top:2px; font-size:11px;">Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}</div>
           ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findLabel(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
         </div>
         <span class="badge ${h.status === 'Performer' ? 'performer' : 'underperform'}">${h.status}</span>
@@ -816,6 +824,15 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   state.kpiConfig = cfg;
   if (!state._preserveScores) state.scores = {};
   state._preserveScores = false;
+
+  // For anyone evaluating someone ELSE (not self), pull that person's own Self
+  // scores as reference context, if they've already submitted it.
+  state.selfReference = null;
+  if (evaluatorType !== "self") {
+    const selfRes = await apiGet("getSelfScoresForTarget", { staffId: target.staffId });
+    if (selfRes.found) state.selfReference = selfRes.scores;
+  }
+
   renderFormBody(evaluatorType, target, cfg);
 }
 
@@ -824,7 +841,7 @@ function renderFormBody(evaluatorType, target, cfg) {
 
   const scoreRow = (criterion, desc) => `
     <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
-      <div class="name">${criterion}</div>
+      <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ""}
       <div class="score-select">
         ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
@@ -852,6 +869,10 @@ function renderFormBody(evaluatorType, target, cfg) {
       <div class="hint" style="background:var(--sand); padding:9px 12px; border-radius:10px; margin-bottom:8px;">
         Skor: <strong>1</strong> Sangat Kurang · <strong>2</strong> Kurang · <strong>3</strong> Cukup · <strong>4</strong> Baik · <strong>5</strong> Sangat Baik
       </div>
+      ${evaluatorType !== "self" ? (state.selfReference
+        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah isi Self Appraisal — skornya ditampilkan sebagai referensi di tiap kriteria (label "Self: X").</div>`
+        : `<div class="hint" style="background:var(--amber-bg); color:var(--amber); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">⚠️ ${target.name} belum isi Self Appraisal — kamu menilai tanpa referensi dari dia.</div>`
+      ) : ""}
       <div class="hint" id="progress-counter" style="text-align:right; font-weight:700; color:var(--teal); margin-bottom:14px;"></div>
 
       <div class="section-title">Section A — Attitude</div>

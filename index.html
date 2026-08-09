@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-19</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-20</div>
 
 <script>
 // =================================================================
@@ -264,6 +264,8 @@ const app = document.getElementById("app");
 function render() {
   if (state.screen === "login") return renderLogin();
   if (state.screen === "roleMenu") return renderRoleMenu();
+  if (state.screen === "dashboard") return renderDashboard();
+  if (state.screen === "history") return renderMyAppraisalHistory(state.user.staffId);
   if (state.screen === "self") return renderAppraisalForm({ evaluatorType: "self", target: state.user });
   if (state.screen === "myEvaluations") return renderMyEvaluations();
   if (state.screen === "review") return renderReview();
@@ -385,7 +387,10 @@ async function doLogin() {
 // If only one screen applies, skip straight to it; otherwise show a picker.
 function availableScreens(user) {
   const options = [];
-  if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1) options.push({ key: "self", label: "Isi Appraisal — Diri Sendiri" });
+  if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1) {
+    options.push({ key: "self", label: "Isi Appraisal — Diri Sendiri" });
+    options.push({ key: "history", label: "Riwayat Appraisal Saya" });
+  }
   if (user.isLeader) options.push({ key: "myEvaluations", label: "Isi Appraisal — Staff Tim Saya" });
   if (user.isManagement) options.push({ key: "myEvaluations", label: "Isi Appraisal — Staff & Leader Area Saya" });
   if (user.isExecutive) options.push({ key: "myEvaluations", label: "Isi Appraisal — Management" });
@@ -405,6 +410,16 @@ function availableScreens(user) {
 
 function goToRoleMenu() {
   const options = availableScreens(state.user);
+  const hasSelfCapability = ["Staff", "Leader", "Management"].indexOf(state.user.tier) !== -1;
+
+  if (hasSelfCapability) {
+    // Always land on the personal dashboard (chart + menu) — never auto-skip past it,
+    // since these people always have both Self Appraisal and Riwayat available.
+    state.screen = "dashboard";
+    render();
+    return;
+  }
+
   if (options.length === 0) {
     app.innerHTML = topbar("Akses belum diatur") + `
       <div class="card">
@@ -431,6 +446,27 @@ function renderRoleMenu() {
   app.innerHTML = topbar("Pilih menu") + `
     <div class="card">
       <div class="hint">${state.user.name} punya lebih dari satu akses:</div>
+      ${options.map(o => `<div class="staff-row" onclick="goToScreen('${o.key}')"><div class="name">${o.label}</div></div>`).join("")}
+    </div>`;
+}
+
+async function renderDashboard() {
+  app.innerHTML = topbar("Dashboard Saya") + `<div class="loading">Memuat...</div>`;
+  const res = await apiGet("getMyAppraisalHistory", { staffId: state.user.staffId });
+  const history = res.history || [];
+  const options = availableScreens(state.user);
+
+  let chartBlock = "";
+  if (history.length > 1) {
+    chartBlock = `<div class="card"><div class="hint" style="font-weight:700; color:var(--teal); margin-bottom:8px;">Skor Appraisal Saya</div>${buildScoreChartSvg(history)}</div>`;
+  } else if (history.length === 1) {
+    chartBlock = `<div class="card"><div class="hint">Skor bulan ${history[0].month}: <strong style="color:var(--teal);">${Number(history[0].finalScore || 0).toFixed(1)}</strong></div><div class="hint" style="font-size:12px; margin-top:4px;">Grafik akan muncul begitu ada 2 bulan data atau lebih.</div></div>`;
+  } else {
+    chartBlock = `<div class="card"><div class="hint">Belum ada riwayat skor — grafik akan muncul begitu appraisal pertamamu selesai diproses.</div></div>`;
+  }
+
+  app.innerHTML = topbar("Dashboard Saya") + chartBlock + `
+    <div class="card">
       ${options.map(o => `<div class="staff-row" onclick="goToScreen('${o.key}')"><div class="name">${o.label}</div></div>`).join("")}
     </div>`;
 }
@@ -465,7 +501,7 @@ async function renderMyEvaluations() {
   });
   const showMenuLink = availableScreens(state.user).length > 1;
   app.innerHTML = topbar("Isi Appraisal") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     ${list.length > 5 ? '<input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" style="margin-bottom:10px;" />' : ""}
     <div class="hint">${list.length} orang — klik untuk isi appraisal</div>
     ${list.map(s => `
@@ -520,7 +556,7 @@ async function renderReview() {
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
 
   app.innerHTML = topbar("Lihat Appraisal") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     ${rows.length > 5 ? '<input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" style="margin-bottom:10px;" />' : ""}
     <div class="hint">${rows.length} appraisal record — read only</div>
     ${rows.map(r => `
@@ -626,6 +662,7 @@ async function renderMyAppraisalStatus(target) {
     ${decisionBlock}
     <div class="card center">
       <button class="secondary" onclick="renderMyAppraisalHistory('${target.staffId}')" style="margin-bottom:10px;">📈 Lihat Riwayat Appraisal Saya</button><br/>
+      <button class="secondary" onclick="goToRoleMenu()" style="margin-bottom:10px;">Kembali ke Dashboard</button><br/>
       <button class="secondary" onclick="logout()">Keluar</button>
     </div>`;
 }
@@ -1030,7 +1067,7 @@ async function renderGm() {
   };
 
   app.innerHTML = topbar("Approve Appraisal") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan appraisal</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
@@ -1154,7 +1191,7 @@ async function renderScInput() {
   const showMenuLink = availableScreens(state.user).length > 1;
 
   app.innerHTML = topbar("Input Service Charge") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToScreen(\'roleMenu\')">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />

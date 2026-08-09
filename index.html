@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-20</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-21</div>
 
 <script>
 // =================================================================
@@ -673,6 +673,14 @@ async function renderMyAppraisalHistory(staffId) {
   if (res.error) {
     app.innerHTML = topbar("Riwayat Appraisal Saya") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
+  }
+
+  // Make sure decision labels are loaded — this screen can be opened directly from the
+  // Dashboard, without ever visiting a screen that would've fetched these already.
+  state.decisionOptionsByTier = state.decisionOptionsByTier || {};
+  if (state.user.tier && !state.decisionOptionsByTier[state.user.tier]) {
+    const dRes = await apiGet("getDecisionOptions", { tier: state.user.tier });
+    state.decisionOptionsByTier[state.user.tier] = dRes.options || [];
   }
   const history = res.history || [];
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");

@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-06-17</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-18</div>
 
 <script>
 // =================================================================
@@ -625,8 +625,59 @@ async function renderMyAppraisalStatus(target) {
     </div>
     ${decisionBlock}
     <div class="card center">
+      <button class="secondary" onclick="renderMyAppraisalHistory('${target.staffId}')" style="margin-bottom:10px;">📈 Lihat Riwayat Appraisal Saya</button><br/>
       <button class="secondary" onclick="logout()">Keluar</button>
     </div>`;
+}
+
+async function renderMyAppraisalHistory(staffId) {
+  app.innerHTML = topbar("Riwayat Appraisal Saya") + `<div class="loading">Memuat riwayat...</div>`;
+  const res = await apiGet("getMyAppraisalHistory", { staffId });
+  if (res.error) {
+    app.innerHTML = topbar("Riwayat Appraisal Saya") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  const history = res.history || [];
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+
+  app.innerHTML = topbar("Riwayat Appraisal Saya") + `
+    <button class="ghost" onclick="goBackFromHistory()">&larr; Kembali</button>
+    ${history.length > 1 ? `<div class="card">${buildScoreChartSvg(history)}</div>` : ""}
+    <div class="hint" style="margin-top:8px;">${history.length} bulan tercatat</div>
+    ${history.slice().reverse().map(h => `
+      <div class="staff-row" style="cursor:default;">
+        <div>
+          <div class="name">${h.month}</div>
+          <div class="dept">Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}</div>
+          ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findLabel(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
+        </div>
+        <span class="badge ${h.status === 'Performer' ? 'performer' : 'underperform'}">${h.status}</span>
+      </div>`).join("")}
+    ${!history.length ? '<div class="hint">Belum ada riwayat appraisal.</div>' : ""}
+  `;
+}
+
+function buildScoreChartSvg(history) {
+  const width = 600, height = 220, padTop = 24, padBottom = 30, padSide = 30;
+  const innerH = height - padTop - padBottom;
+  const stepX = history.length > 1 ? (width - padSide * 2) / (history.length - 1) : 0;
+  const yFor = (score) => padTop + innerH - (Math.max(0, Math.min(100, Number(score) || 0)) / 100) * innerH;
+  const points = history.map((h, i) => ({ x: padSide + i * stepX, y: yFor(h.finalScore), month: h.month, score: Number(h.finalScore || 0) }));
+  const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
+  const thresholdY = yFor(60);
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">
+      <line x1="${padSide}" y1="${thresholdY.toFixed(1)}" x2="${width - padSide}" y2="${thresholdY.toFixed(1)}" stroke="#D98A2B" stroke-dasharray="4 4" stroke-width="1.2" />
+      <text x="${width - padSide}" y="${(thresholdY - 6).toFixed(1)}" text-anchor="end" font-size="10" fill="#D98A2B">Threshold 60</text>
+      <path d="${pathD}" fill="none" stroke="#0E4749" stroke-width="2.5" />
+      ${points.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${p.score >= 60 ? "#2F9E6E" : "#E2574C"}" />`).join("")}
+      ${points.map(p => `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="10" fill="#8A7B6C">${p.month.slice(2)}</text>`).join("")}
+    </svg>`;
+}
+
+function goBackFromHistory() {
+  goToRoleMenu();
 }
 
 async function renderAppraisalForm({ evaluatorType, target }) {

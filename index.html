@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-24</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-25</div>
 
 <script>
 // =================================================================
@@ -270,6 +270,7 @@ function render() {
   if (state.screen === "myEvaluations") return renderMyEvaluations();
   if (state.screen === "review") return renderReview();
   if (state.screen === "progress") return renderEvaluatorProgress();
+  if (state.screen === "company") return renderCompanySummary();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
   if (state.screen === "sc") return renderScInput();
@@ -400,6 +401,7 @@ function availableScreens(user) {
   if (user.isHR) options.push({ key: "review", label: "Lihat Appraisal — Semua Staff" });
   if (user.isLeader) options.push({ key: "review", label: "Lihat Appraisal — Staff Tim Saya" });
   if (user.isExecutive) options.push({ key: "progress", label: "Monitoring — Progress Leader & Management" });
+  if (user.isExecutive) options.push({ key: "company", label: "Dashboard — Ringkasan Perusahaan" });
   if (user.isExecutive) options.push({ key: "gm", label: "Approve Appraisal — Semua Staff" });
   if (user.isHR) options.push({ key: "sc", label: "Input Service Charge — Bulanan" });
   // De-dupe (someone could have more than one flag pointing at the same key).
@@ -547,6 +549,55 @@ function filterList(query) {
 // area, HR & Executive see everyone). No approve buttons here; approval
 // stays on the Executive-only GM dashboard.
 // =================================================================
+async function renderCompanySummary() {
+  app.innerHTML = topbar("Dashboard Perusahaan") + `<div class="loading">Memuat ringkasan...</div>`;
+  const res = await apiGet("getCompanySummary", { month: state.month });
+  if (res.error) {
+    app.innerHTML = topbar("Dashboard Perusahaan") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  const showMenuLink = availableScreens(state.user).length > 1;
+  const statBox = (label, value, color) => `
+    <div style="flex:1; min-width:120px; background:var(--sand); border-radius:12px; padding:12px; text-align:center;">
+      <div style="font-size:22px; font-weight:800; color:${color || "var(--teal)"};">${value}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${label}</div>
+    </div>`;
+
+  app.innerHTML = topbar("Dashboard Perusahaan") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <label>Bulan</label>
+      <input type="month" id="month-picker" value="${state.month}" onchange="changeCompanyMonth(this.value)" />
+    </div>
+    <div class="card">
+      <div class="row-flex" style="flex-wrap:wrap; gap:8px;">
+        ${statBox("Total Appraisal", res.total)}
+        ${statBox("Rata-rata Skor", res.avgScore.toFixed(1))}
+        ${statBox("Performer", res.performerCount, "var(--green)")}
+        ${statBox("Underperform", res.underperformCount, "var(--red)")}
+        ${statBox("Sudah Di-approve", `${res.approvedCount}/${res.total}`, "var(--gold)")}
+      </div>
+    </div>
+    <div class="card">
+      <h2>Rata-rata Skor per Department/Tier</h2>
+      ${res.departmentBreakdown.map(d => `
+        <div class="staff-row" style="cursor:default; display:block;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="name">${d.department} <span style="font-weight:400; color:var(--text-muted);">(${d.count} orang)</span></div>
+            <span class="badge ${d.avgScore >= 60 ? "performer" : "underperform"}">${d.avgScore.toFixed(1)}</span>
+          </div>
+          ${d.underperformCount > 0 ? `<div class="dept" style="margin-top:4px; color:var(--red);">${d.underperformCount} underperform</div>` : ""}
+        </div>`).join("")}
+      ${!res.departmentBreakdown.length ? '<div class="hint">Belum ada data untuk bulan ini.</div>' : ""}
+    </div>`;
+}
+
+function changeCompanyMonth(value) {
+  if (!value) return;
+  state.month = value;
+  renderCompanySummary();
+}
+
 async function renderEvaluatorProgress() {
   app.innerHTML = topbar("Monitoring Progress") + `<div class="loading">Memuat progress...</div>`;
   const res = await apiGet("getEvaluatorProgress", {});

@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-26</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-28</div>
 
 <script>
 // =================================================================
@@ -399,6 +399,7 @@ function availableScreens(user) {
   if (user.isExecutive) options.push({ key: "myEvaluations", label: "Isi Appraisal — Management" });
   if (user.isHR) options.push({ key: "myEvaluations", label: "Isi Appraisal — Semua Tier (HR)" });
   if (user.isManagement) options.push({ key: "review", label: "Lihat Appraisal — Leader & Staff Area Saya" });
+  if (user.isManagement) options.push({ key: "company", label: "Dashboard — Perbandingan Antar Department" });
   if (user.isHR) options.push({ key: "review", label: "Lihat Appraisal — Semua Staff" });
   if (user.isLeader) options.push({ key: "review", label: "Lihat Appraisal — Staff Tim Saya" });
   if (user.isExecutive) options.push({ key: "progress", label: "Monitoring — Progress Leader & Management" });
@@ -448,12 +449,24 @@ function goToRoleMenu() {
   render();
 }
 
+function menuItemHtml(o) {
+  const isAction = /^(Isi|Approve|Input|To-Do)/.test(o.label);
+  const color = isAction ? "var(--coral)" : "var(--teal)";
+  const tag = isAction ? "AKSI" : "LIHAT";
+  const bg = isAction ? "var(--red-bg)" : "var(--green-bg)";
+  return `
+    <div class="staff-row" style="border-left: 4px solid ${color};" onclick="goToScreen('${o.key}')">
+      <div class="name">${o.label}</div>
+      <span class="badge" style="background:${bg}; color:${color};">${tag}</span>
+    </div>`;
+}
+
 function renderRoleMenu() {
   const options = availableScreens(state.user);
   app.innerHTML = topbar("Pilih menu") + `
     <div class="card">
       <div class="hint">${state.user.name} punya lebih dari satu akses:</div>
-      ${options.map(o => `<div class="staff-row" onclick="goToScreen('${o.key}')"><div class="name">${o.label}</div></div>`).join("")}
+      ${options.map(menuItemHtml).join("")}
     </div>`;
 }
 
@@ -474,7 +487,7 @@ async function renderDashboard() {
 
   app.innerHTML = topbar("Dashboard Saya") + chartBlock + `
     <div class="card">
-      ${options.map(o => `<div class="staff-row" onclick="goToScreen('${o.key}')"><div class="name">${o.label}</div></div>`).join("")}
+      ${options.map(menuItemHtml).join("")}
     </div>`;
 }
 

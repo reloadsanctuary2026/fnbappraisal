@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-29</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-31</div>
 
 <script>
 // =================================================================
@@ -276,6 +276,7 @@ function render() {
   if (state.screen === "sc") return renderScInput();
   if (state.screen === "hrTodos") return renderHrFollowUpTodos();
   if (state.screen === "notifications") return renderNotifications();
+  if (state.screen === "faq") return renderFaq();
 }
 
 function topbar(title) {
@@ -290,6 +291,7 @@ function topbar(title) {
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:8px;">
+        ${state.user ? `<button onclick="openFaq()">❓</button>` : ""}
         ${state.user ? `<button onclick="openNotifications()" style="position:relative;">🔔${unread > 0 ? `<span style="position:absolute; top:-6px; right:-6px; background:var(--coral); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:800;">${unread}</span>` : ""}</button>` : ""}
         ${state.user ? '<button onclick="logout()">Keluar</button>' : ""}
       </div>
@@ -301,6 +303,90 @@ async function refreshUnreadCount() {
   const res = await apiGet("getNotifications", { staffId: state.user.staffId });
   const list = res.notifications || [];
   state.unreadCount = list.filter(n => !n.read).length;
+}
+
+function openFaq() {
+  state.prevScreen = state.screen;
+  state.screen = "faq";
+  render();
+}
+
+function goBackFromFaq() {
+  state.screen = state.prevScreen || "dashboard";
+  render();
+}
+
+function renderFaq() {
+  const tierFlow = {
+    Staff: `
+      <p><strong>1.</strong> Tanggal 1–7: isi <strong>Self Appraisal</strong> — nilai diri sendiri, cuma bisa 1x submit.</p>
+      <p><strong>2.</strong> Tanggal 8–14: Leader/Management kamu menilai kamu.</p>
+      <p><strong>3.</strong> Tanggal 15–21: HR menilai kamu.</p>
+      <p><strong>4.</strong> Tanggal 22–28: Executive approve hasil final + kasih Decision.</p>
+      <p>Cek progress kapan aja lewat <strong>Appraisal History</strong> di Dashboard. Notifikasi (🔔) masuk begitu Decision keluar.</p>`,
+    Leader: `
+      <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (kamu juga dinilai, oleh Management).</p>
+      <p><strong>2.</strong> Tanggal 8–14: isi <strong>Team Appraisal</strong> buat Staff yang jadi tanggung jawabmu. Kalau Staff-nya udah isi Self duluan, skornya muncul sebagai referensi.</p>
+      <p><strong>3.</strong> Lewat <strong>Team Review</strong>, kamu bisa lihat hasil appraisal Staff-mu (read-only, gak bisa isi ulang).</p>
+      <p>Kalau lupa isi sampai window ketutup, skor Leader buat Staff itu dianggap 0 (bobot 40%) — jadi usahain tepat waktu.</p>`,
+    Management: `
+      <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (dinilai oleh Executive).</p>
+      <p><strong>2.</strong> Tanggal 8–14: isi <strong>Team Appraisal</strong> buat Leader di scope-mu. Kalau ada Staff yang Leader-nya belum sempat isi, kamu bisa isi sebagai pengganti.</p>
+      <p><strong>3.</strong> <strong>Team Review</strong> — lihat hasil Leader & Staff di scope-mu (read-only).</p>
+      <p><strong>4.</strong> <strong>Company Overview</strong> — bandingin rata-rata skor department-mu vs department lain (cuma rata-rata, gak ada data personal orang lain).</p>`,
+    Executive: `
+      <p><strong>1.</strong> Tanggal 8–14: isi <strong>Team Appraisal</strong> buat Management.</p>
+      <p><strong>2.</strong> Tanggal 22–28: <strong>Final Approval</strong> — approve SEMUA tier (Staff/Leader/Management), wajib pilih Decision + 1-on-1 Status + Catatan buat tiap orang yang di-flag.</p>
+      <p><strong>3.</strong> <strong>Team Progress</strong> — pantau siapa aja Leader/Management/HR yang belum ngerjain tugas appraisal-nya (compliance, bukan skor).</p>
+      <p><strong>4.</strong> <strong>Company Overview</strong> — ringkasan performa seluruh perusahaan bulan ini: rata-rata skor, jumlah Performer/Underperform, breakdown per department.</p>`,
+    HR: `
+      <p><strong>1.</strong> Tanggal 15–21: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department. Ada tombol "Samakan dgn Leader/Mgmt" buat mempercepat kalau gak sempat nilai satu-satu.</p>
+      <p><strong>2.</strong> <strong>All Staff Review</strong> — lihat semua hasil appraisal, lintas department & tier (read-only).</p>
+      <p><strong>3.</strong> <strong>Service Charge Input</strong> — input Total SC bulanan, sistem otomatis hitung deduction & pool distribution.</p>
+      <p><strong>4.</strong> <strong>Follow-Up To-Do</strong> — reminder buat kasus "Extend Probation/Kontrak" yang udah jatuh tempo, perlu ditindaklanjuti.</p>`,
+  };
+
+  const qa = [
+    { q: "Kenapa saya gak bisa isi appraisal lagi?", a: "Appraisal cuma bisa disubmit 1 kali per bulan. Kalau udah submit, tombolnya otomatis terkunci sampai bulan berikutnya. Hubungi HR kalau butuh koreksi." },
+    { q: "Kapan saya tahu hasil appraisal saya?", a: "Setelah Executive approve (tanggal 22–28), kamu dapat notifikasi (🔔) dan bisa lihat detail lengkapnya di Appraisal History." },
+    { q: "Kalau Leader/HR saya belum isi appraisal, gimana?", a: "Kalau sampai window waktunya tutup mereka belum isi, skor mereka dianggap 0 (bukan diskip) — ini konsekuensi bawaan sistem, bukan bug." },
+    { q: "Skor saya turun karena apa?", a: "Cek Appraisal History — ada breakdown per Section (Attitude/Discipline/KPI/Bonus) biar tau bagian mana yang lemah." },
+    { q: "Siapa yang bisa lihat data appraisal saya?", a: "Leader/Management/Executive/HR yang berwenang di scope kamu. Orang di department lain gak bisa lihat data personal kamu." },
+  ];
+
+  const showMenuLink = availableScreens(state.user).length > 1;
+  app.innerHTML = topbar("FAQ & Panduan") + `
+    <button class="ghost" onclick="goBackFromFaq()">&larr; Kembali</button>
+
+    <div class="card">
+      <h2>Alur Umum (Siklus Bulanan)</h2>
+      <table class="mini">
+        <tr><td>Tanggal 1–7</td><td>Self Appraisal (semua tier)</td></tr>
+        <tr><td>Tanggal 8–14</td><td>Leader/Management/Executive menilai tim-nya</td></tr>
+        <tr><td>Tanggal 15–21</td><td>HR menilai semua tier</td></tr>
+        <tr><td>Tanggal 22–28</td><td>Executive Approval + Decision final</td></tr>
+      </table>
+      <div class="hint" style="margin-top:8px;">Kalau fase sebelumnya diisi lebih awal, fase berikutnya bisa dibuka lebih cepat juga — tenggat waktunya tetap sama.</div>
+    </div>
+
+    <div class="card">
+      <h2>Alur per Role</h2>
+      ${Object.keys(tierFlow).map(tier => `
+        <details ${tier === state.user.tier || (tier === "HR" && state.user.isHR) || (tier === "Executive" && state.user.isExecutive) ? "open" : ""} style="margin-bottom:10px;">
+          <summary style="cursor:pointer; font-weight:700; color:var(--teal); padding:8px 0;">${tier}${tier === state.user.tier ? " (kamu)" : ""}</summary>
+          <div style="padding:4px 8px 8px;">${tierFlow[tier]}</div>
+        </details>`).join("<hr style='border:none; border-top:1px solid var(--border); margin:4px 0;'>")}
+    </div>
+
+    <div class="card">
+      <h2>Pertanyaan Umum</h2>
+      ${qa.map(item => `
+        <details style="margin-bottom:8px;">
+          <summary style="cursor:pointer; font-weight:600; padding:6px 0;">${item.q}</summary>
+          <div class="hint" style="padding:2px 8px 8px; font-size:13px;">${item.a}</div>
+        </details>`).join("")}
+    </div>
+  `;
 }
 
 function openNotifications() {
@@ -388,46 +474,62 @@ async function doLogin() {
 // A person can have several capabilities at once (e.g. a Floor Supervisor is
 // both a Staff who gets self-appraised AND a Leader who appraises their team).
 // If only one screen applies, skip straight to it; otherwise show a picker.
-function availableScreens(user) {
-  const options = [];
+function availableScreensGrouped(user) {
+  const groups = [];
+
   if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1) {
-    options.push({ key: "self", label: "Isi Appraisal — Diri Sendiri" });
-    options.push({ key: "history", label: "Riwayat Appraisal Saya" });
+    groups.push({ name: "MyAppraisal", items: [
+      { key: "self", label: "Self Appraisal" },
+      { key: "history", label: "Appraisal History" },
+    ]});
   }
-  if (user.isLeader) options.push({ key: "myEvaluations", label: "Isi Appraisal — Staff Tim Saya" });
-  if (user.isManagement) options.push({ key: "myEvaluations", label: "Isi Appraisal — Staff & Leader Area Saya" });
-  if (user.isExecutive) options.push({ key: "myEvaluations", label: "Isi Appraisal — Management" });
-  if (user.isHR) options.push({ key: "myEvaluations", label: "Isi Appraisal — Semua Tier (HR)" });
-  if (user.isManagement) options.push({ key: "review", label: "Lihat Appraisal — Leader & Staff Area Saya" });
-  if (user.isManagement) options.push({ key: "company", label: "Dashboard — Perbandingan Antar Department" });
-  if (user.isHR) options.push({ key: "review", label: "Lihat Appraisal — Semua Staff" });
-  if (user.isLeader) options.push({ key: "review", label: "Lihat Appraisal — Staff Tim Saya" });
-  if (user.isExecutive) options.push({ key: "progress", label: "Monitoring — Progress Leader & Management" });
-  if (user.isExecutive) options.push({ key: "company", label: "Dashboard — Ringkasan Perusahaan" });
-  if (user.isExecutive) options.push({ key: "gm", label: "Approve Appraisal — Semua Staff" });
-  if (user.isHR) options.push({ key: "sc", label: "Input Service Charge — Bulanan" });
-  if (user.isHR) options.push({ key: "hrTodos", label: "To-Do — Follow-Up Extend Probation" });
-  // De-dupe (someone could have more than one flag pointing at the same key).
+
+  const teamItems = [];
+  if (user.isLeader || user.isManagement || user.isExecutive) {
+    teamItems.push({ key: "myEvaluations", label: "Team Appraisal" });
+  }
+  if (user.isLeader || user.isManagement) {
+    teamItems.push({ key: "review", label: "Team Review" });
+  }
+  if (user.isManagement) {
+    teamItems.push({ key: "company", label: "Company Overview" });
+  }
+  if (user.isExecutive) {
+    teamItems.push({ key: "gm", label: "Final Approval" });
+  }
+  if (teamItems.length) groups.push({ name: "MyTeams", items: teamItems });
+
+  if (user.isExecutive) {
+    groups.push({ name: "MyReport", items: [
+      { key: "progress", label: "Team Progress" },
+      { key: "company", label: "Company Overview" },
+    ]});
+  }
+
+  if (user.isHR) {
+    groups.push({ name: "MyHR", items: [
+      { key: "myEvaluations", label: "HR Appraisal" },
+      { key: "review", label: "All Staff Review" },
+      { key: "sc", label: "Service Charge Input" },
+      { key: "hrTodos", label: "Follow-Up To-Do" },
+    ]});
+  }
+
+  return groups;
+}
+
+function availableScreens(user) {
+  const groups = availableScreensGrouped(user);
+  const flat = [];
   const seen = new Set();
-  return options.filter(o => {
-    if (seen.has(o.key)) return false;
-    seen.add(o.key);
-    return true;
-  });
+  groups.forEach(g => g.items.forEach(item => {
+    if (!seen.has(item.key)) { seen.add(item.key); flat.push(item); }
+  }));
+  return flat;
 }
 
 function goToRoleMenu() {
   const options = availableScreens(state.user);
-  const hasSelfCapability = ["Staff", "Leader", "Management"].indexOf(state.user.tier) !== -1;
-
-  if (hasSelfCapability) {
-    // Always land on the personal dashboard (chart + menu) — never auto-skip past it,
-    // since these people always have both Self Appraisal and Riwayat available.
-    state.screen = "dashboard";
-    render();
-    return;
-  }
-
   if (options.length === 0) {
     app.innerHTML = topbar("Akses belum diatur") + `
       <div class="card">
@@ -440,12 +542,9 @@ function goToRoleMenu() {
       </div>`;
     return;
   }
-  if (options.length === 1) {
-    state.screen = options[0].key;
-    render();
-    return;
-  }
-  state.screen = "roleMenu";
+  // Always land on the hub (chart if self-eligible, plus grouped menu) — never auto-skip
+  // straight into a single screen, so people can always see everything they have access to.
+  state.screen = "dashboard";
   render();
 }
 
@@ -472,23 +571,59 @@ function renderRoleMenu() {
 
 async function renderDashboard() {
   app.innerHTML = topbar("Dashboard Saya") + `<div class="loading">Memuat...</div>`;
-  const res = await apiGet("getMyAppraisalHistory", { staffId: state.user.staffId });
-  const history = res.history || [];
-  const options = availableScreens(state.user);
+  const hasSelfCapability = ["Staff", "Leader", "Management"].indexOf(state.user.tier) !== -1;
+  const groups = availableScreensGrouped(state.user);
 
   let chartBlock = "";
-  if (history.length > 1) {
-    chartBlock = `<div class="card"><div class="hint" style="font-weight:700; color:var(--teal); margin-bottom:8px;">Skor Appraisal Saya</div>${buildScoreChartSvg(history)}</div>`;
-  } else if (history.length === 1) {
-    chartBlock = `<div class="card"><div class="hint">Skor bulan ${history[0].month}: <strong style="color:var(--teal);">${Number(history[0].finalScore || 0).toFixed(1)}</strong></div><div class="hint" style="font-size:12px; margin-top:4px;">Grafik akan muncul begitu ada 2 bulan data atau lebih.</div></div>`;
-  } else {
-    chartBlock = `<div class="card"><div class="hint">Belum ada riwayat skor — grafik akan muncul begitu appraisal pertamamu selesai diproses.</div></div>`;
+  let selfDoneThisMonth = false;
+
+  if (hasSelfCapability) {
+    const [historyRes, statusRes] = await Promise.all([
+      apiGet("getMyAppraisalHistory", { staffId: state.user.staffId }),
+      apiGet("getMyAppraisalStatus", { staffId: state.user.staffId }),
+    ]);
+    const history = historyRes.history || [];
+    selfDoneThisMonth = !!statusRes.selfDone;
+
+    if (history.length > 1) {
+      const latest = history[history.length - 1];
+      chartBlock = `
+        <div class="card" style="background:linear-gradient(135deg, var(--teal), var(--teal-dark)); border:none;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px;">
+            <div style="color:rgba(255,255,255,0.75); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Skor Appraisal Saya</div>
+            <div style="color:#fff; font-size:28px; font-weight:800;">${Number(latest.finalScore || 0).toFixed(1)}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.94); border-radius:12px; padding:10px 6px 2px; margin-top:10px;">
+            ${buildScoreChartSvg(history)}
+          </div>
+        </div>`;
+    } else if (history.length === 1) {
+      chartBlock = `
+        <div class="card" style="background:linear-gradient(135deg, var(--teal), var(--teal-dark)); border:none; text-align:center;">
+          <div style="color:rgba(255,255,255,0.75); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Skor Bulan ${history[0].month}</div>
+          <div style="color:#fff; font-size:36px; font-weight:800; margin-top:4px;">${Number(history[0].finalScore || 0).toFixed(1)}</div>
+          <div style="color:rgba(255,255,255,0.7); font-size:12px; margin-top:6px;">Grafik akan muncul begitu ada 2 bulan data atau lebih.</div>
+        </div>`;
+    } else {
+      chartBlock = `<div class="card"><div class="hint">Belum ada riwayat skor — grafik akan muncul begitu appraisal pertamamu selesai diproses.</div></div>`;
+    }
   }
 
-  app.innerHTML = topbar("Dashboard Saya") + chartBlock + `
-    <div class="card">
-      ${options.map(menuItemHtml).join("")}
-    </div>`;
+  app.innerHTML = topbar("Dashboard Saya") + chartBlock +
+    groups.map(g => `
+      <div class="card">
+        <h2 style="font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:10px;">${g.name}</h2>
+        ${g.items.map(item => {
+          if (item.key === "self" && selfDoneThisMonth) {
+            return `
+              <div class="staff-row" style="opacity:0.55; cursor:not-allowed; border-left: 4px solid var(--border);">
+                <div class="name">${item.label}</div>
+                <span class="badge pending">Sudah Diisi</span>
+              </div>`;
+          }
+          return menuItemHtml(item);
+        }).join("")}
+      </div>`).join("");
 }
 
 function goToScreen(key) {
@@ -508,10 +643,10 @@ function logout() {
 // tier rules itself.
 // =================================================================
 async function renderMyEvaluations() {
-  app.innerHTML = topbar("Isi Appraisal") + `<div class="loading">Memuat daftar...</div>`;
+  app.innerHTML = topbar(state.user.isHR ? "HR Appraisal" : "Team Appraisal") + `<div class="loading">Memuat daftar...</div>`;
   const res = await apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId });
   if (res.error) {
-    app.innerHTML = topbar("Isi Appraisal") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    app.innerHTML = topbar(state.user.isHR ? "HR Appraisal" : "Team Appraisal") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const list = res.targets || [];
@@ -520,7 +655,7 @@ async function renderMyEvaluations() {
     return a.status === "Not started" ? -1 : 1;
   });
   const showMenuLink = availableScreens(state.user).length > 1;
-  app.innerHTML = topbar("Isi Appraisal") + `
+  app.innerHTML = topbar(state.user.isHR ? "HR Appraisal" : "Team Appraisal") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     ${list.length > 5 ? '<input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" style="margin-bottom:10px;" />' : ""}
     <div class="hint">${list.length} orang — klik untuk isi appraisal</div>
@@ -565,10 +700,10 @@ function filterList(query) {
 // stays on the Executive-only GM dashboard.
 // =================================================================
 async function renderCompanySummary() {
-  app.innerHTML = topbar("Dashboard Perusahaan") + `<div class="loading">Memuat ringkasan...</div>`;
+  app.innerHTML = topbar("Company Overview") + `<div class="loading">Memuat ringkasan...</div>`;
   const res = await apiGet("getCompanySummary", { month: state.month });
   if (res.error) {
-    app.innerHTML = topbar("Dashboard Perusahaan") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    app.innerHTML = topbar("Company Overview") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const showMenuLink = availableScreens(state.user).length > 1;
@@ -578,7 +713,7 @@ async function renderCompanySummary() {
       <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${label}</div>
     </div>`;
 
-  app.innerHTML = topbar("Dashboard Perusahaan") + `
+  app.innerHTML = topbar("Company Overview") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan</label>
@@ -614,10 +749,10 @@ function changeCompanyMonth(value) {
 }
 
 async function renderEvaluatorProgress() {
-  app.innerHTML = topbar("Monitoring Progress") + `<div class="loading">Memuat progress...</div>`;
+  app.innerHTML = topbar("Team Progress") + `<div class="loading">Memuat progress...</div>`;
   const res = await apiGet("getEvaluatorProgress", {});
   if (res.error) {
-    app.innerHTML = topbar("Monitoring Progress") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    app.innerHTML = topbar("Team Progress") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const progress = res.progress || [];
@@ -640,7 +775,7 @@ async function renderEvaluatorProgress() {
       </div>`;
   };
 
-  app.innerHTML = topbar("Monitoring Progress") + `
+  app.innerHTML = topbar("Team Progress") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="hint" style="margin-top:8px;">Progress evaluator bulan ini — belum termasuk skor, cuma status "sudah/belum isi appraisal".</div>
     ${groupOrder.map(tier => {
@@ -653,17 +788,17 @@ async function renderEvaluatorProgress() {
 }
 
 async function renderReview() {
-  app.innerHTML = topbar("Lihat Appraisal") + `<div class="loading">Memuat data...</div>`;
+  app.innerHTML = topbar(state.user.isHR ? "All Staff Review" : "Team Review") + `<div class="loading">Memuat data...</div>`;
   const res = await apiGet("getReviewData", { reviewerId: state.user.staffId });
   if (res.error) {
-    app.innerHTML = topbar("Lihat Appraisal") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    app.innerHTML = topbar(state.user.isHR ? "All Staff Review" : "Team Review") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const rows = res.rows || [];
   const showMenuLink = availableScreens(state.user).length > 1;
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
 
-  app.innerHTML = topbar("Lihat Appraisal") + `
+  app.innerHTML = topbar(state.user.isHR ? "All Staff Review" : "Team Review") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     ${rows.length > 5 ? '<input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" style="margin-bottom:10px;" />' : ""}
     <div class="hint">${rows.length} appraisal record — read only</div>
@@ -1149,10 +1284,10 @@ async function confirmAndSubmit(evaluatorType) {
 // Executive Approval dashboard (approve only — no Service Charge here)
 // =================================================================
 async function renderGm() {
-  app.innerHTML = topbar("Approve Appraisal") + `<div class="loading">Memuat data...</div>`;
+  app.innerHTML = topbar("Final Approval") + `<div class="loading">Memuat data...</div>`;
   const final = await apiGet("getFinalAppraisal", { month: state.month });
   if (final.error) {
-    app.innerHTML = topbar("Approve Appraisal") + `<div class="card"><div class="error">${friendlyError(final.error)}</div></div>`;
+    app.innerHTML = topbar("Final Approval") + `<div class="card"><div class="error">${friendlyError(final.error)}</div></div>`;
     return;
   }
   const list = final.staff || [];
@@ -1221,7 +1356,7 @@ async function renderGm() {
       </div>`;
   };
 
-  app.innerHTML = topbar("Approve Appraisal") + `
+  app.innerHTML = topbar("Final Approval") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan appraisal</label>
@@ -1338,16 +1473,16 @@ async function submitDecision(staffId) {
 // Total Service Charge input — HR only
 // =================================================================
 async function renderHrFollowUpTodos() {
-  app.innerHTML = topbar("To-Do Follow-Up") + `<div class="loading">Memuat...</div>`;
+  app.innerHTML = topbar("Follow-Up To-Do") + `<div class="loading">Memuat...</div>`;
   const res = await apiGet("getHrFollowUpTodos", {});
   if (res.error) {
-    app.innerHTML = topbar("To-Do Follow-Up") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    app.innerHTML = topbar("Follow-Up To-Do") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const todos = res.todos || [];
   const showMenuLink = availableScreens(state.user).length > 1;
 
-  app.innerHTML = topbar("To-Do Follow-Up") + `
+  app.innerHTML = topbar("Follow-Up To-Do") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="hint" style="margin-top:8px;">${todos.length} follow-up sudah jatuh tempo dan perlu ditindaklanjuti.</div>
     ${todos.map(t => `
@@ -1376,16 +1511,16 @@ async function resolveFollowUp(month, staffId) {
 }
 
 async function renderScInput() {
-  app.innerHTML = topbar("Input Service Charge") + `<div class="loading">Memuat data...</div>`;
+  app.innerHTML = topbar("Service Charge Input") + `<div class="loading">Memuat data...</div>`;
   const pool = await apiGet("getScPool", { month: state.month });
   if (pool.error) {
-    app.innerHTML = topbar("Input Service Charge") + `<div class="card"><div class="error">${friendlyError(pool.error)}</div></div>`;
+    app.innerHTML = topbar("Service Charge Input") + `<div class="card"><div class="error">${friendlyError(pool.error)}</div></div>`;
     return;
   }
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
   const showMenuLink = availableScreens(state.user).length > 1;
 
-  app.innerHTML = topbar("Input Service Charge") + `
+  app.innerHTML = topbar("Service Charge Input") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan</label>

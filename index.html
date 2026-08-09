@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-31</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-32</div>
 
 <script>
 // =================================================================
@@ -609,21 +609,46 @@ async function renderDashboard() {
     }
   }
 
+  const groupColors = {
+    MyAppraisal: { accent: "var(--teal)", light: "#E4F0EF" },
+    MyTeams: { accent: "var(--coral)", light: "#FFE9E3" },
+    MyReport: { accent: "#B36B00", light: "#FBF0DE" },
+    MyHR: { accent: "#6C4FB6", light: "#EEE8F7" },
+  };
+
   app.innerHTML = topbar("Dashboard Saya") + chartBlock +
-    groups.map(g => `
-      <div class="card">
-        <h2 style="font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:10px;">${g.name}</h2>
-        ${g.items.map(item => {
-          if (item.key === "self" && selfDoneThisMonth) {
-            return `
-              <div class="staff-row" style="opacity:0.55; cursor:not-allowed; border-left: 4px solid var(--border);">
-                <div class="name">${item.label}</div>
-                <span class="badge pending">Sudah Diisi</span>
-              </div>`;
-          }
-          return menuItemHtml(item);
-        }).join("")}
-      </div>`).join("");
+    groups.map((g, gi) => {
+      const color = groupColors[g.name] || groupColors.MyAppraisal;
+      const groupId = `group-${gi}`;
+      return `
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div onclick="toggleGroup('${groupId}')" style="cursor:pointer; padding:16px 18px; display:flex; justify-content:space-between; align-items:center; background:${color.light};">
+          <div style="font-weight:800; color:${color.accent}; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">${g.name}</div>
+          <span id="${groupId}-chevron" style="color:${color.accent}; font-size:16px; display:inline-block; transition:transform 0.2s ease;">▾</span>
+        </div>
+        <div id="${groupId}" style="display:none; padding:14px;">
+          ${g.items.map(item => {
+            if (item.key === "self" && selfDoneThisMonth) {
+              return `
+                <div class="staff-row" style="opacity:0.55; cursor:not-allowed; border-left: 4px solid var(--border);">
+                  <div class="name">${item.label}</div>
+                  <span class="badge pending">Sudah Diisi</span>
+                </div>`;
+            }
+            return menuItemHtml(item);
+          }).join("")}
+        </div>
+      </div>`;
+    }).join("");
+}
+
+function toggleGroup(id) {
+  const el = document.getElementById(id);
+  const chevron = document.getElementById(id + "-chevron");
+  if (!el) return;
+  const isOpen = el.style.display === "block";
+  el.style.display = isOpen ? "none" : "block";
+  if (chevron) chevron.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
 }
 
 function goToScreen(key) {

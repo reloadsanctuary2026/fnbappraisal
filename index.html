@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-21</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-22</div>
 
 <script>
 // =================================================================
@@ -395,8 +395,10 @@ function availableScreens(user) {
   if (user.isManagement) options.push({ key: "myEvaluations", label: "Isi Appraisal — Staff & Leader Area Saya" });
   if (user.isExecutive) options.push({ key: "myEvaluations", label: "Isi Appraisal — Management" });
   if (user.isHR) options.push({ key: "myEvaluations", label: "Isi Appraisal — Semua Tier (HR)" });
-  if (user.isManagement) options.push({ key: "review", label: "Lihat Appraisal — Area Saya" });
+  if (user.isManagement) options.push({ key: "review", label: "Lihat Appraisal — Leader & Staff Area Saya" });
   if (user.isHR) options.push({ key: "review", label: "Lihat Appraisal — Semua Staff" });
+  if (user.isLeader) options.push({ key: "review", label: "Lihat Appraisal — Staff Tim Saya" });
+  if (user.isExecutive) options.push({ key: "review", label: "Lihat Appraisal — Semua Staff" });
   if (user.isExecutive) options.push({ key: "gm", label: "Approve Appraisal — Semua Staff" });
   if (user.isHR) options.push({ key: "sc", label: "Input Service Charge — Bulanan" });
   // De-dupe (someone could have more than one flag pointing at the same key).

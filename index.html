@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-07-28</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-29</div>
 
 <script>
 // =================================================================
@@ -914,11 +914,16 @@ function renderFormBody(evaluatorType, target, cfg) {
       </div>
     </div>`;
 
-  const bonusRow = (item, points, idx) => `
+  const bonusRow = (item, points, idx, inputType) => `
     <div class="criterion-row">
       <div class="name">${item} <span style="font-weight:600; color:${points > 0 ? "var(--green)" : "var(--red)"};">${points > 0 ? "+" : ""}${points} pts</span></div>
       <div class="row-flex" style="align-items:center;">
-        <input type="number" min="0" class="bonus-count" data-idx="${idx}" value="0" style="margin-bottom:0; flex:0 0 80px;" />
+        ${inputType === "checkbox"
+          ? `<label style="display:flex; align-items:center; gap:8px; flex:0 0 80px; margin-bottom:0; cursor:pointer;">
+               <input type="checkbox" class="bonus-count" data-idx="${idx}" style="width:20px; height:20px; margin:0;" />
+               <span style="font-size:13px; color:var(--text-muted);">Terjadi</span>
+             </label>`
+          : `<input type="number" min="0" class="bonus-count" data-idx="${idx}" value="0" style="margin-bottom:0; flex:0 0 80px;" />`}
         <input type="text" class="bonus-notes" data-idx="${idx}" placeholder="Evidence / notes (opsional)" style="margin-bottom:0;" />
       </div>
     </div>`;
@@ -955,7 +960,7 @@ function renderFormBody(evaluatorType, target, cfg) {
       ${isSelf ? "" : `
         <div class="section-title">Section D — Bonus &amp; Deduction</div>
         <div class="hint">Isi jumlah kejadian bulan ini. Biarkan 0 kalau tidak ada.</div>
-        ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i)).join("")}
+        ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i, b.inputType)).join("")}
       `}
 
       <div class="error" id="form-error"></div>
@@ -980,7 +985,10 @@ function renderFormBody(evaluatorType, target, cfg) {
       if (idx === -1) return;
       const countEl = document.querySelector(`.bonus-count[data-idx="${idx}"]`);
       const notesEl = document.querySelector(`.bonus-notes[data-idx="${idx}"]`);
-      if (countEl) countEl.value = b.count;
+      if (countEl) {
+        if (countEl.type === "checkbox") countEl.checked = b.count > 0;
+        else countEl.value = b.count;
+      }
       if (notesEl) notesEl.value = b.notes || "";
     });
   }
@@ -1040,7 +1048,10 @@ function reviewBeforeSubmit(evaluatorType) {
   if (evaluatorType !== "self") {
     cfg.bonus.forEach((b, i) => {
       const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
-      const count = Number(countInput ? countInput.value : 0) || 0;
+      let count = 0;
+      if (countInput) {
+        count = countInput.type === "checkbox" ? (countInput.checked ? 1 : 0) : (Number(countInput.value) || 0);
+      }
       if (count > 0) {
         const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
         bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });

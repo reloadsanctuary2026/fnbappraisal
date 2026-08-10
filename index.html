@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-40</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-41</div>
 
 <script>
 // =================================================================
@@ -886,6 +886,7 @@ async function renderReview() {
         <div>
           <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
           <div class="dept">${r.month} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
+          <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? new Date(r.contractEndDate).toLocaleDateString("id-ID") : "-"}</div>
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
           <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
@@ -1194,6 +1195,14 @@ function renderFormBody(evaluatorType, target, cfg) {
         ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i, b.inputType)).join("")}
       `}
 
+      ${isSelf ? `
+        <div class="section-title">Feedback to Management</div>
+        <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
+          🔒 Kotak ini CUMA dibaca Executive (GM/OM) — MOD, Leader, atau Manager tidak akan baca ini. Ngomong aja apa yang perlu disampaikan, gak akan bocor ke siapa-siapa.
+        </div>
+        <textarea id="management-feedback" rows="4" placeholder="Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
+      ` : ""}
+
       <div class="error" id="form-error"></div>
       <button class="primary" onclick="reviewBeforeSubmit('${evaluatorType}')" style="margin-top: 14px;">Submit Appraisal</button>
       <div class="center" style="margin-top: 10px;">
@@ -1222,6 +1231,10 @@ function renderFormBody(evaluatorType, target, cfg) {
       }
       if (notesEl) notesEl.value = b.notes || "";
     });
+  }
+  if (state._pendingFeedback) {
+    const feedbackEl = document.getElementById("management-feedback");
+    if (feedbackEl) feedbackEl.value = state._pendingFeedback;
   }
   updateProgressCounter();
 }
@@ -1262,6 +1275,7 @@ function cancelForm() {
   }
   state.scores = {};
   state._pendingBonusEntries = null;
+  state._pendingFeedback = null;
   goBack();
 }
 
@@ -1273,6 +1287,11 @@ function reviewBeforeSubmit(evaluatorType) {
   if (missing.length) {
     document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
     return;
+  }
+
+  if (evaluatorType === "self") {
+    const feedbackEl = document.getElementById("management-feedback");
+    state._pendingFeedback = feedbackEl ? feedbackEl.value : "";
   }
 
   const bonusEntries = [];
@@ -1355,6 +1374,12 @@ async function confirmAndSubmit(evaluatorType) {
       showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
       state.scores = {};
       state._pendingBonusEntries = null;
+      if (evaluatorType === "self") {
+        if (state._pendingFeedback && state._pendingFeedback.trim()) {
+          await apiPost("submitManagementFeedback", { staffId: target.staffId, feedback: state._pendingFeedback.trim() });
+        }
+        state._pendingFeedback = null;
+      }
       if (evaluatorType !== "self") {
         // Came from "Tugas Appraisal Saya" — land back there directly so the person
         // can keep appraising the next staff quickly, instead of bouncing to the menu.
@@ -1404,9 +1429,12 @@ async function renderGm() {
     state.oneOnOneOptions = oneOnOneRes.options || [];
   }
 
-  if (!state.allPositionTitles) {
-    const posRes = await apiGet("getAllPositionTitles", {});
-    state.allPositionTitles = posRes.titles || [];
+  if (!state.positionTitlesByTier) state.positionTitlesByTier = {};
+  for (const t of tiers) {
+    if (!state.positionTitlesByTier[t]) {
+      const posRes = await apiGet("getAllPositionTitles", { tier: t });
+      state.positionTitlesByTier[t] = posRes.titles || [];
+    }
   }
 
   const decisionForm = (s) => {
@@ -1434,10 +1462,10 @@ async function renderGm() {
         <div id="mutation-fields-${s.staffId}" style="display:none;">
           <label>Dari Posisi</label>
           <input type="text" value="${s.jobTitle || s.department || s.tier}" disabled style="background:var(--border); opacity:0.7;" />
-          <label>Ke Posisi (wajib)</label>
+          <label>Ke Posisi (wajib — cuma level sama/di bawah)</label>
           <select id="mutation-to-${s.staffId}">
             <option value="">— pilih —</option>
-            ${state.allPositionTitles.map(t => `<option value="${t}">${t}</option>`).join("")}
+            ${(state.positionTitlesByTier[s.tier] || []).filter(t => t !== s.jobTitle).map(t => `<option value="${t}">${t}</option>`).join("")}
           </select>
         </div>
 
@@ -1465,18 +1493,22 @@ async function renderGm() {
         <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
         <button class="secondary" onclick="approveAll()">Approve Semua (kecuali yang di bawah standar) — default "Approved, Lanjut"</button>
       </div>
-      ${list.length > 5 ? '<input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" style="margin-bottom:10px;" />' : ""}
+      <div class="row-flex" style="margin-bottom:10px;">
+        <input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" />
+        <button class="secondary" id="underperform-filter-btn" style="flex:0 0 auto; white-space:nowrap;" onclick="toggleUnderperformFilter()">Underperform Saja</button>
+      </div>
       ${list.map(s => `
-        <div data-search="${escapeAttr(s.name.toLowerCase())}" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px;">
+        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px;">
           <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
             <div style="display:flex; align-items:flex-start; gap:10px;">
               <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none; cursor:pointer;" onerror="this.style.display='none';" onclick="event.stopPropagation(); showPhotoModal(this.src, '${escapeAttr(s.name)}')" />
               <div id="photo-fallback-${s.staffId}" style="width:44px; height:44px; border-radius:10px; background:var(--sand); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:16px;">${s.name.charAt(0)}</div>
-              <div>
+              <div style="cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
-                <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
+                <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)} <span style="color:var(--coral);">📈 lihat tren</span></div>
                 <div class="dept" style="margin-top:2px;">Self ${Number(s.selfTotal || 0).toFixed(1)} · Leader/Mgmt ${Number(s.leaderTotal || 0).toFixed(1)} · HR ${Number(s.hrTotal || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">Dinilai Leader/Mgmt: <strong>${s.leaderEvaluatorName || "-"}</strong> · HR: <strong>${s.hrEvaluatorName || "-"}</strong></div>
+                <div class="dept" style="margin-top:2px;">Kontrak berakhir: <strong>${s.contractEndDate ? new Date(s.contractEndDate).toLocaleDateString("id-ID") : "-"}</strong></div>
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong>${s.mutationToPosition ? ` (${s.mutationFromPosition} → ${s.mutationToPosition})` : ""}${s.extensionDuration ? ` (perpanjangan: ${s.extensionDuration})` : ""} · ${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
               </div>
             </div>
@@ -1484,7 +1516,7 @@ async function renderGm() {
               <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
               ${s.approvalStatus === 'Approved'
                 ? `<span class="badge done">Disetujui</span>`
-                : `<button class="secondary" onclick="toggleDecisionForm('${s.staffId}')">Approve</button>`}
+                : `<button class="secondary" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Approve</button>`}
             </div>
           </div>
           ${s.approvalStatus !== 'Approved' ? decisionForm(s) : ""}
@@ -1506,6 +1538,61 @@ async function loadStaffPhotos(staffIds) {
       if (fallback) fallback.style.display = "none";
     }).catch(() => {});
   }
+}
+
+function toggleUnderperformFilter() {
+  const btn = document.getElementById("underperform-filter-btn");
+  const isActive = btn.dataset.active === "true";
+  btn.dataset.active = isActive ? "false" : "true";
+  btn.style.background = isActive ? "" : "var(--coral)";
+  btn.style.color = isActive ? "" : "#fff";
+  btn.style.borderColor = isActive ? "" : "var(--coral)";
+  document.querySelectorAll("[data-status]").forEach(el => {
+    el.style.display = (!isActive && el.dataset.status !== "Underperform") ? "none" : "";
+  });
+}
+
+async function showComparisonModal(staffId, name) {
+  const res = await apiGet("getMyAppraisalHistory", { staffId });
+  const history = res.history || [];
+  const existing = document.getElementById("comparison-modal");
+  if (existing) existing.remove();
+
+  const last2 = history.slice(-2);
+  let content;
+  if (last2.length === 2) {
+    const [prev, curr] = last2;
+    const diff = Number(curr.finalScore) - Number(prev.finalScore);
+    content = `
+      <div class="row-flex" style="margin-bottom:10px;">
+        <div style="flex:1; text-align:center;">
+          <div class="hint">${prev.month}</div>
+          <div style="font-size:26px; font-weight:800;">${Number(prev.finalScore).toFixed(1)}</div>
+        </div>
+        <div style="flex:1; text-align:center;">
+          <div class="hint">${curr.month}</div>
+          <div style="font-size:26px; font-weight:800; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${Number(curr.finalScore).toFixed(1)}</div>
+        </div>
+      </div>
+      <div class="hint" style="text-align:center; margin-bottom:12px; font-weight:700; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)} poin dari bulan lalu</div>`;
+  } else if (last2.length === 1) {
+    content = `<div class="hint" style="text-align:center; margin-bottom:12px;">Skor bulan ${last2[0].month}: <strong style="font-size:20px;">${Number(last2[0].finalScore).toFixed(1)}</strong><br/>Belum ada data bulan sebelumnya buat dibandingin.</div>`;
+  } else {
+    content = `<div class="hint" style="text-align:center; margin-bottom:12px;">Belum ada riwayat appraisal yang di-approve.</div>`;
+  }
+  if (history.length > 1) content += buildScoreChartSvg(history);
+
+  const overlay = document.createElement("div");
+  overlay.id = "comparison-modal";
+  overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px;";
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="card" style="max-width:420px; width:100%; background:#fff;" onclick="event.stopPropagation();">
+      <h2>${name}</h2>
+      ${content}
+      <button class="secondary" style="width:100%;" onclick="document.getElementById('comparison-modal').remove()">Tutup</button>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 function showPhotoModal(src, name) {

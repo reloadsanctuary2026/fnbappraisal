@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-37</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-39</div>
 
 <script>
 // =================================================================
@@ -324,6 +324,18 @@ function goBackFromFaq() {
 }
 
 function renderFaq() {
+  const MENU_DESCRIPTIONS = {
+    self: "Isi appraisal buat diri sendiri — cuma bisa disubmit 1x per bulan, gak bisa direvisi setelah terkirim.",
+    history: "Lihat riwayat skor & Decision dari bulan-bulan yang udah di-approve Executive, plus grafik tren skor dari waktu ke waktu.",
+    myEvaluations: "Isi appraisal buat orang-orang yang jadi tanggung jawab kamu. Kalau orangnya udah isi Self duluan, skornya muncul sebagai referensi.",
+    review: "Lihat hasil appraisal orang-orang di scope kamu — read-only, gak ada tombol isi/ubah, cuma buat monitoring/lihat-lihat. Bisa geser bulan.",
+    company: "Ringkasan rata-rata skor per department/tier — buat lihat gambaran besar performa. Gak nampilin skor personal individu, cuma agregat.",
+    gm: "Approve hasil akhir semua tier + wajib pilih Decision, 1-on-1 Status, dan Catatan. Bisa juga geser bulan buat sekedar lihat-lihat skor bulan lain.",
+    progress: "Pantau siapa aja Leader/Management/HR yang UDAH vs BELUM ngerjain tugas appraisal-nya bulan ini — soal kepatuhan/compliance, bukan soal skor bagus/jelek.",
+    sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
+    hrTodos: "Daftar Decision 'Extend Probation/Kontrak' yang tanggal jatuh temponya udah lewat dan perlu ditindaklanjuti — supaya gak ada yang keslip.",
+  };
+
   const tierFlow = {
     Staff: `
       <p><strong>1.</strong> Tanggal 1–7: isi <strong>Self Appraisal</strong> — nilai diri sendiri, cuma bisa 1x submit.</p>
@@ -374,6 +386,18 @@ function renderFaq() {
         <tr><td>Tanggal 22–28</td><td>Executive Approval + Decision final</td></tr>
       </table>
       <div class="hint" style="margin-top:8px;">Kalau fase sebelumnya diisi lebih awal, fase berikutnya bisa dibuka lebih cepat juga — tenggat waktunya tetap sama.</div>
+    </div>
+
+    <div class="card">
+      <h2>Fungsi Tiap Menu Kamu</h2>
+      ${availableScreensGrouped(state.user).map(g => `
+        <div class="hint" style="font-weight:700; color:var(--teal); margin:10px 0 6px; text-transform:uppercase; font-size:12px; letter-spacing:0.05em;">${g.name}</div>
+        ${g.items.map(item => `
+          <div style="padding:8px 0; border-bottom:1px solid var(--border);">
+            <div style="font-weight:600; font-size:13px;">${item.label}</div>
+            <div class="hint" style="font-size:12px; margin-top:2px;">${MENU_DESCRIPTIONS[item.key] || ""}</div>
+          </div>`).join("")}
+      `).join("")}
     </div>
 
     <div class="card">
@@ -884,13 +908,14 @@ async function copyLeaderToHr(staffId, name) {
   if (!ok) return;
   showToast("Menyalin...");
   const res = await apiPost("copyLeaderToHr", { staffId, evaluatorId: state.user.staffId });
-  if (res.error || res.success === false) { showToast("Gagal: " + friendlyError(res.error || res.reason), "error"); return; }
   if (res.computeError) {
     console.error("computeEvaluatorTotal error:", res.computeError);
-    showToast("Tersalin, TAPI ada error hitung skor: " + res.computeError.slice(0, 150), "error");
-  } else {
-    showToast(`Appraisal HR untuk ${name} disamakan dengan Leader/Management!`);
+    showToast("Gagal hitung skor: " + res.computeError.slice(0, 150) + " — coba lagi (belum kepakai kuota submit-nya).", "error");
+    renderMyEvaluations();
+    return;
   }
+  if (res.error || res.success === false) { showToast("Gagal: " + friendlyError(res.error || res.reason), "error"); return; }
+  showToast(`Appraisal HR untuk ${name} disamakan dengan Leader/Management!`);
   renderMyEvaluations();
 }
 
@@ -1321,13 +1346,13 @@ async function confirmAndSubmit(evaluatorType) {
     };
     showToast("Menyimpan...");
     const res = await apiPost("submitAppraisal", payload);
+    if (res.computeError) {
+      console.error("computeEvaluatorTotal error:", res.computeError);
+      showToast("Gagal hitung skor: " + res.computeError.slice(0, 150) + " — silakan coba submit lagi (kuota submit belum kepakai).", "error");
+      return;
+    }
     if (res.success) {
-      if (res.computeError) {
-        console.error("computeEvaluatorTotal error:", res.computeError);
-        showToast("Tersimpan, TAPI ada error hitung skor: " + res.computeError.slice(0, 150), "error");
-      } else {
-        showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
-      }
+      showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
       state.scores = {};
       state._pendingBonusEntries = null;
       if (evaluatorType !== "self") {

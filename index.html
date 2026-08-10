@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-33</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-34</div>
 
 <script>
 // =================================================================
@@ -556,7 +556,8 @@ function goToRoleMenu() {
 }
 
 function menuItemHtml(o) {
-  const isAction = /^(Isi|Approve|Input|To-Do)/.test(o.label);
+  const ACTION_KEYS = ["self", "myEvaluations", "gm", "sc", "hrTodos"];
+  const isAction = ACTION_KEYS.indexOf(o.key) !== -1;
   const color = isAction ? "var(--coral)" : "var(--teal)";
   const tag = isAction ? "AKSI" : "LIHAT";
   const bg = isAction ? "var(--red-bg)" : "var(--green-bg)";

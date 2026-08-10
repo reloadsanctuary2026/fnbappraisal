@@ -110,6 +110,9 @@
     background: #fff;
   }
   .staff-row:hover { border-color: var(--coral); background: #FFFCF8; }
+  .clickable-card { transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease; }
+  .clickable-card:hover { background: #FFFCF8; box-shadow: 0 3px 12px rgba(32,48,47,0.10); }
+  .clickable-card:active { transform: scale(0.99); }
   .staff-row:active { transform: scale(0.99); }
   .staff-row .name { font-size: 14px; font-weight: 600; }
   .staff-row .dept { font-size: 12px; color: var(--text-muted); }
@@ -165,7 +168,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-43</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-44</div>
 
 <script>
 // =================================================================
@@ -1499,7 +1502,7 @@ async function renderGm() {
         <button class="secondary" id="underperform-filter-btn" style="flex:0 0 auto; white-space:nowrap;" onclick="toggleUnderperformFilter()">Underperform Saja</button>
       </div>
       ${list.map(s => `
-        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
+        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" class="clickable-card" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
           <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
             <div style="display:flex; align-items:center; gap:10px;">
               <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />
@@ -1556,7 +1559,16 @@ function toggleUnderperformFilter() {
 }
 
 async function showComparisonModal(staffId, name) {
-  const s = (state._currentGmList || []).find(x => x.staffId === staffId) || {};
+  // Show an instant loading placeholder — the fetch below can take a moment, and without
+  // this the click feels unresponsive (nothing visibly happens until data arrives).
+  const loadingOverlay = document.createElement("div");
+  loadingOverlay.id = "comparison-modal";
+  loadingOverlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px;";
+  loadingOverlay.onclick = (e) => { if (e.target === loadingOverlay) loadingOverlay.remove(); };
+  loadingOverlay.innerHTML = `<div class="card" style="background:#fff; padding:24px 32px;">Memuat...</div>`;
+  document.body.appendChild(loadingOverlay);
+
+  const s = (state._currentGmList || []).find(x => String(x.staffId) === String(staffId)) || {};
   const res = await apiGet("getMyAppraisalHistory", { staffId });
   const history = res.history || [];
   const existing = document.getElementById("comparison-modal");

@@ -168,7 +168,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-45</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-46</div>
 
 <script>
 // =================================================================
@@ -1517,10 +1517,8 @@ async function renderGm() {
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
                 <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
-                <div class="dept" style="margin-top:2px;">Leader/Mgmt: ${Number(s.leaderTotal || 0).toFixed(1)}</div>
-                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0).toFixed(1)}</div>
-                <div class="dept" style="margin-top:6px;">Dinilai Leader/Mgmt: <strong>${s.leaderEvaluatorName || "-"}</strong></div>
-                <div class="dept" style="margin-top:2px;">Dinilai HR: <strong>${s.hrEvaluatorName || "-"}</strong></div>
+                <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">(Appraised by ${s.leaderEvaluatorName || "-"})</span></div>
+                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">(Appraised by ${s.hrEvaluatorName || "-"})</span></div>
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>

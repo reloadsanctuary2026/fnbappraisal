@@ -168,7 +168,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-44</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-45</div>
 
 <script>
 // =================================================================
@@ -888,7 +888,7 @@ async function renderReview() {
       <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" style="cursor:default;">
         <div>
           <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
-          <div class="dept">${r.month} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
+          <div class="dept">${monthLabelID(r.month)} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
           <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? new Date(r.contractEndDate).toLocaleDateString("id-ID") : "-"}</div>
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
@@ -1026,7 +1026,7 @@ async function renderMyAppraisalHistory(staffId) {
     ${history.slice().reverse().map(h => `
       <div class="staff-row" style="cursor:default;">
         <div>
-          <div class="name">${h.month}</div>
+          <div class="name">${monthLabelID(h.month)}</div>
           <div class="dept">Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}</div>
           <div class="dept" style="margin-top:2px; font-size:11px;">Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}</div>
           ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findLabel(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
@@ -1035,6 +1035,12 @@ async function renderMyAppraisalHistory(staffId) {
       </div>`).join("")}
     ${!history.length ? '<div class="hint">Belum ada riwayat appraisal.</div>' : ""}
   `;
+}
+
+function monthShortLabelID(monthKey) {
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const idx = Number(String(monthKey).split("-")[1]) - 1;
+  return months[idx] || monthKey;
 }
 
 function buildScoreChartSvg(history) {
@@ -1052,7 +1058,7 @@ function buildScoreChartSvg(history) {
       <text x="${width - padSide}" y="${(thresholdY - 6).toFixed(1)}" text-anchor="end" font-size="10" fill="#D98A2B">Threshold 60</text>
       <path d="${pathD}" fill="none" stroke="#0E4749" stroke-width="2.5" />
       ${points.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${p.score >= 60 ? "#2F9E6E" : "#E2574C"}" />`).join("")}
-      ${points.map(p => `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="10" fill="#8A7B6C">${p.month.slice(2)}</text>`).join("")}
+      ${points.map(p => `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="10" fill="#8A7B6C">${monthShortLabelID(p.month)}</text>`).join("")}
     </svg>`;
 }
 
@@ -1574,33 +1580,30 @@ async function showComparisonModal(staffId, name) {
   const existing = document.getElementById("comparison-modal");
   if (existing) existing.remove();
 
-  const last2 = history.slice(-2);
+  const last3 = history.slice(-3);
   let trendBlock;
-  if (last2.length === 2) {
-    const [prev, curr] = last2;
+  if (last3.length >= 2) {
+    trendBlock = `<div class="row-flex" style="margin-bottom:6px;">
+      ${last3.map((m, i) => `
+        <div style="flex:1; text-align:center;">
+          <div class="hint">${monthLabelID(m.month)}</div>
+          <div style="font-size:${last3.length === 3 ? 22 : 26}px; font-weight:800; color:${i === 0 ? "var(--text)" : (Number(m.finalScore) >= Number(last3[i-1].finalScore) ? "var(--green)" : "var(--red)")};">${Number(m.finalScore).toFixed(1)}</div>
+        </div>`).join("")}
+    </div>`;
+    const prev = last3[last3.length - 2], curr = last3[last3.length - 1];
     const diff = Number(curr.finalScore) - Number(prev.finalScore);
-    trendBlock = `
-      <div class="row-flex" style="margin-bottom:10px;">
-        <div style="flex:1; text-align:center;">
-          <div class="hint">${prev.month}</div>
-          <div style="font-size:26px; font-weight:800;">${Number(prev.finalScore).toFixed(1)}</div>
-        </div>
-        <div style="flex:1; text-align:center;">
-          <div class="hint">${curr.month}</div>
-          <div style="font-size:26px; font-weight:800; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${Number(curr.finalScore).toFixed(1)}</div>
-        </div>
-      </div>
-      <div class="hint" style="text-align:center; margin-bottom:12px; font-weight:700; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)} poin dari bulan lalu</div>`;
-  } else if (last2.length === 1) {
-    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Skor bulan ${last2[0].month}: <strong style="font-size:20px;">${Number(last2[0].finalScore).toFixed(1)}</strong><br/>Belum ada data bulan sebelumnya buat dibandingin.</div>`;
+    const pct = Number(prev.finalScore) !== 0 ? (diff / Number(prev.finalScore) * 100) : 0;
+    trendBlock += `<div class="hint" style="text-align:center; margin-bottom:12px; font-weight:700; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)} poin (${Math.abs(pct).toFixed(1)}%) dari bulan lalu</div>`;
+  } else if (last3.length === 1) {
+    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Skor bulan ${monthLabelID(last3[0].month)}: <strong style="font-size:20px;">${Number(last3[0].finalScore).toFixed(1)}</strong><br/>Belum ada data bulan sebelumnya buat dibandingin.</div>`;
   } else {
     trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Belum ada riwayat appraisal yang di-approve.</div>`;
   }
   if (history.length > 1) trendBlock += buildScoreChartSvg(history);
 
   const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
-    <div class="mode-banner" style="background:var(--sand); margin-top:16px; margin-bottom:8px;"><span class="mode-label" style="color:var(--teal);">Decision</span></div>
-    <div class="hint" style="font-size:14px; color:var(--text); margin-top:6px;"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
+    <div class="section-title" style="margin:16px -18px 8px;">Decision</div>
+    <div class="hint" style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
     ${s.mutationToPosition ? `<div class="hint" style="font-size:13px; margin-top:8px;">Mutasi: ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
     ${s.extensionDuration ? `<div class="hint" style="font-size:13px; margin-top:8px;">Perpanjangan: ${s.extensionDuration}</div>` : ""}
     <div class="hint" style="font-size:13px; margin-top:8px;">1-on-1: <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>

@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-41</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-42</div>
 
 <script>
 // =================================================================
@@ -1412,6 +1412,7 @@ async function renderGm() {
     return;
   }
   const list = final.staff || [];
+  state._currentGmList = list;
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
   const showMenuLink = availableScreens(state.user).length > 1;
 
@@ -1498,18 +1499,17 @@ async function renderGm() {
         <button class="secondary" id="underperform-filter-btn" style="flex:0 0 auto; white-space:nowrap;" onclick="toggleUnderperformFilter()">Underperform Saja</button>
       </div>
       ${list.map(s => `
-        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px;">
+        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
           <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
-            <div style="display:flex; align-items:flex-start; gap:10px;">
-              <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none; cursor:pointer;" onerror="this.style.display='none';" onclick="event.stopPropagation(); showPhotoModal(this.src, '${escapeAttr(s.name)}')" />
+            <div style="display:flex; align-items:center; gap:10px;">
+              <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />
               <div id="photo-fallback-${s.staffId}" style="width:44px; height:44px; border-radius:10px; background:var(--sand); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:16px;">${s.name.charAt(0)}</div>
-              <div style="cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
+              <div>
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
-                <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)} <span style="color:var(--coral);">📈 lihat tren</span></div>
+                <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">Self ${Number(s.selfTotal || 0).toFixed(1)} · Leader/Mgmt ${Number(s.leaderTotal || 0).toFixed(1)} · HR ${Number(s.hrTotal || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">Dinilai Leader/Mgmt: <strong>${s.leaderEvaluatorName || "-"}</strong> · HR: <strong>${s.hrEvaluatorName || "-"}</strong></div>
-                <div class="dept" style="margin-top:2px;">Kontrak berakhir: <strong>${s.contractEndDate ? new Date(s.contractEndDate).toLocaleDateString("id-ID") : "-"}</strong></div>
-                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:4px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong>${s.mutationToPosition ? ` (${s.mutationFromPosition} → ${s.mutationToPosition})` : ""}${s.extensionDuration ? ` (perpanjangan: ${s.extensionDuration})` : ""} · ${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}${s.decisionNotes ? " — " + s.decisionNotes : ""}</div>` : ""}
+                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:2px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -1519,7 +1519,7 @@ async function renderGm() {
                 : `<button class="secondary" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Approve</button>`}
             </div>
           </div>
-          ${s.approvalStatus !== 'Approved' ? decisionForm(s) : ""}
+          <div onclick="event.stopPropagation();">${s.approvalStatus !== 'Approved' ? decisionForm(s) : ""}</div>
         </div>`).join("")}
       ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.</div>' : ""}
     </div>`;
@@ -1553,17 +1553,18 @@ function toggleUnderperformFilter() {
 }
 
 async function showComparisonModal(staffId, name) {
+  const s = (state._currentGmList || []).find(x => x.staffId === staffId) || {};
   const res = await apiGet("getMyAppraisalHistory", { staffId });
   const history = res.history || [];
   const existing = document.getElementById("comparison-modal");
   if (existing) existing.remove();
 
   const last2 = history.slice(-2);
-  let content;
+  let trendBlock;
   if (last2.length === 2) {
     const [prev, curr] = last2;
     const diff = Number(curr.finalScore) - Number(prev.finalScore);
-    content = `
+    trendBlock = `
       <div class="row-flex" style="margin-bottom:10px;">
         <div style="flex:1; text-align:center;">
           <div class="hint">${prev.month}</div>
@@ -1576,21 +1577,37 @@ async function showComparisonModal(staffId, name) {
       </div>
       <div class="hint" style="text-align:center; margin-bottom:12px; font-weight:700; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)} poin dari bulan lalu</div>`;
   } else if (last2.length === 1) {
-    content = `<div class="hint" style="text-align:center; margin-bottom:12px;">Skor bulan ${last2[0].month}: <strong style="font-size:20px;">${Number(last2[0].finalScore).toFixed(1)}</strong><br/>Belum ada data bulan sebelumnya buat dibandingin.</div>`;
+    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Skor bulan ${last2[0].month}: <strong style="font-size:20px;">${Number(last2[0].finalScore).toFixed(1)}</strong><br/>Belum ada data bulan sebelumnya buat dibandingin.</div>`;
   } else {
-    content = `<div class="hint" style="text-align:center; margin-bottom:12px;">Belum ada riwayat appraisal yang di-approve.</div>`;
+    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Belum ada riwayat appraisal yang di-approve.</div>`;
   }
-  if (history.length > 1) content += buildScoreChartSvg(history);
+  if (history.length > 1) trendBlock += buildScoreChartSvg(history);
+
+  const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
+    <div class="mode-banner" style="background:var(--sand); margin-top:14px;"><span class="mode-label" style="color:var(--teal);">Decision</span></div>
+    <div class="hint" style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
+    ${s.mutationToPosition ? `<div class="hint" style="font-size:13px;">Mutasi: ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
+    ${s.extensionDuration ? `<div class="hint" style="font-size:13px;">Perpanjangan: ${s.extensionDuration}</div>` : ""}
+    <div class="hint" style="font-size:13px; margin-top:4px;">1-on-1: <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
+    ${s.decisionNotes ? `<div class="hint" style="font-size:13px; margin-top:4px;">Catatan: "${s.decisionNotes}"</div>` : ""}
+  ` : "";
 
   const overlay = document.createElement("div");
   overlay.id = "comparison-modal";
-  overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px;";
+  overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px; overflow-y:auto;";
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   overlay.innerHTML = `
-    <div class="card" style="max-width:420px; width:100%; background:#fff;" onclick="event.stopPropagation();">
-      <h2>${name}</h2>
-      ${content}
-      <button class="secondary" style="width:100%;" onclick="document.getElementById('comparison-modal').remove()">Tutup</button>
+    <div class="card" style="max-width:420px; width:100%; background:#fff; max-height:85vh; overflow-y:auto;" onclick="event.stopPropagation();">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+        <img src="${document.getElementById(`photo-${staffId}`) && document.getElementById(`photo-${staffId}`).style.display !== "none" ? document.getElementById(`photo-${staffId}`).src : ""}" style="width:56px; height:56px; border-radius:12px; object-fit:cover; background:var(--sand); ${document.getElementById(`photo-${staffId}`) && document.getElementById(`photo-${staffId}`).style.display !== "none" ? "" : "display:none;"}" />
+        <div>
+          <h2 style="margin:0;">${name}</h2>
+          <div class="hint" style="font-size:12px;">${s.department !== "-" ? s.department : s.tier} · Kontrak berakhir: ${s.contractEndDate ? new Date(s.contractEndDate).toLocaleDateString("id-ID") : "-"}</div>
+        </div>
+      </div>
+      ${trendBlock}
+      ${decisionBlock}
+      <button class="secondary" style="width:100%; margin-top:12px;" onclick="document.getElementById('comparison-modal').remove()">Tutup</button>
     </div>`;
   document.body.appendChild(overlay);
 }

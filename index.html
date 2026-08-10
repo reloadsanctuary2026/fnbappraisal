@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-35</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-36</div>
 
 <script>
 // =================================================================
@@ -343,7 +343,7 @@ function renderFaq() {
       <p><strong>4.</strong> <strong>Company Overview</strong> — bandingin rata-rata skor department-mu vs department lain (cuma rata-rata, gak ada data personal orang lain).</p>`,
     Executive: `
       <p><strong>1.</strong> Tanggal 8–14: isi <strong>Team Appraisal</strong> buat Management.</p>
-      <p><strong>2.</strong> Tanggal 22–28: <strong>Final Approval</strong> — approve SEMUA tier (Staff/Leader/Management), wajib pilih Decision + 1-on-1 Status + Catatan buat tiap orang yang di-flag.</p>
+      <p><strong>2.</strong> Tanggal 22–28: <strong>All Staff Review & Approval</strong> — approve SEMUA tier (Staff/Leader/Management), wajib pilih Decision + 1-on-1 Status + Catatan buat tiap orang yang di-flag. Bisa juga geser bulan buat sekedar liat-liat skor bulan lain.</p>
       <p><strong>3.</strong> <strong>Team Progress</strong> — pantau siapa aja Leader/Management/HR yang belum ngerjain tugas appraisal-nya (compliance, bukan skor).</p>
       <p><strong>4.</strong> <strong>Company Overview</strong> — ringkasan performa seluruh perusahaan bulan ini: rata-rata skor, jumlah Performer/Underperform, breakdown per department.</p>`,
     HR: `
@@ -502,7 +502,7 @@ function availableScreensGrouped(user) {
     teamItems.push({ key: "company", label: "Company Overview" });
   }
   if (user.isExecutive) {
-    teamItems.push({ key: "gm", label: "Final Approval" });
+    teamItems.push({ key: "gm", label: "All Staff Review & Approval" });
   }
   if (teamItems.length) groups.push({ name: "MyTeams", items: teamItems });
 
@@ -1339,10 +1339,10 @@ async function confirmAndSubmit(evaluatorType) {
 // Executive Approval dashboard (approve only — no Service Charge here)
 // =================================================================
 async function renderGm() {
-  app.innerHTML = topbar("Final Approval") + `<div class="loading">Memuat data...</div>`;
+  app.innerHTML = topbar("All Staff Review & Approval") + `<div class="loading">Memuat data...</div>`;
   const final = await apiGet("getFinalAppraisal", { month: state.month });
   if (final.error) {
-    app.innerHTML = topbar("Final Approval") + `<div class="card"><div class="error">${friendlyError(final.error)}</div></div>`;
+    app.innerHTML = topbar("All Staff Review & Approval") + `<div class="card"><div class="error">${friendlyError(final.error)}</div></div>`;
     return;
   }
   const list = final.staff || [];
@@ -1411,7 +1411,7 @@ async function renderGm() {
       </div>`;
   };
 
-  app.innerHTML = topbar("Final Approval") + `
+  app.innerHTML = topbar("All Staff Review & Approval") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan appraisal</label>

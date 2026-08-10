@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-36</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-09-37</div>
 
 <script>
 // =================================================================
@@ -1044,8 +1044,24 @@ async function renderAppraisalForm({ evaluatorType, target }) {
     return;
   }
   if (!access.allowed) {
-    if (evaluatorType === "self" && (access.reason === "max_attempts_reached" || access.reason === "too_late")) {
+    if (evaluatorType === "self" && access.reason === "max_attempts_reached") {
       renderMyAppraisalStatus(target);
+      return;
+    }
+    if (evaluatorType === "self" && access.reason === "too_late") {
+      // "too_late" alone is ambiguous — could mean "already submitted, now just waiting
+      // on others" OR "never submitted at all, window quietly closed". Check which one
+      // this actually is before deciding what to tell them.
+      const statusCheck = await apiGet("getMyAppraisalStatus", { staffId: target.staffId });
+      if (statusCheck.found && statusCheck.selfDone) {
+        renderMyAppraisalStatus(target);
+      } else {
+        app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
+          <div class="card">
+            <div class="hint" style="font-size:14px;">Waktu buat isi Self Appraisal bulan ini sudah lewat, dan kamu belum sempat mengisinya. Bagian Self kamu akan dihitung 0 untuk bulan ini. Hubungi HR kalau ada alasan khusus.</div>
+            <button class="secondary" onclick="goBack()" style="margin-top:12px;">Kembali</button>
+          </div>`;
+      }
       return;
     }
     let msg;

@@ -165,7 +165,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-42</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-43</div>
 
 <script>
 // =================================================================
@@ -1506,10 +1506,13 @@ async function renderGm() {
               <div id="photo-fallback-${s.staffId}" style="width:44px; height:44px; border-radius:10px; background:var(--sand); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:16px;">${s.name.charAt(0)}</div>
               <div>
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
-                <div class="dept">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
-                <div class="dept" style="margin-top:2px;">Self ${Number(s.selfTotal || 0).toFixed(1)} · Leader/Mgmt ${Number(s.leaderTotal || 0).toFixed(1)} · HR ${Number(s.hrTotal || 0).toFixed(1)}</div>
-                <div class="dept" style="margin-top:2px;">Dinilai Leader/Mgmt: <strong>${s.leaderEvaluatorName || "-"}</strong> · HR: <strong>${s.hrEvaluatorName || "-"}</strong></div>
-                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:2px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
+                <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
+                <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
+                <div class="dept" style="margin-top:2px;">Leader/Mgmt: ${Number(s.leaderTotal || 0).toFixed(1)}</div>
+                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0).toFixed(1)}</div>
+                <div class="dept" style="margin-top:6px;">Dinilai Leader/Mgmt: <strong>${s.leaderEvaluatorName || "-"}</strong></div>
+                <div class="dept" style="margin-top:2px;">Dinilai HR: <strong>${s.hrEvaluatorName || "-"}</strong></div>
+                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
@@ -1584,12 +1587,12 @@ async function showComparisonModal(staffId, name) {
   if (history.length > 1) trendBlock += buildScoreChartSvg(history);
 
   const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
-    <div class="mode-banner" style="background:var(--sand); margin-top:14px;"><span class="mode-label" style="color:var(--teal);">Decision</span></div>
-    <div class="hint" style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
-    ${s.mutationToPosition ? `<div class="hint" style="font-size:13px;">Mutasi: ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
-    ${s.extensionDuration ? `<div class="hint" style="font-size:13px;">Perpanjangan: ${s.extensionDuration}</div>` : ""}
-    <div class="hint" style="font-size:13px; margin-top:4px;">1-on-1: <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
-    ${s.decisionNotes ? `<div class="hint" style="font-size:13px; margin-top:4px;">Catatan: "${s.decisionNotes}"</div>` : ""}
+    <div class="mode-banner" style="background:var(--sand); margin-top:16px; margin-bottom:8px;"><span class="mode-label" style="color:var(--teal);">Decision</span></div>
+    <div class="hint" style="font-size:14px; color:var(--text); margin-top:6px;"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
+    ${s.mutationToPosition ? `<div class="hint" style="font-size:13px; margin-top:8px;">Mutasi: ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
+    ${s.extensionDuration ? `<div class="hint" style="font-size:13px; margin-top:8px;">Perpanjangan: ${s.extensionDuration}</div>` : ""}
+    <div class="hint" style="font-size:13px; margin-top:8px;">1-on-1: <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
+    ${s.decisionNotes ? `<div class="hint" style="font-size:13px; margin-top:8px;">Catatan:<br/>"${s.decisionNotes}"</div>` : ""}
   ` : "";
 
   const overlay = document.createElement("div");

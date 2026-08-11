@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-54</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-55</div>
 
 <script>
 // =================================================================
@@ -233,7 +233,7 @@ function friendlyError(code) {
     decision_required: "Decision belum dipilih.",
     one_on_one_status_required: "1-on-1 Status belum dipilih.",
     notes_required: "Catatan belum diisi.",
-    outside_approval_window: "Belum waktunya approval (tanggal 22-28 tiap bulan).",
+    outside_approval_window: "Belum waktunya approval (tanggal 28 - 4 bulan depan).",
     not_authorized: "Anda tidak punya akses untuk appraisal ini.",
     evaluator_or_target_not_found: "Data tidak ditemukan, coba refresh halaman.",
     appraisal_not_found: "Appraisal untuk staff ini belum lengkap.",
@@ -347,27 +347,27 @@ function renderFaq() {
   const tierFlow = {
     Staff: `
       <p><strong>1.</strong> Tanggal 1–7: isi <strong>Self Appraisal</strong> — nilai diri sendiri, cuma bisa 1x submit.</p>
-      <p><strong>2.</strong> Tanggal 8–14: Leader/Management kamu menilai kamu.</p>
-      <p><strong>3.</strong> Tanggal 15–21: HR menilai kamu.</p>
-      <p><strong>4.</strong> Tanggal 22–28: Executive approve hasil final + kasih Decision.</p>
+      <p><strong>2.</strong> Tanggal 8–17: HR menilai kamu.</p>
+      <p><strong>3.</strong> Tanggal 18–27: Leader/Management kamu menilai kamu.</p>
+      <p><strong>4.</strong> Tanggal 28 - 4 (bulan depan): Executive approve hasil final + kasih Decision.</p>
       <p>Cek progress kapan aja lewat <strong>Appraisal History</strong> di Dashboard. Notifikasi (🔔) masuk begitu Decision keluar.</p>`,
     Leader: `
       <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (kamu juga dinilai, oleh Management).</p>
-      <p><strong>2.</strong> Tanggal 8–14: isi <strong>Team Appraisal</strong> buat Staff yang jadi tanggung jawabmu. Kalau Staff-nya udah isi Self duluan, skornya muncul sebagai referensi.</p>
+      <p><strong>2.</strong> Tanggal 18–27: isi <strong>Team Appraisal</strong> buat Staff yang jadi tanggung jawabmu — ini setelah HR appraisal, bukan sebelumnya. Kalau Staff-nya udah isi Self duluan, skornya muncul sebagai referensi.</p>
       <p><strong>3.</strong> Lewat <strong>Team Review</strong>, kamu bisa lihat hasil appraisal Staff-mu (read-only, gak bisa isi ulang).</p>
       <p>Kalau lupa isi sampai window ketutup, skor Leader buat Staff itu dianggap 0 (bobot 60%) — jadi usahain tepat waktu.</p>`,
     Management: `
       <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (dinilai oleh Executive).</p>
-      <p><strong>2.</strong> Tanggal 8–14: isi <strong>Team Appraisal</strong> buat Leader di scope-mu. Kalau ada Staff yang Leader-nya belum sempat isi, kamu bisa isi sebagai pengganti.</p>
+      <p><strong>2.</strong> Tanggal 18–27: isi <strong>Team Appraisal</strong> buat Leader di scope-mu. Kalau ada Staff yang Leader-nya belum sempat isi, kamu bisa isi sebagai pengganti.</p>
       <p><strong>3.</strong> <strong>Team Review</strong> — lihat hasil Leader & Staff di scope-mu (read-only).</p>
       <p><strong>4.</strong> <strong>F&B Overview</strong> — bandingin rata-rata skor department-mu vs department lain (cuma rata-rata, gak ada data personal orang lain).</p>`,
     Executive: `
-      <p><strong>1.</strong> Tanggal 8–14: isi <strong>Team Appraisal</strong> buat Management.</p>
-      <p><strong>2.</strong> Tanggal 22–28: <strong>All Staff Review & Approval</strong> — approve SEMUA tier (Staff/Leader/Management), wajib pilih Decision + 1-on-1 Status + Catatan buat tiap orang yang di-flag. Bisa juga geser bulan buat sekedar liat-liat skor bulan lain.</p>
+      <p><strong>1.</strong> Tanggal 18–27: isi <strong>Team Appraisal</strong> buat Management.</p>
+      <p><strong>2.</strong> Tanggal 28 - 4 (bulan depan): <strong>All Staff Review & Approval</strong> — approve SEMUA tier (Staff/Leader/Management), wajib pilih Decision + 1-on-1 Status + Catatan buat tiap orang yang di-flag. Bisa juga geser bulan buat sekedar liat-liat skor bulan lain.</p>
       <p><strong>3.</strong> <strong>Team Progress</strong> — pantau siapa aja Leader/Management/HR yang belum ngerjain tugas appraisal-nya (compliance, bukan skor).</p>
       <p><strong>4.</strong> <strong>F&B Overview</strong> — ringkasan performa seluruh perusahaan bulan ini: rata-rata skor, jumlah Performer/Underperform, breakdown per department.</p>`,
     HR: `
-      <p><strong>1.</strong> Tanggal 15–21: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department. Ada tombol "Samakan dgn Leader/Mgmt" buat mempercepat kalau gak sempat nilai satu-satu.</p>
+      <p><strong>1.</strong> Tanggal 8–17: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department — ini duluan sebelum Leader/Management appraisal. Tombol "Samakan dgn Leader/Mgmt" baru muncul setelah Leader/Management-nya isi.</p>
       <p><strong>2.</strong> <strong>All Staff Review</strong> — lihat semua hasil appraisal, lintas department & tier (read-only).</p>
       <p><strong>3.</strong> <strong>Service Charge Input</strong> — input Total SC bulanan, sistem otomatis hitung deduction & pool distribution.</p>
       <p><strong>4.</strong> <strong>Follow-Up To-Do</strong> — reminder buat kasus "Extend Probation/Kontrak" yang udah jatuh tempo, perlu ditindaklanjuti.</p>`,
@@ -375,7 +375,7 @@ function renderFaq() {
 
   const qa = [
     { q: "Kenapa saya gak bisa isi appraisal lagi?", a: "Appraisal cuma bisa disubmit 1 kali per bulan. Kalau udah submit, tombolnya otomatis terkunci sampai bulan berikutnya. Hubungi HR kalau butuh koreksi." },
-    { q: "Kapan saya tahu hasil appraisal saya?", a: "Setelah Executive approve (tanggal 22–28), kamu dapat notifikasi (🔔) dan bisa lihat detail lengkapnya di Appraisal History." },
+    { q: "Kapan saya tahu hasil appraisal saya?", a: "Setelah Executive approve (tanggal 28 - 4 bulan depan), kamu dapat notifikasi (🔔) dan bisa lihat detail lengkapnya di Appraisal History." },
     { q: "Kalau Leader/HR saya belum isi appraisal, gimana?", a: "Kalau sampai window waktunya tutup mereka belum isi, skor mereka dianggap 0 (bukan diskip) — ini konsekuensi bawaan sistem, bukan bug." },
     { q: "Skor saya turun karena apa?", a: "Cek Appraisal History — ada breakdown per Section (Attitude/Discipline/KPI/Bonus) biar tau bagian mana yang lemah." },
     { q: "Siapa yang bisa lihat data appraisal saya?", a: "Leader/Management/Executive/HR yang berwenang di scope kamu. Orang di department lain gak bisa lihat data personal kamu." },
@@ -389,9 +389,9 @@ function renderFaq() {
       <h2>Alur Umum (Siklus Bulanan)</h2>
       <table class="mini">
         <tr><td>Tanggal 1–7</td><td>Self Appraisal (semua tier)</td></tr>
-        <tr><td>Tanggal 8–14</td><td>Leader/Management/Executive menilai tim-nya</td></tr>
-        <tr><td>Tanggal 15–21</td><td>HR menilai semua tier</td></tr>
-        <tr><td>Tanggal 22–28</td><td>Executive Approval + Decision final</td></tr>
+        <tr><td>Tanggal 8–17</td><td>HR menilai semua tier</td></tr>
+        <tr><td>Tanggal 18–27</td><td>Leader/Management/Executive menilai tim-nya</td></tr>
+        <tr><td>Tanggal 28 - 4 (bulan depan)</td><td>Executive Approval + Decision final</td></tr>
       </table>
       <div class="hint" style="margin-top:8px;">Kalau fase sebelumnya diisi lebih awal, fase berikutnya bisa dibuka lebih cepat juga — tenggat waktunya tetap sama.</div>
     </div>
@@ -1600,7 +1600,7 @@ async function renderGm() {
     <div class="card">
       <label>Bulan appraisal</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
-      <div class="hint">Approval cuma bisa dilakukan tanggal 22–28 tiap bulan.</div>
+      <div class="hint">Approval cuma bisa dilakukan tanggal 28 sampai tanggal 4 bulan depan.</div>
     </div>
 
     <div class="card">

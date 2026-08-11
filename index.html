@@ -168,7 +168,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-51</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-52</div>
 
 <script>
 // =================================================================
@@ -729,10 +729,23 @@ async function renderMyEvaluations() {
   const showMenuLink = availableScreens(state.user).length > 1;
   app.innerHTML = topbar(state.user.isHR ? "HR Appraisal" : "Team Appraisal") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
-    ${list.length > 5 ? '<input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" style="margin-bottom:10px;" />' : ""}
+    <input type="text" placeholder="Cari nama..." oninput="updateMyEvalFilter('search', this.value)" style="margin-bottom:10px;" />
+    <div class="row-flex" style="margin-bottom:10px;">
+      <select onchange="sortMyEvalList(this.value)">
+        <option value="">Urutkan...</option>
+        <option value="name-asc">Nama (A-Z)</option>
+        <option value="name-desc">Nama (Z-A)</option>
+      </select>
+      <select onchange="updateMyEvalFilter('department', this.value)">
+        <option value="">Semua Department</option>
+        ${[...new Set(list.map(s => s.department !== "-" ? s.department : s.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
+      </select>
+    </div>
+    <button class="secondary" id="myeval-notdone-btn" onclick="toggleMyEvalFilterBtn('notDoneOnly', 'myeval-notdone-btn')" style="margin-bottom:10px;">Belum Diisi Saja</button>
     <div class="hint">${list.length} orang — klik untuk isi appraisal</div>
+    <div id="myeval-list-container">
     ${list.map(s => `
-      <div class="staff-row" data-search="${escapeAttr(s.name.toLowerCase())}" onclick="openForm('${s.slot}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}', '${s.tier}')">
+      <div class="staff-row" data-search="${escapeAttr(s.name.toLowerCase())}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-mystatus="${s.status}" data-name="${escapeAttr(s.name)}" onclick="openForm('${s.slot}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}', '${s.tier}')">
         <div>
           <div class="name">${s.name} <span style="font-weight:700; font-size:11px; color:var(--coral); text-transform:uppercase;">· ${s.slot === "hr" ? "HR" : "Leader/Mgmt"}</span></div>
           <div class="dept">${s.department !== "-" ? s.department : s.tier} · ${s.tier}</div>
@@ -753,9 +766,48 @@ async function renderMyEvaluations() {
           ` : ""}
         </div>
       </div>`).join("")}
+    </div>
     ${!list.length ? '<div class="hint">Tidak ada yang perlu di-appraisal saat ini.</div>' : ""}
   `;
+  state._myEvalFilters = { search: "", department: "", notDoneOnly: false };
 }
+
+function toggleMyEvalFilterBtn(filterKey, btnId) {
+  const btn = document.getElementById(btnId);
+  const isActive = btn.dataset.active === "true";
+  btn.dataset.active = isActive ? "false" : "true";
+  btn.style.background = isActive ? "" : "var(--coral)";
+  btn.style.color = isActive ? "" : "#fff";
+  btn.style.borderColor = isActive ? "" : "var(--coral)";
+  updateMyEvalFilter(filterKey, !isActive);
+}
+
+function updateMyEvalFilter(key, value) {
+  state._myEvalFilters = state._myEvalFilters || {};
+  state._myEvalFilters[key] = value;
+  const f = state._myEvalFilters;
+  document.querySelectorAll("#myeval-list-container [data-search]").forEach(el => {
+    let show = true;
+    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
+    if (f.department && el.dataset.department !== f.department) show = false;
+    if (f.notDoneOnly && el.dataset.mystatus === "Submitted") show = false;
+    el.style.display = show ? "" : "none";
+  });
+}
+
+function sortMyEvalList(criteria) {
+  if (!criteria) return;
+  const container = document.getElementById("myeval-list-container");
+  if (!container) return;
+  const cards = Array.from(container.children);
+  cards.sort((a, b) => {
+    if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
+    if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
+    return 0;
+  });
+  cards.forEach(c => container.appendChild(c));
+}
+
 
 function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
 
@@ -827,7 +879,7 @@ async function renderEvaluatorProgress() {
     app.innerHTML = topbar("Team Progress") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
-  const progress = res.progress || [];
+  const progress = (res.progress || []).sort((a, b) => a.percentage - b.percentage);
   const showMenuLink = availableScreens(state.user).length > 1;
 
   const groupOrder = ["Leader", "Management", "HR"];
@@ -882,10 +934,25 @@ async function renderReview() {
       <label>Bulan</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
     </div>
-    ${rows.length > 5 ? '<input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" style="margin-bottom:10px;" />' : ""}
+    <input type="text" placeholder="Cari nama..." oninput="updateReviewFilter('search', this.value)" style="margin-bottom:10px;" />
+    <div class="row-flex" style="margin-bottom:10px;">
+      <select onchange="sortReviewList(this.value)">
+        <option value="">Urutkan...</option>
+        <option value="name-asc">Nama (A-Z)</option>
+        <option value="name-desc">Nama (Z-A)</option>
+        <option value="score-desc">Skor Tertinggi</option>
+        <option value="score-asc">Skor Terendah</option>
+      </select>
+      <select onchange="updateReviewFilter('department', this.value)">
+        <option value="">Semua Department</option>
+        ${[...new Set(rows.map(r => r.department !== "-" ? r.department : r.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
+      </select>
+    </div>
+    <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">Underperform Saja</button>
     <div class="hint">${rows.length} appraisal record — read only</div>
+    <div id="review-list-container">
     ${rows.map(r => `
-      <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" style="cursor:default;">
+      <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-department="${escapeAttr(r.department !== "-" ? r.department : r.tier)}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:default;">
         <div>
           <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
           <div class="dept">${monthLabelID(r.month)} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
@@ -896,8 +963,49 @@ async function renderReview() {
           <span class="badge ${r.approvalStatus === 'Approved' ? 'done' : 'pending'}">${statusLabelID(r.approvalStatus || 'Pending')}</span>
         </div>
       </div>`).join("")}
+    </div>
     ${!rows.length ? '<div class="hint">Belum ada data appraisal di scope kamu.</div>' : ""}
   `;
+  state._reviewFilters = { search: "", department: "", underperformOnly: false };
+}
+
+function toggleReviewFilterBtn(filterKey, btnId) {
+  const btn = document.getElementById(btnId);
+  const isActive = btn.dataset.active === "true";
+  btn.dataset.active = isActive ? "false" : "true";
+  btn.style.background = isActive ? "" : "var(--coral)";
+  btn.style.color = isActive ? "" : "#fff";
+  btn.style.borderColor = isActive ? "" : "var(--coral)";
+  updateReviewFilter(filterKey, !isActive);
+}
+
+function updateReviewFilter(key, value) {
+  state._reviewFilters = state._reviewFilters || {};
+  state._reviewFilters[key] = value;
+  const f = state._reviewFilters;
+  document.querySelectorAll("#review-list-container [data-search]").forEach(el => {
+    let show = true;
+    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
+    if (f.department && el.dataset.department !== f.department) show = false;
+    if (f.underperformOnly && el.dataset.status !== "Underperform") show = false;
+    el.style.display = show ? "" : "none";
+  });
+}
+
+function sortReviewList(criteria) {
+  if (!criteria) return;
+  const container = document.getElementById("review-list-container");
+  if (!container) return;
+  const cards = Array.from(container.children);
+  cards.sort((a, b) => {
+    if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
+    if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
+    if (criteria === "score-desc") return Number(b.dataset.score) - Number(a.dataset.score);
+    if (criteria === "score-asc") return Number(a.dataset.score) - Number(b.dataset.score);
+    return 0;
+  });
+  cards.forEach(c => container.appendChild(c));
+
 }
 
 function openForm(evaluatorType, staffId, name, department, tier) {

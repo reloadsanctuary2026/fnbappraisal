@@ -121,7 +121,6 @@
   .badge.pending { background: var(--sand); color: var(--text-muted); }
   .badge.performer { background: var(--green-bg); color: var(--green); }
   .badge.underperform { background: var(--red-bg); color: var(--red); }
-  .badge.flag { background: var(--amber-bg); color: var(--amber); }
 
   .criterion-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
   .criterion-row:last-child { border-bottom: none; }
@@ -168,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-52</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-53</div>
 
 <script>
 // =================================================================
@@ -262,7 +261,6 @@ let state = {
   targetStaff: null,     // person being appraised (for non-self forms)
   kpiConfig: null,
   scores: {},            // criterion -> score
-  submissionCount: 0,    // how many times this target/slot has already been submitted
   unreadCount: 0,
   prevScreen: null,
   _preserveScores: false,
@@ -704,7 +702,7 @@ function goToScreen(key) {
 }
 
 function logout() {
-  state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {}, submissionCount: 0 };
+  state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {} };
   render();
 }
 
@@ -810,13 +808,6 @@ function sortMyEvalList(criteria) {
 
 
 function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
-
-function filterList(query) {
-  const q = query.trim().toLowerCase();
-  document.querySelectorAll("[data-search]").forEach(el => {
-    el.style.display = el.dataset.search.includes(q) ? "" : "none";
-  });
-}
 
 // =================================================================
 // Review — read-only, scoped by Tier/Oversees (Management sees their
@@ -1226,7 +1217,6 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       </div>`;
     return;
   }
-  state.submissionCount = access.submissionCount || 0;
 
   app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memuat form...</div>`;
   const cfg = await apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId });

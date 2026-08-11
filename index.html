@@ -168,7 +168,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-49</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-50</div>
 
 <script>
 // =================================================================
@@ -1619,7 +1619,7 @@ async function showComparisonModal(staffId, name) {
     <div class="card" style="max-width:420px; width:100%; background:#fff; max-height:85vh; overflow-y:auto;" onclick="event.stopPropagation();">
       <div style="text-align:center; margin-bottom:14px;">
         ${document.getElementById(`photo-${staffId}`) && document.getElementById(`photo-${staffId}`).style.display !== "none"
-          ? `<img src="${document.getElementById(`photo-${staffId}`).src}" style="width:110px; height:110px; border-radius:16px; object-fit:cover; background:var(--sand); margin:0 auto 10px; display:block;" />`
+          ? `<img src="${document.getElementById(`photo-${staffId}`).src}" style="width:110px; height:110px; border-radius:16px; object-fit:cover; background:var(--sand); margin:0 auto 10px; display:block; cursor:pointer;" onclick="event.stopPropagation(); showPhotoModal('${document.getElementById(`photo-${staffId}`).src}', '${escapeAttr(name)}')" />`
           : `<div style="width:110px; height:110px; border-radius:16px; background:var(--sand); margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:42px;">${name.charAt(0)}</div>`}
         <h2 style="margin:0;">${name}</h2>
         <div class="hint" style="font-size:12px; margin-top:2px;">${s.department !== "-" ? s.department : s.tier} · Kontrak berakhir: ${s.contractEndDate ? new Date(s.contractEndDate).toLocaleDateString("id-ID") : "-"}</div>
@@ -1636,7 +1636,7 @@ function showPhotoModal(src, name) {
   if (existing) existing.remove();
   const overlay = document.createElement("div");
   overlay.id = "photo-modal";
-  overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px;";
+  overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:300; display:flex; align-items:center; justify-content:center; padding:24px;";
   overlay.onclick = () => overlay.remove();
   overlay.innerHTML = `
     <div style="max-width:90%; max-height:90%; text-align:center;">

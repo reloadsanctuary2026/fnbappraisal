@@ -168,7 +168,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-50</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-51</div>
 
 <script>
 // =================================================================
@@ -1503,12 +1503,27 @@ async function renderGm() {
         <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
         <button class="secondary" onclick="approveAll()">Approve Semua (kecuali yang di bawah standar) — default "Approved, Lanjut"</button>
       </div>
+      <input type="text" placeholder="Cari nama..." oninput="updateGmFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:10px;">
-        <input type="text" placeholder="Cari nama..." oninput="filterList(this.value)" />
-        <button class="secondary" id="underperform-filter-btn" style="flex:0 0 auto; white-space:nowrap;" onclick="toggleUnderperformFilter()">Underperform Saja</button>
+        <select onchange="sortGmList(this.value)">
+          <option value="">Urutkan...</option>
+          <option value="name-asc">Nama (A-Z)</option>
+          <option value="name-desc">Nama (Z-A)</option>
+          <option value="score-desc">Skor Tertinggi</option>
+          <option value="score-asc">Skor Terendah</option>
+        </select>
+        <select onchange="updateGmFilter('department', this.value)">
+          <option value="">Semua Department</option>
+          ${[...new Set(list.map(s => s.department !== "-" ? s.department : s.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
+        </select>
       </div>
+      <div class="row-flex" style="margin-bottom:10px;">
+        <button class="secondary" id="underperform-filter-btn" onclick="toggleGmFilterBtn('underperformOnly', 'underperform-filter-btn')">Underperform Saja</button>
+        <button class="secondary" id="not-approved-filter-btn" onclick="toggleGmFilterBtn('notApprovedOnly', 'not-approved-filter-btn')">Belum Diputuskan Saja</button>
+      </div>
+      <div id="gm-list-container">
       ${list.map(s => `
-        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" class="clickable-card" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
+        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-approved="${s.approvalStatus === 'Approved'}" data-name="${escapeAttr(s.name)}" data-score="${s.finalScore || 0}" class="clickable-card" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
           <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
             <div style="display:flex; align-items:center; gap:10px;">
               <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />
@@ -1531,9 +1546,11 @@ async function renderGm() {
           </div>
           <div onclick="event.stopPropagation();">${s.approvalStatus !== 'Approved' ? decisionForm(s) : ""}</div>
         </div>`).join("")}
+      </div>
       ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.</div>' : ""}
     </div>`;
 
+  state._gmFilters = { search: "", department: "", underperformOnly: false, notApprovedOnly: false };
   loadStaffPhotos(list.map(s => s.staffId));
 }
 
@@ -1553,16 +1570,43 @@ async function loadStaffPhotos(staffIds) {
   });
 }
 
-function toggleUnderperformFilter() {
-  const btn = document.getElementById("underperform-filter-btn");
+function toggleGmFilterBtn(filterKey, btnId) {
+  const btn = document.getElementById(btnId);
   const isActive = btn.dataset.active === "true";
   btn.dataset.active = isActive ? "false" : "true";
   btn.style.background = isActive ? "" : "var(--coral)";
   btn.style.color = isActive ? "" : "#fff";
   btn.style.borderColor = isActive ? "" : "var(--coral)";
-  document.querySelectorAll("[data-status]").forEach(el => {
-    el.style.display = (!isActive && el.dataset.status !== "Underperform") ? "none" : "";
+  updateGmFilter(filterKey, !isActive);
+}
+
+function updateGmFilter(key, value) {
+  state._gmFilters = state._gmFilters || {};
+  state._gmFilters[key] = value;
+  const f = state._gmFilters;
+  document.querySelectorAll("#gm-list-container [data-search]").forEach(el => {
+    let show = true;
+    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
+    if (f.department && el.dataset.department !== f.department) show = false;
+    if (f.underperformOnly && el.dataset.status !== "Underperform") show = false;
+    if (f.notApprovedOnly && el.dataset.approved !== "false") show = false;
+    el.style.display = show ? "" : "none";
   });
+}
+
+function sortGmList(criteria) {
+  if (!criteria) return;
+  const container = document.getElementById("gm-list-container");
+  if (!container) return;
+  const cards = Array.from(container.children);
+  cards.sort((a, b) => {
+    if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
+    if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
+    if (criteria === "score-desc") return Number(b.dataset.score) - Number(a.dataset.score);
+    if (criteria === "score-asc") return Number(a.dataset.score) - Number(b.dataset.score);
+    return 0;
+  });
+  cards.forEach(c => container.appendChild(c));
 }
 
 async function showComparisonModal(staffId, name) {

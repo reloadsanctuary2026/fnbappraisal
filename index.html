@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-53</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-54</div>
 
 <script>
 // =================================================================
@@ -209,6 +209,13 @@ function monthLabelID(monthKey) {
   const [y, m] = String(monthKey).split("-");
   const idx = Number(m) - 1;
   return months[idx] ? `${months[idx]} ${y}` : monthKey;
+}
+
+function fullDateLabelID(dateInput) {
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) return "-";
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 function statusLabelID(status) {
@@ -444,7 +451,7 @@ async function renderNotifications() {
       <div class="staff-row" style="cursor:default; ${n.read ? "" : "border-color:var(--coral);"}" ${n.read ? "" : `onclick="markRead('${n.id}')"`}>
         <div>
           <div class="name" style="font-weight:${n.read ? "500" : "700"};">${n.message}</div>
-          <div class="dept">${new Date(n.timestamp).toLocaleDateString("id-ID")} · ${n.month}</div>
+          <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
         </div>
         ${n.read ? "" : `<span class="badge pending">Baru</span>`}
       </div>`).join("")}
@@ -947,7 +954,7 @@ async function renderReview() {
         <div>
           <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
           <div class="dept">${monthLabelID(r.month)} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
-          <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? new Date(r.contractEndDate).toLocaleDateString("id-ID") : "-"}</div>
+          <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? fullDateLabelID(r.contractEndDate) : "-"}</div>
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
           <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
@@ -1764,7 +1771,7 @@ async function showComparisonModal(staffId, name) {
           ? `<img src="${document.getElementById(`photo-${staffId}`).src}" style="width:110px; height:110px; border-radius:16px; object-fit:cover; background:var(--sand); margin:0 auto 10px; display:block; cursor:pointer;" onclick="event.stopPropagation(); showPhotoModal('${document.getElementById(`photo-${staffId}`).src}', '${escapeAttr(name)}')" />`
           : `<div style="width:110px; height:110px; border-radius:16px; background:var(--sand); margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:42px;">${name.charAt(0)}</div>`}
         <h2 style="margin:0;">${name}</h2>
-        <div class="hint" style="font-size:12px; margin-top:2px;">${s.department !== "-" ? s.department : s.tier} · Kontrak berakhir: ${s.contractEndDate ? new Date(s.contractEndDate).toLocaleDateString("id-ID") : "-"}</div>
+        <div class="hint" style="font-size:12px; margin-top:2px;">${s.department !== "-" ? s.department : s.tier} · Kontrak berakhir: ${s.contractEndDate ? fullDateLabelID(s.contractEndDate) : "-"}</div>
       </div>
       ${trendBlock}
       ${decisionBlock}
@@ -1851,7 +1858,7 @@ async function renderHrFollowUpTodos() {
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
           <div>
             <div class="name">${t.name} <span style="font-weight:400; color:var(--text-muted);">(${t.department})</span></div>
-            <div class="dept">Extend: ${t.extensionDuration} — jatuh tempo ${new Date(t.extensionExpiryDate).toLocaleDateString("id-ID")}</div>
+            <div class="dept">Extend: ${t.extensionDuration} — jatuh tempo ${fullDateLabelID(t.extensionExpiryDate)}</div>
             ${t.decisionNotes ? `<div class="dept" style="margin-top:2px;">Catatan waktu itu: "${t.decisionNotes}"</div>` : ""}
             <div class="dept" style="margin-top:2px; font-size:11px;">Disetujui oleh ${t.approvedBy}</div>
           </div>

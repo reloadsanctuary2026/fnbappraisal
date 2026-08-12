@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-55</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-56</div>
 
 <script>
 // =================================================================
@@ -1753,11 +1753,11 @@ async function showComparisonModal(staffId, name) {
 
   const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
     <div class="section-title" style="margin:16px -18px 8px;">Decision</div>
-    <div class="hint" style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
-    ${s.mutationToPosition ? `<div class="hint" style="font-size:13px; margin-top:8px;">Mutasi: ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
-    ${s.extensionDuration ? `<div class="hint" style="font-size:13px; margin-top:8px;">Perpanjangan: ${s.extensionDuration}</div>` : ""}
-    <div class="hint" style="font-size:13px; margin-top:8px;">1-on-1: <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
-    ${s.decisionNotes ? `<div class="hint" style="font-size:13px; margin-top:8px;">Catatan:<br/>"${s.decisionNotes}"</div>` : ""}
+    <div style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
+    ${s.mutationToPosition ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Mutasi: ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
+    ${s.extensionDuration ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Perpanjangan: ${s.extensionDuration}</div>` : ""}
+    <div style="font-size:13px; color:var(--text); margin-top:8px;">1-on-1: <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
+    ${s.decisionNotes ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Catatan:<br/>"${s.decisionNotes}"</div>` : ""}
   ` : "";
 
   const overlay = document.createElement("div");

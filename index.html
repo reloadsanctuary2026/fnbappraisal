@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-60</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-61</div>
 
 <script>
 // =================================================================
@@ -480,27 +480,67 @@ function renderLogin() {
     <div class="card">
       <h2>Masuk dengan NIK</h2>
       <label>NIK (Nomor Induk Karyawan)</label>
-      <input type="text" id="pin-input" inputmode="numeric" placeholder="Contoh: 1096" maxlength="10" />
+      <input type="text" id="nik-input" inputmode="numeric" placeholder="Contoh: 1096" maxlength="10" />
       <div class="error" id="login-error"></div>
-      <button class="primary" onclick="doLogin()">Masuk</button>
+      <button class="primary" onclick="doLoginStep1()">Lanjut</button>
     </div>`;
-  document.getElementById("pin-input").focus();
-  document.getElementById("pin-input").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+  document.getElementById("nik-input").focus();
+  document.getElementById("nik-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep1(); });
 }
 
-async function doLogin() {
-  const nik = document.getElementById("pin-input").value.trim();
+async function doLoginStep1() {
+  const nik = document.getElementById("nik-input").value.trim();
   if (!nik) return;
   const errEl = document.getElementById("login-error");
   errEl.textContent = "Menghubungkan...";
   try {
-    const res = await apiGet("login", { nik });
-    if (res.error) {
-      errEl.textContent = friendlyError(res.error);
-      return;
-    }
+    const res = await apiGet("checkNikExists", { nik });
     if (!res.found) {
       errEl.textContent = "NIK tidak ditemukan.";
+      return;
+    }
+    if (!res.hasPin) {
+      // No PIN set yet for this person — proceed straight through, same as before PIN existed.
+      await completeLogin(nik, "");
+      return;
+    }
+    state._pendingNik = nik;
+    showPinPrompt();
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
+  }
+}
+
+function showPinPrompt() {
+  app.innerHTML = `
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div></div>
+    <div class="card">
+      <h2>Masukkan PIN</h2>
+      <label>PIN 4 digit kamu</label>
+      <input type="password" id="pin-code-input" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:22px; letter-spacing:8px; text-align:center;" />
+      <div class="error" id="login-error"></div>
+      <button class="primary" onclick="doLoginStep2()">Masuk</button>
+      <button class="ghost" style="margin-top:8px;" onclick="renderLogin()">&larr; Ganti NIK</button>
+    </div>`;
+  document.getElementById("pin-code-input").focus();
+  document.getElementById("pin-code-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep2(); });
+}
+
+async function doLoginStep2() {
+  const pin = document.getElementById("pin-code-input").value.trim();
+  const errEl = document.getElementById("login-error");
+  if (!pin) { errEl.textContent = "PIN wajib diisi."; return; }
+  await completeLogin(state._pendingNik, pin);
+}
+
+async function completeLogin(nik, pin) {
+  const errEl = document.getElementById("login-error");
+  if (errEl) errEl.textContent = "Menghubungkan...";
+  try {
+    const res = await apiGet("login", { nik, pin });
+    if (!res.found) {
+      if (errEl) errEl.textContent = res.error === "invalid_pin" ? "PIN salah. Coba lagi." : "NIK tidak ditemukan.";
       return;
     }
     state.user = res;
@@ -508,7 +548,7 @@ async function doLogin() {
     goToRoleMenu();
   } catch (err) {
     console.error(err);
-    errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
+    if (errEl) errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
   }
 }
 

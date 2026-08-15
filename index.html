@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-61</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-62</div>
 
 <script>
 // =================================================================
@@ -1961,6 +1961,33 @@ async function renderScInput() {
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
   const showMenuLink = availableScreens(state.user).length > 1;
 
+  const quota = pool.roleBonusQuota || { Service: 2, Cashier: 1, Hostess: 1, Runner: 2, Bar: 2, Kitchen: 2 };
+  const selections = pool.roleBonusSelections || [];
+  state._roleBonusStaffOptions = state._roleBonusStaffOptions || {};
+
+  // Load staff options for each department (once, cached in state).
+  for (const dept of Object.keys(quota)) {
+    if (!state._roleBonusStaffOptions[dept]) {
+      const res = await apiGet("getStaffByDepartment", { department: dept });
+      state._roleBonusStaffOptions[dept] = res.staff || [];
+    }
+  }
+
+  const roleBonusRows = (dept, qty) => {
+    const picked = selections.filter(s => s.department === dept).map(s => s.staffId);
+    const options = state._roleBonusStaffOptions[dept] || [];
+    let rows = "";
+    for (let i = 0; i < qty; i++) {
+      const currentPick = picked[i] || "";
+      rows += `
+        <select class="role-bonus-select" data-dept="${dept}" style="margin-bottom:6px;">
+          <option value="">— kosongkan —</option>
+          ${options.map(o => `<option value="${o.staffId}" ${o.staffId === currentPick ? "selected" : ""}>${o.name}</option>`).join("")}
+        </select>`;
+    }
+    return rows;
+  };
+
   app.innerHTML = topbar("Calculate Service Charge") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
@@ -1968,17 +1995,30 @@ async function renderScInput() {
       <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
     </div>
     <div class="card">
-      <h2>Total Service Charge — ${state.month}</h2>
-      <label>Total SC bulan ini (Rp)</label>
+      <h2>Total Service Charge — ${monthLabelID(state.month)}</h2>
+      <label>Total SC bulan ini (Rp, sebelum potongan apapun)</label>
       <input type="number" id="sc-input" value="${pool.found ? pool.totalSC : ""}" placeholder="150000000" />
       <button class="secondary" onclick="saveTotalSC()">Simpan Total SC</button>
       ${pool.found ? `
         <table class="mini" style="margin-top:12px;">
-          <tr><td>Base share / staff</td><td>${idr(pool.baseShare)}</td></tr>
-          <tr><td>Pool total</td><td>${idr(pool.poolTotal)}</td></tr>
+          <tr><td>Total SC (Net)</td><td>${idr(pool.totalSC)}</td></tr>
+          <tr><td>Staff Bonus Pool (tetap)</td><td>− ${idr(pool.staffBonusPoolAmount)}</td></tr>
+          <tr><td><strong>Distributable Amount</strong></td><td><strong>${idr(pool.distributableAmount)}</strong></td></tr>
+          <tr><td>Base Share / staff</td><td>${idr(pool.baseShare)}</td></tr>
+          <tr><td>Deduction Pool (dari Underperform)</td><td>${idr(pool.poolTotal)}</td></tr>
           <tr><td># Performer</td><td>${pool.performerCount}</td></tr>
-          <tr><td>Pool share / performer</td><td>${idr(pool.poolShare)}</td></tr>
+          <tr><td>Pool Share / performer</td><td>${idr(pool.poolShare)}</td></tr>
         </table>` : ""}
+    </div>
+    <div class="card">
+      <h2>Monthly Role-Based Bonus — ${idr(pool.roleBonusPerPerson || 300000)}/orang</h2>
+      <div class="hint" style="margin-bottom:10px;">Pilih staff yang dapat bonus tambahan bulan ini, sesuai kuota tiap role (Memo 122/HR-IM/VIII/2026). Dikonsolidasikan dari usulan Leader/Department Head masing-masing.</div>
+      ${Object.entries(quota).map(([dept, qty]) => `
+        <div style="margin-bottom:14px;">
+          <label style="font-weight:700;">${dept} (${qty} orang)</label>
+          ${roleBonusRows(dept, qty)}
+        </div>`).join("")}
+      <button class="primary" onclick="saveRoleBonusSelections()">Simpan Role-Based Bonus</button>
     </div>`;
 }
 
@@ -1996,6 +2036,29 @@ async function saveTotalSC() {
   showToast("Total SC tersimpan!");
   renderScInput();
 }
+
+async function saveRoleBonusSelections() {
+  const selects = document.querySelectorAll(".role-bonus-select");
+  const selections = [];
+  const seen = {};
+  for (const el of selects) {
+    const dept = el.dataset.dept;
+    const staffId = el.value;
+    if (!staffId) continue;
+    const key = dept + "|" + staffId;
+    if (seen[key]) { showToast(`${staffId} dipilih dobel untuk ${dept} — cek lagi.`, "error"); return; }
+    seen[key] = true;
+    selections.push({ department: dept, staffId });
+  }
+  const res = await apiPost("setRoleBonusSelections", { month: state.month, selections });
+  if (res.error || res.success === false) {
+    showToast(`Gagal simpan: kuota ${res.department || ""} kelebihan.`, "error");
+    return;
+  }
+  showToast("Role-Based Bonus tersimpan!");
+  renderScInput();
+}
+
 async function approveAll() {
   const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
   if (res.error) { showToast("Gagal approve semua: " + friendlyError(res.error), "error"); return; }

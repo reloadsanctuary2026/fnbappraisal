@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-62</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-64</div>
 
 <script>
 // =================================================================
@@ -286,6 +286,7 @@ function render() {
   if (state.screen === "review") return renderReview();
   if (state.screen === "progress") return renderEvaluatorProgress();
   if (state.screen === "feedback") return renderStaffFeedback();
+  if (state.screen === "historical") return renderHistoricalInput();
   if (state.screen === "company") return renderCompanySummary();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
@@ -342,6 +343,7 @@ function renderFaq() {
     gm: "Approve hasil akhir semua tier + wajib pilih Decision, 1-on-1 Status, dan Catatan. Bisa juga geser bulan buat sekedar lihat-lihat skor bulan lain.",
     progress: "Pantau siapa aja Leader/Management/HR yang UDAH vs BELUM ngerjain tugas appraisal-nya bulan ini — soal kepatuhan/compliance, bukan soal skor bagus/jelek.",
     feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal — cuma Executive yang bisa lihat halaman ini.",
+    historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan buat perhitungan Service Charge.",
     sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
     hrTodos: "Daftar Decision 'Extend Probation/Kontrak' yang tanggal jatuh temponya udah lewat dan perlu ditindaklanjuti — supaya gak ada yang keslip.",
   };
@@ -594,6 +596,12 @@ function availableScreensGrouped(user) {
       { key: "review", label: "Review Everyone's Records" },
       { key: "sc", label: "Calculate Service Charge" },
       { key: "hrTodos", label: "Track Pending Follow-Ups" },
+    ]});
+  }
+
+  if (user.isAdminOperational) {
+    groups.push({ name: "MyOperational", items: [
+      { key: "historical", label: "Input Data Historis" },
     ]});
   }
 
@@ -913,6 +921,140 @@ function changeCompanyMonth(value) {
   renderCompanySummary();
 }
 
+async function renderHistoricalInput() {
+  app.innerHTML = topbar("Input Data Historis") + `<div class="loading">Memuat daftar staff...</div>`;
+  const res = await apiGet("getStaffList", {});
+  const staffList = res.staff || [];
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  app.innerHTML = topbar("Input Data Historis") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <div class="hint" style="margin-bottom:8px;">Buat data appraisal SEBELUM sistem ini ada — cuma skor Leader yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan untuk perhitungan Service Charge.</div>
+      <label>Cari nama staff</label>
+      <input type="text" id="historical-search" placeholder="Ketik nama..." oninput="filterHistoricalStaffList(this.value)" />
+      <div id="historical-staff-list" style="max-height:280px; overflow-y:auto; margin-top:8px;">
+        ${staffList.map(s => `
+          <div class="staff-row" data-search="${escapeAttr(s.name.toLowerCase())}" onclick="selectHistoricalStaff('${s.staffId}', '${escapeAttr(s.name)}')">
+            <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department})</span></div>
+          </div>`).join("")}
+      </div>
+    </div>
+    <div id="historical-form-container"></div>
+  `;
+}
+
+function filterHistoricalStaffList(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll("#historical-staff-list [data-search]").forEach(el => {
+    el.style.display = el.dataset.search.includes(q) ? "" : "none";
+  });
+}
+
+async function selectHistoricalStaff(staffId, name) {
+  state._historicalStaffId = staffId;
+  state._historicalStaffName = name;
+  const container = document.getElementById("historical-form-container");
+  container.innerHTML = `
+    <div class="card">
+      <h2>${name}</h2>
+      <label>Bulan (historis)</label>
+      <input type="month" id="historical-month-input" onchange="loadHistoricalForm()" />
+      <div id="historical-existing-note" class="hint"></div>
+    </div>
+    <div id="historical-detail-form"></div>`;
+}
+
+async function loadHistoricalForm() {
+  const month = document.getElementById("historical-month-input").value;
+  if (!month || !state._historicalStaffId) return;
+
+  const detailContainer = document.getElementById("historical-detail-form");
+  detailContainer.innerHTML = `<div class="loading">Memuat kriteria...</div>`;
+
+  const [existing, cfg] = await Promise.all([
+    apiGet("getHistoricalAppraisal", { staffId: state._historicalStaffId, month }),
+    apiGet("getKpiConfigForTarget", { targetStaffId: state._historicalStaffId }),
+  ]);
+  state._historicalCfg = cfg;
+
+  const noteEl = document.getElementById("historical-existing-note");
+  noteEl.textContent = !existing.found ? "" : (existing.selfTotal || existing.hrTotal)
+    ? "⚠️ Bulan ini sudah punya data Self/HR (siklus normal) — hati-hati kalau ditimpa."
+    : `Sudah ada data historis bulan ini (Final Score: ${Number(existing.finalScore).toFixed(1)}) — isi ulang semua kriteria di bawah untuk menimpanya, kriteria detail sebelumnya tidak tersimpan per-item.`;
+
+  const scoreRow = (label, desc, id) => `
+    <div class="criterion-row">
+      <div class="name">${label}</div>
+      ${desc ? `<div class="desc">${desc}</div>` : ""}
+      <div class="score-select" data-crit-id="${id}">
+        ${[1,2,3,4,5].map(n => `<div class="score-opt" onclick="pickHistoricalScore(this, '${id}', ${n})">${n}</div>`).join("")}
+      </div>
+    </div>`;
+
+  detailContainer.innerHTML = `
+    <div class="card">
+      <div class="section-title">Section A — Attitude</div>
+      ${cfg.attitude.map((c, i) => scoreRow(c.name, c.description, "A" + i)).join("")}
+      <div class="section-title">Section B — Discipline</div>
+      ${cfg.discipline.map((c, i) => scoreRow(c.name, `${c.dataSource} — Target: ${c.target}`, "B" + i)).join("")}
+      ${cfg.placeholder ? `<div class="hint">${cfg.placeholderNote}</div>` : `
+        <div class="section-title">Section C — Performance KPI</div>
+        ${cfg.kpi.map((c, i) => scoreRow(c.name, `${c.howToMeasure} — Target: ${c.target}`, "C" + i)).join("")}
+      `}
+      <div class="section-title">Section D — Bonus / Deduction</div>
+      ${cfg.bonus.map((b, i) => `
+        <div class="criterion-row">
+          <div class="name">${b.item} (${b.points > 0 ? "+" : ""}${b.points}/kejadian)</div>
+          <input type="number" id="historical-bonus-${i}" min="0" placeholder="Jumlah kejadian (kosongkan jika 0)" style="max-width:200px;" />
+        </div>`).join("")}
+      <button class="primary" onclick="saveHistoricalAppraisal()" style="margin-top:16px;">Simpan Data Historis</button>
+    </div>`;
+}
+
+function pickHistoricalScore(el, critId, value) {
+  const row = el.closest(".score-select");
+  row.dataset.value = value;
+  row.querySelectorAll(".score-opt").forEach(o => o.classList.remove("selected"));
+  el.classList.add("selected");
+}
+
+async function saveHistoricalAppraisal() {
+  const month = document.getElementById("historical-month-input").value;
+  if (!month) { showToast("Pilih bulan dulu.", "error"); return; }
+  const cfg = state._historicalCfg;
+
+  const collectScores = (list, prefix) => {
+    const scores = {};
+    for (let i = 0; i < list.length; i++) {
+      const row = document.querySelector(`.score-select[data-crit-id="${prefix}${i}"]`);
+      if (!row || !row.dataset.value) return null;
+      scores[list[i].name] = Number(row.dataset.value);
+    }
+    return scores;
+  };
+
+  const attitudeScores = collectScores(cfg.attitude, "A");
+  if (!attitudeScores) { showToast("Isi semua kriteria Section A dulu.", "error"); return; }
+  const disciplineScores = collectScores(cfg.discipline, "B");
+  if (!disciplineScores) { showToast("Isi semua kriteria Section B dulu.", "error"); return; }
+  let kpiScores = {};
+  if (!cfg.placeholder) {
+    kpiScores = collectScores(cfg.kpi, "C");
+    if (!kpiScores) { showToast("Isi semua kriteria Section C dulu.", "error"); return; }
+  }
+  const bonusEntries = cfg.bonus.map((b, i) => ({
+    item: b.item, count: Number(document.getElementById(`historical-bonus-${i}`).value || 0),
+  })).filter(e => e.count > 0);
+
+  const res = await apiPost("submitHistoricalAppraisal", {
+    enteredById: state.user.staffId, staffId: state._historicalStaffId, month,
+    attitudeScores, disciplineScores, kpiScores, bonusEntries,
+  });
+  if (res.error || res.success === false) { showToast("Gagal simpan: " + friendlyError(res.error), "error"); return; }
+  showToast(`Data historis ${state._historicalStaffName} bulan ${monthLabelID(month)} tersimpan! Final Score: ${res.finalScore.toFixed(1)}`);
+}
+
 async function renderStaffFeedback() {
   app.innerHTML = topbar("Read Staff Feedback") + `<div class="loading">Memuat...</div>`;
   const res = await apiGet("getAllManagementFeedback", { requesterId: state.user.staffId });
@@ -1206,8 +1348,8 @@ async function renderMyAppraisalHistory(staffId) {
       <div class="staff-row" style="cursor:default;">
         <div>
           <div class="name">${monthLabelID(h.month)}</div>
-          <div class="dept">Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}</div>
-          <div class="dept" style="margin-top:2px; font-size:11px;">Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}</div>
+          <div class="dept">${h.selfTotal === "" && h.hrTotal === "" ? `📜 Data Historis (cuma Leader Appraisal) · Leader ${Number(h.leaderTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}` : `Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}`}</div>
+          ${h.selfTotal === "" && h.hrTotal === "" ? "" : `<div class="dept" style="margin-top:2px; font-size:11px;">Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}</div>`}
           ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findLabel(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
         </div>
         <span class="badge ${h.status === 'Performer' ? 'performer' : 'underperform'}">${h.status}</span>

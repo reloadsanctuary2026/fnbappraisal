@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-64</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-65</div>
 
 <script>
 // =================================================================
@@ -922,21 +922,37 @@ function changeCompanyMonth(value) {
 }
 
 async function renderHistoricalInput() {
-  app.innerHTML = topbar("Input Data Historis") + `<div class="loading">Memuat daftar staff...</div>`;
-  const res = await apiGet("getStaffList", {});
+  app.innerHTML = topbar("Input Data Historis") + `<div class="loading">Memuat data...</div>`;
+  if (!state._historicalMonth) state._historicalMonth = "2026-06"; // default starting point: June
+  await loadHistoricalStaffList(state._historicalMonth);
+}
+
+async function loadHistoricalStaffList(month) {
+  state._historicalMonth = month;
+  const res = await apiGet("getHistoricalCompletionStatus", { month });
   const staffList = res.staff || [];
+  const doneCount = staffList.filter(s => s.hasData).length;
   const showMenuLink = availableScreens(state.user).length > 1;
 
   app.innerHTML = topbar("Input Data Historis") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <div class="hint" style="margin-bottom:8px;">Buat data appraisal SEBELUM sistem ini ada — cuma skor Leader yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan untuk perhitungan Service Charge.</div>
+      <label>Bulan historis</label>
+      <input type="month" id="historical-month-picker" value="${month}" onchange="loadHistoricalStaffList(this.value)" />
+    </div>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+        <h2 style="margin:0;">Progress ${monthLabelID(month)}</h2>
+        <div class="hint" style="font-weight:700; color:${doneCount === staffList.length ? "var(--green)" : "var(--coral)"};">${doneCount} dari ${staffList.length} sudah diisi</div>
+      </div>
       <label>Cari nama staff</label>
       <input type="text" id="historical-search" placeholder="Ketik nama..." oninput="filterHistoricalStaffList(this.value)" />
-      <div id="historical-staff-list" style="max-height:280px; overflow-y:auto; margin-top:8px;">
+      <div id="historical-staff-list" style="max-height:340px; overflow-y:auto; margin-top:8px;">
         ${staffList.map(s => `
           <div class="staff-row" data-search="${escapeAttr(s.name.toLowerCase())}" onclick="selectHistoricalStaff('${s.staffId}', '${escapeAttr(s.name)}')">
             <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department})</span></div>
+            <span class="badge ${s.hasData ? "done" : "pending"}">${s.hasData ? "✅ Sudah Diisi" : "⭕ Belum Diisi"}</span>
           </div>`).join("")}
       </div>
     </div>
@@ -947,6 +963,7 @@ async function renderHistoricalInput() {
 function filterHistoricalStaffList(query) {
   const q = query.trim().toLowerCase();
   document.querySelectorAll("#historical-staff-list [data-search]").forEach(el => {
+
     el.style.display = el.dataset.search.includes(q) ? "" : "none";
   });
 }
@@ -955,18 +972,12 @@ async function selectHistoricalStaff(staffId, name) {
   state._historicalStaffId = staffId;
   state._historicalStaffName = name;
   const container = document.getElementById("historical-form-container");
-  container.innerHTML = `
-    <div class="card">
-      <h2>${name}</h2>
-      <label>Bulan (historis)</label>
-      <input type="month" id="historical-month-input" onchange="loadHistoricalForm()" />
-      <div id="historical-existing-note" class="hint"></div>
-    </div>
-    <div id="historical-detail-form"></div>`;
+  container.innerHTML = `<div class="card"><h2>${name} — ${monthLabelID(state._historicalMonth)}</h2><div id="historical-existing-note" class="hint"></div></div><div id="historical-detail-form"></div>`;
+  await loadHistoricalForm();
 }
 
 async function loadHistoricalForm() {
-  const month = document.getElementById("historical-month-input").value;
+  const month = state._historicalMonth;
   if (!month || !state._historicalStaffId) return;
 
   const detailContainer = document.getElementById("historical-detail-form");
@@ -1020,7 +1031,7 @@ function pickHistoricalScore(el, critId, value) {
 }
 
 async function saveHistoricalAppraisal() {
-  const month = document.getElementById("historical-month-input").value;
+  const month = state._historicalMonth;
   if (!month) { showToast("Pilih bulan dulu.", "error"); return; }
   const cfg = state._historicalCfg;
 
@@ -1053,6 +1064,7 @@ async function saveHistoricalAppraisal() {
   });
   if (res.error || res.success === false) { showToast("Gagal simpan: " + friendlyError(res.error), "error"); return; }
   showToast(`Data historis ${state._historicalStaffName} bulan ${monthLabelID(month)} tersimpan! Final Score: ${res.finalScore.toFixed(1)}`);
+  loadHistoricalStaffList(month); // refresh list so the ✅ indicator updates immediately
 }
 
 async function renderStaffFeedback() {

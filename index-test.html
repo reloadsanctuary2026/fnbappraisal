@@ -166,6 +166,7 @@
 </style>
 </head>
 <body>
+<div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
 <div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-71 — TEST</div>
 
@@ -312,7 +313,6 @@ function render() {
 function topbar(title) {
   const unread = state.unreadCount || 0;
   return `
-    <div style="background:var(--gold); color:#fff; text-align:center; padding:5px; font-weight:800; font-size:12px; letter-spacing:0.05em;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
     <div class="topbar">
       <div style="display:flex; align-items:center; gap:10px;">
         <div class="logo-mark"></div>
@@ -492,7 +492,6 @@ function goBackFromNotifications() {
 // =================================================================
 function renderLogin() {
   app.innerHTML = `
-    <div style="background:var(--gold); color:#fff; text-align:center; padding:5px; font-weight:800; font-size:12px; letter-spacing:0.05em;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
     <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div></div>
     <div class="card">
       <h2>Masuk dengan NIK</h2>
@@ -531,7 +530,6 @@ async function doLoginStep1() {
 
 function showPinPrompt() {
   app.innerHTML = `
-    <div style="background:var(--gold); color:#fff; text-align:center; padding:5px; font-weight:800; font-size:12px; letter-spacing:0.05em;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
     <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div></div>
     <div class="card">
       <h2>Masukkan PIN</h2>

@@ -1,0 +1,2391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reload F&amp;B Appraisal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #0E4749;
+    --teal-dark: #082F31;
+    --coral: #FF6B4A;
+    --coral-dark: #E85535;
+    --gold: #F2A65A;
+    --bg: #FFF9F1;
+    --card: #FFFFFF;
+    --sand: #F5EBDC;
+    --border: #EDE1D1;
+    --text: #20302F;
+    --text-muted: #6B5D4F;
+    --green: #1A6B49;
+    --green-bg: #E4F5EC;
+    --red: #B8352B;
+    --red-bg: #FDECEA;
+    --amber: #946017;
+    --amber-bg: #FBF0DE;
+  }
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+  body {
+    margin: 0;
+    font-family: "Poppins", ui-rounded, -apple-system, "Segoe UI", Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+  }
+  #app { max-width: 720px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(120deg, var(--teal) 0%, var(--teal) 65%, var(--coral-dark) 130%);
+    color: #fff; padding: 16px 18px; margin: -16px -16px 16px;
+    border-radius: 0 0 20px 20px;
+    position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 6px 16px rgba(14, 71, 73, 0.18);
+  }
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
+  .topbar .sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; }
+  .logo-mark {
+    width: 34px; height: 34px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--gold), var(--coral));
+    -webkit-mask-image: url(data:image/png;base64,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);
+    mask-image: url(data:image/png;base64,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);
+    -webkit-mask-size: contain; mask-size: contain;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+    -webkit-mask-position: center; mask-position: center;
+  }
+  .topbar button {
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3); color: #fff;
+    border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .topbar button:hover { background: rgba(255,255,255,0.24); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+    padding: 18px; margin-bottom: 14px; overflow: hidden;
+    box-shadow: 0 2px 10px rgba(32, 48, 47, 0.04);
+  }
+  .card h2 { font-size: 15px; margin: 0 0 12px; font-weight: 700; }
+  .mode-banner {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+    padding: 10px 14px; border-radius: 12px; margin-bottom: 16px;
+  }
+  .mode-banner .mode-label { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .mode-banner .mode-meta { font-size: 12px; opacity: 0.85; }
+  .mode-banner.mode-self { background: var(--green-bg); color: var(--green); }
+  .mode-banner.mode-leader { background: var(--amber-bg); color: var(--amber); }
+  .mode-banner.mode-hr { background: #E8E3F5; color: #6C4FB6; }
+  label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%; padding: 11px 14px; font-size: 15px; border: 1.5px solid var(--border);
+    border-radius: 12px; background: #fff; color: var(--text); margin-bottom: 14px;
+    transition: border-color 0.15s ease;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--coral); }
+  button.primary {
+    width: 100%; padding: 13px; font-size: 14px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, var(--coral), var(--gold)); border: none; border-radius: 14px;
+    cursor: pointer; transition: transform 0.1s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 12px rgba(255, 107, 74, 0.28);
+  }
+  button.primary:hover { box-shadow: 0 6px 16px rgba(255, 107, 74, 0.36); }
+  button.primary:active { transform: scale(0.98); }
+  button.primary:disabled { opacity: 0.5; box-shadow: none; }
+  button.secondary {
+    padding: 9px 16px; font-size: 13px; border: 1.5px solid var(--border); font-weight: 600;
+    background: #fff; border-radius: 12px; cursor: pointer; color: var(--text);
+    transition: border-color 0.15s ease, transform 0.1s ease;
+  }
+  button.secondary:hover { border-color: var(--coral); }
+  button.secondary:active { transform: scale(0.97); }
+  button.ghost { background: transparent; border: none; color: var(--teal); font-weight: 600; font-size: 13px; cursor: pointer; }
+
+  .staff-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    padding: 13px 14px; border: 1.5px solid var(--border); border-radius: 14px; margin-bottom: 8px; cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease;
+    background: #fff;
+  }
+  .staff-row:hover { border-color: var(--coral); background: #FFFCF8; }
+  .clickable-card { transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease; }
+  .clickable-card:hover { background: #FFFCF8; box-shadow: 0 3px 12px rgba(32,48,47,0.10); }
+  .clickable-card:active { transform: scale(0.99); }
+  .staff-row:active { transform: scale(0.99); }
+  .staff-row .name { font-size: 14px; font-weight: 600; }
+  .staff-row .dept { font-size: 12px; color: var(--text-muted); }
+  .badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 700; }
+  .badge.done { background: var(--green-bg); color: var(--green); }
+  .badge.pending { background: var(--sand); color: var(--text-muted); }
+  .badge.performer { background: var(--green-bg); color: var(--green); }
+  .badge.underperform { background: var(--red-bg); color: var(--red); }
+
+  .criterion-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .criterion-row:last-child { border-bottom: none; }
+  .criterion-row .name { font-size: 13px; margin-bottom: 6px; font-weight: 600; }
+  .criterion-row .desc { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .score-select { display: flex; gap: 6px; }
+  .score-opt {
+    flex: 1; text-align: center; padding: 9px 0; border: 1.5px solid var(--border);
+    border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; user-select: none; color: var(--text-muted);
+    transition: transform 0.12s ease, background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  }
+  .score-opt:hover { border-color: var(--coral); }
+  .score-opt.selected {
+    background: linear-gradient(135deg, var(--coral), var(--gold)); color: #fff; border-color: transparent;
+    transform: scale(1.08);
+  }
+
+  .section-title {
+    font-size: 12px; font-weight: 800; color: #fff; margin: 26px -18px 16px; padding: 11px 18px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    background: linear-gradient(90deg, var(--teal), var(--teal-dark));
+  }
+  .section-title:first-of-type { margin-top: 4px; }
+  .hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+  .error { color: var(--red); font-size: 13px; margin-bottom: 10px; font-weight: 600; }
+  .center { text-align: center; }
+  .row-flex { display: flex; gap: 8px; }
+  .row-flex > * { flex: 1; }
+  table.mini { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.mini td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+  table.mini td:last-child { text-align: right; font-weight: 600; }
+  .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
+    background: var(--teal); color: #fff; padding: 13px 22px; border-radius: 14px;
+    font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+    z-index: 100; opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
+    max-width: 88%; text-align: center; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--green); }
+  .toast.error { background: var(--red); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-71 — TEST</div>
+
+<script>
+// =================================================================
+// CONFIG — set this to your Apps Script Web App URL
+// =================================================================
+const API_URL = "https://script.google.com/macros/s/AKfycbwqUUo-avmoBoj9ZqmdGUTMQtswX4Rj6aYoHc21oDLD6LfUsEluTLA2ccn4g3pUYaXLUw/exec";
+
+// =================================================================
+// API helpers
+// =================================================================
+async function apiGet(action, params = {}) {
+  const qs = new URLSearchParams({ action, ...params }).toString();
+  try {
+    const res = await fetch(`${API_URL}?${qs}`);
+    return await res.json();
+  } catch (err) {
+    console.error("apiGet failed:", action, err);
+    return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
+  }
+}
+async function apiPost(action, payload) {
+  // NOTE: no explicit Content-Type header — keeps this a "simple request"
+  // so the browser skips the CORS preflight, which Apps Script can't answer.
+  const fullPayload = {
+    ...payload,
+    sessionToken: state.user ? state.user.sessionToken : null,
+    sessionStaffId: state.user ? state.user.staffId : null,
+  };
+  try {
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload: fullPayload }) });
+    const json = await res.json();
+    if (json.error === "session_expired") {
+      showToast("Sesi kamu udah habis, login ulang ya.", "error");
+      setTimeout(() => { state.user = null; renderLogin(); }, 1500);
+    }
+    return json;
+  } catch (err) {
+    console.error("apiPost failed:", action, err);
+    return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
+  }
+}
+function currentMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabelID(monthKey) {
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const [y, m] = String(monthKey).split("-");
+  const idx = Number(m) - 1;
+  return months[idx] ? `${months[idx]} ${y}` : monthKey;
+}
+
+function fullDateLabelID(dateInput) {
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) return "-";
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function statusLabelID(status) {
+  const map = { "Submitted": "Sudah Diisi", "Not started": "Belum Diisi", "Approved": "Disetujui", "Pending": "Menunggu" };
+  return map[status] || status;
+}
+
+function findLabel(options, value) {
+  const match = (options || []).find(o => o.value === value);
+  return match ? match.label : (value || "-");
+}
+
+function friendlyError(code) {
+  const map = {
+    decision_required: "Decision belum dipilih.",
+    one_on_one_status_required: "1-on-1 Status belum dipilih.",
+    notes_required: "Catatan belum diisi.",
+    outside_approval_window: "Belum waktunya approval (tanggal 28 - 4 bulan depan).",
+    not_authorized: "Anda tidak punya akses untuk ini.",
+    evaluator_or_target_not_found: "Data tidak ditemukan, coba refresh halaman.",
+    appraisal_not_found: "Appraisal untuk staff ini belum lengkap.",
+    access_denied: "Akses ditolak.",
+    max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
+    session_expired: "Sesi kamu udah habis, login ulang ya.",
+  };
+  if (map[code]) return map[code];
+  if (code && /lock/i.test(code)) return "Server lagi sibuk (banyak orang submit bersamaan) — tunggu beberapa detik lalu coba lagi.";
+  return code || "Terjadi kendala tidak dikenal";
+}
+
+function showToast(message, type = "success") {
+  const existing = document.getElementById("toast");
+  if (existing) existing.remove();
+  const el = document.createElement("div");
+  el.id = "toast";
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 300);
+  }, 2400);
+}
+
+// =================================================================
+// App state
+// =================================================================
+let state = {
+  screen: "login",       // login | roleMenu | self | myEvaluations | form | gm
+  user: null,            // {staffId, name, department, tier, oversees, reportsTo, isLeader, isManagement, isExecutive, isHR}
+  month: currentMonth(),
+  targetStaff: null,     // person being appraised (for non-self forms)
+  kpiConfig: null,
+  scores: {},            // criterion -> score
+  unreadCount: 0,
+  prevScreen: null,
+  _preserveScores: false,
+  _pendingBonusEntries: null,
+};
+
+const app = document.getElementById("app");
+
+function render() {
+  if (state.screen === "login") return renderLogin();
+  if (state.screen === "roleMenu") return renderRoleMenu();
+  if (state.screen === "dashboard") return renderDashboard();
+  if (state.screen === "history") return renderMyAppraisalHistory(state.user.staffId);
+  if (state.screen === "self") return renderAppraisalForm({ evaluatorType: "self", target: state.user });
+  if (state.screen === "myEvaluations") return renderMyEvaluations();
+  if (state.screen === "review") return renderReview();
+  if (state.screen === "progress") return renderEvaluatorProgress();
+  if (state.screen === "feedback") return renderStaffFeedback();
+  if (state.screen === "historical") return renderHistoricalInput();
+  if (state.screen === "company") return renderCompanySummary();
+  if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
+  if (state.screen === "gm") return renderGm();
+  if (state.screen === "sc") return renderScInput();
+  if (state.screen === "hrTodos") return renderHrFollowUpTodos();
+  if (state.screen === "notifications") return renderNotifications();
+  if (state.screen === "faq") return renderFaq();
+}
+
+function topbar(title) {
+  const unread = state.unreadCount || 0;
+  return `
+    <div style="background:var(--gold); color:#fff; text-align:center; padding:5px; font-weight:800; font-size:12px; letter-spacing:0.05em;">🧪 MODE TESTING — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div class="logo-mark"></div>
+        <div>
+          <h1>${title}</h1>
+          <div class="sub">${state.user ? state.user.name + (state.user.jobTitle ? " — " + state.user.jobTitle : "") + " · " + monthLabelID(state.month) : ""}</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        ${state.user ? `<button onclick="openFaq()">❓</button>` : ""}
+        ${state.user ? `<button onclick="openNotifications()" style="position:relative;">🔔${unread > 0 ? `<span style="position:absolute; top:-6px; right:-6px; background:var(--coral); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:800;">${unread}</span>` : ""}</button>` : ""}
+        ${state.user ? '<button onclick="logout()">Keluar</button>' : ""}
+      </div>
+    </div>`;
+}
+
+async function refreshUnreadCount() {
+  if (!state.user) return;
+  const res = await apiGet("getNotifications", { staffId: state.user.staffId });
+  const list = res.notifications || [];
+  state.unreadCount = list.filter(n => !n.read).length;
+}
+
+function openFaq() {
+  state.prevScreen = state.screen;
+  state.screen = "faq";
+  render();
+}
+
+function goBackFromFaq() {
+  state.screen = state.prevScreen || "dashboard";
+  render();
+}
+
+function renderFaq() {
+  const MENU_DESCRIPTIONS = {
+    self: "Isi appraisal buat diri sendiri — cuma bisa disubmit 1x per bulan, gak bisa direvisi setelah terkirim.",
+    history: "Lihat riwayat skor & Decision dari bulan-bulan yang udah di-approve Executive, plus grafik tren skor dari waktu ke waktu.",
+    myEvaluations: "Isi appraisal buat orang-orang yang jadi tanggung jawab kamu. Kalau orangnya udah isi Self duluan, skornya muncul sebagai referensi.",
+    review: "Lihat hasil appraisal orang-orang di scope kamu — read-only, gak ada tombol isi/ubah, cuma buat monitoring/lihat-lihat. Bisa geser bulan.",
+    company: "Ringkasan rata-rata skor per department/tier — buat lihat gambaran besar performa. Gak nampilin skor personal individu, cuma agregat.",
+    gm: "Approve hasil akhir semua tier + wajib pilih Decision, 1-on-1 Status, dan Catatan. Bisa juga geser bulan buat sekedar lihat-lihat skor bulan lain.",
+    progress: "Pantau siapa aja Leader/Management/HR yang UDAH vs BELUM ngerjain tugas appraisal-nya bulan ini — soal kepatuhan/compliance, bukan soal skor bagus/jelek.",
+    feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal, lengkap dengan Issue Summary & Action Tracker — Executive, HR, dan Admin Operational bisa lihat halaman ini.",
+    historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan buat perhitungan Service Charge.",
+    sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
+    hrTodos: "Daftar Decision 'Extend Probation/Kontrak' yang tanggal jatuh temponya udah lewat dan perlu ditindaklanjuti — supaya gak ada yang keslip.",
+  };
+
+  const tierFlow = {
+    Staff: `
+      <p><strong>1.</strong> Tanggal 1–7: isi <strong>Appraise Yourself</strong> — nilai diri sendiri, cuma bisa 1x submit.</p>
+      <p><strong>2.</strong> Tanggal 8–17: Leader/Management kamu menilai kamu.</p>
+      <p><strong>3.</strong> Tanggal 18–27: HR menilai kamu.</p>
+      <p><strong>4.</strong> Tanggal 28 - 4 (bulan depan): Executive approve hasil final + kasih Decision.</p>
+      <p>Cek progress kapan aja lewat <strong>Track Your Progress</strong> di Dashboard. Notifikasi (🔔) masuk begitu Decision keluar.</p>`,
+    Leader: `
+      <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (kamu juga dinilai, oleh Management).</p>
+      <p><strong>2.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Staff yang jadi tanggung jawabmu. Kalau Staff-nya udah isi Self duluan, skornya muncul sebagai referensi.</p>
+      <p><strong>3.</strong> Lewat <strong>Review Your Team</strong>, kamu bisa lihat hasil appraisal Staff-mu (read-only, gak bisa isi ulang).</p>
+      <p>Kalau lupa isi sampai window ketutup, skor Leader buat Staff itu dianggap 0 (bobot 60%) — jadi usahain tepat waktu.</p>`,
+    Management: `
+      <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (dinilai oleh Executive).</p>
+      <p><strong>2.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Leader di scope-mu. Kalau ada Staff yang Leader-nya belum sempat isi, kamu bisa isi sebagai pengganti.</p>
+      <p><strong>3.</strong> <strong>Review Your Team</strong> — lihat hasil Leader & Staff di scope-mu (read-only).</p>
+      <p><strong>4.</strong> <strong>Compare Departments</strong> — bandingin rata-rata skor department-mu vs department lain (cuma rata-rata, gak ada data personal orang lain).</p>`,
+    Executive: `
+      <p><strong>1.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Management.</p>
+      <p><strong>2.</strong> Tanggal 28 - 4 (bulan depan): <strong>Approve Final Decisions</strong> — approve SEMUA tier (Staff/Leader/Management), wajib pilih Decision + 1-on-1 Status + Catatan buat tiap orang yang di-flag. Bisa juga geser bulan buat sekedar liat-liat skor bulan lain.</p>
+      <p><strong>3.</strong> <strong>Track Team Compliance</strong> — pantau siapa aja Leader/Management/HR yang belum ngerjain tugas appraisal-nya (compliance, bukan skor).</p>
+      <p><strong>4.</strong> <strong>Compare Departments</strong> — ringkasan performa seluruh perusahaan bulan ini: rata-rata skor, jumlah Performer/Underperform, breakdown per department.</p>`,
+    HR: `
+      <p><strong>1.</strong> Tanggal 18–27: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department. Tombol "Samakan dgn Leader/Mgmt" muncul kalau Leader/Management-nya udah isi duluan.</p>
+      <p><strong>2.</strong> <strong>Review Everyone's Records</strong> — lihat semua hasil appraisal, lintas department & tier (read-only).</p>
+      <p><strong>3.</strong> <strong>Calculate Service Charge</strong> — input Total SC bulanan, sistem otomatis hitung deduction & pool distribution.</p>
+      <p><strong>4.</strong> <strong>Track Pending Follow-Ups</strong> — reminder buat kasus "Extend Probation/Kontrak" yang udah jatuh tempo, perlu ditindaklanjuti.</p>`,
+  };
+
+  const qa = [
+    { q: "Kenapa saya gak bisa isi appraisal lagi?", a: "Appraisal cuma bisa disubmit 1 kali per bulan. Kalau udah submit, tombolnya otomatis terkunci sampai bulan berikutnya. Hubungi HR kalau butuh koreksi." },
+    { q: "Kapan saya tahu hasil appraisal saya?", a: "Setelah Executive approve (tanggal 28 - 4 bulan depan), kamu dapat notifikasi (🔔) dan bisa lihat detail lengkapnya di Track Your Progress." },
+    { q: "Kalau Leader/HR saya belum isi appraisal, gimana?", a: "Kalau sampai window waktunya tutup mereka belum isi, skor mereka dianggap 0 (bukan diskip) — ini konsekuensi bawaan sistem, bukan bug." },
+    { q: "Skor saya turun karena apa?", a: "Cek Track Your Progress — ada breakdown per Section (Attitude/Discipline/KPI/Bonus) biar tau bagian mana yang lemah." },
+    { q: "Siapa yang bisa lihat data appraisal saya?", a: "Leader/Management/Executive/HR yang berwenang di scope kamu. Orang di department lain gak bisa lihat data personal kamu." },
+  ];
+
+  const showMenuLink = availableScreens(state.user).length > 1;
+  app.innerHTML = topbar("FAQ & Panduan") + `
+    <button class="ghost" onclick="goBackFromFaq()">&larr; Kembali</button>
+
+    <div class="card">
+      <h2>Alur Umum (Siklus Bulanan)</h2>
+      <table class="mini">
+        <tr><td>Tanggal 1–7</td><td>Appraise Yourself (semua tier)</td></tr>
+        <tr><td>Tanggal 8–17</td><td>Leader/Management/Executive menilai tim-nya</td></tr>
+        <tr><td>Tanggal 18–27</td><td>HR menilai semua tier</td></tr>
+        <tr><td>Tanggal 28 - 4 (bulan depan)</td><td>Executive Approval + Decision final</td></tr>
+      </table>
+      <div class="hint" style="margin-top:8px;">Kalau fase sebelumnya diisi lebih awal, fase berikutnya bisa dibuka lebih cepat juga — tenggat waktunya tetap sama.</div>
+    </div>
+
+    <div class="card">
+      <h2>Fungsi Tiap Menu Kamu</h2>
+      ${availableScreensGrouped(state.user).map(g => `
+        <div class="hint" style="font-weight:700; color:var(--teal); margin:10px 0 6px; text-transform:uppercase; font-size:12px; letter-spacing:0.05em;">${g.name}</div>
+        ${g.items.map(item => `
+          <div style="padding:8px 0; border-bottom:1px solid var(--border);">
+            <div style="font-weight:600; font-size:13px;">${item.label}</div>
+            <div class="hint" style="font-size:12px; margin-top:2px;">${MENU_DESCRIPTIONS[item.key] || ""}</div>
+          </div>`).join("")}
+      `).join("")}
+    </div>
+
+    <div class="card">
+      <h2>Alur per Role</h2>
+      ${Object.keys(tierFlow).map(tier => `
+        <details ${tier === state.user.tier || (tier === "HR" && state.user.isHR) || (tier === "Executive" && state.user.isExecutive) ? "open" : ""} style="margin-bottom:10px;">
+          <summary style="cursor:pointer; font-weight:700; color:var(--teal); padding:8px 0;">${tier}${tier === state.user.tier ? " (kamu)" : ""}</summary>
+          <div style="padding:4px 8px 8px;">${tierFlow[tier]}</div>
+        </details>`).join("<hr style='border:none; border-top:1px solid var(--border); margin:4px 0;'>")}
+    </div>
+
+    <div class="card">
+      <h2>Pertanyaan Umum</h2>
+      ${qa.map(item => `
+        <details style="margin-bottom:8px;">
+          <summary style="cursor:pointer; font-weight:600; padding:6px 0;">${item.q}</summary>
+          <div class="hint" style="padding:2px 8px 8px; font-size:13px;">${item.a}</div>
+        </details>`).join("")}
+    </div>
+  `;
+}
+
+function openNotifications() {
+  state.prevScreen = state.screen;
+  state.screen = "notifications";
+  render();
+}
+
+async function renderNotifications() {
+  app.innerHTML = topbar("Notifikasi") + `<div class="loading">Memuat...</div>`;
+  const res = await apiGet("getNotifications", { staffId: state.user.staffId });
+  if (res.error) {
+    app.innerHTML = topbar("Notifikasi") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  const list = res.notifications || [];
+  state.unreadCount = list.filter(n => !n.read).length;
+
+  app.innerHTML = topbar("Notifikasi") + `
+    <button class="ghost" onclick="goBackFromNotifications()">&larr; Kembali</button>
+    <div class="hint" style="margin-top:8px;">${list.length} notifikasi</div>
+    ${list.map(n => `
+      <div class="staff-row" style="cursor:default; ${n.read ? "" : "border-color:var(--coral);"}" ${n.read ? "" : `onclick="markRead('${n.id}')"`}>
+        <div>
+          <div class="name" style="font-weight:${n.read ? "500" : "700"};">${n.message}</div>
+          <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
+        </div>
+        ${n.read ? "" : `<span class="badge pending">Baru</span>`}
+      </div>`).join("")}
+    ${!list.length ? '<div class="hint">Belum ada notifikasi.</div>' : ""}
+  `;
+}
+
+async function markRead(id) {
+  await apiPost("markNotificationRead", { notificationId: id });
+  renderNotifications();
+}
+
+function goBackFromNotifications() {
+  state.screen = state.prevScreen || "login";
+  render();
+}
+
+// =================================================================
+// Login
+// =================================================================
+function renderLogin() {
+  app.innerHTML = `
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div></div>
+    <div class="card">
+      <h2>Masuk dengan NIK</h2>
+      <label>NIK (Nomor Induk Karyawan)</label>
+      <input type="text" id="nik-input" inputmode="numeric" placeholder="Contoh: 1096" maxlength="10" />
+      <div class="error" id="login-error"></div>
+      <button class="primary" onclick="doLoginStep1()">Lanjut</button>
+    </div>`;
+  document.getElementById("nik-input").focus();
+  document.getElementById("nik-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep1(); });
+}
+
+async function doLoginStep1() {
+  const nik = document.getElementById("nik-input").value.trim();
+  if (!nik) return;
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "Menghubungkan...";
+  try {
+    const res = await apiGet("checkNikExists", { nik });
+    if (!res.found) {
+      errEl.textContent = "NIK tidak ditemukan.";
+      return;
+    }
+    if (!res.hasPin) {
+      // No PIN set yet for this person — proceed straight through, same as before PIN existed.
+      await completeLogin(nik, "");
+      return;
+    }
+    state._pendingNik = nik;
+    showPinPrompt();
+  } catch (err) {
+    console.error(err);
+    errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
+  }
+}
+
+function showPinPrompt() {
+  app.innerHTML = `
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div></div>
+    <div class="card">
+      <h2>Masukkan PIN</h2>
+      <label>PIN 4 digit kamu</label>
+      <input type="password" id="pin-code-input" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:22px; letter-spacing:8px; text-align:center;" />
+      <div class="error" id="login-error"></div>
+      <button class="primary" onclick="doLoginStep2()">Masuk</button>
+      <button class="ghost" style="margin-top:8px;" onclick="renderLogin()">&larr; Ganti NIK</button>
+      <button class="ghost" style="margin-top:4px;" onclick="doRequestPinReset()">Lupa PIN?</button>
+    </div>`;
+  document.getElementById("pin-code-input").focus();
+  document.getElementById("pin-code-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep2(); });
+}
+
+async function doRequestPinReset() {
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "Mengirim permintaan ke HR...";
+  const res = await apiPost("requestPinReset", { nik: state._pendingNik });
+  if (res.error || res.success === false) {
+    errEl.textContent = "Gagal kirim permintaan. Hubungi HR langsung ya.";
+    return;
+  }
+  errEl.style.color = "var(--green)";
+  errEl.textContent = "Permintaan terkirim ke HR — tunggu PIN baru kamu, ya.";
+}
+
+async function doLoginStep2() {
+  const pin = document.getElementById("pin-code-input").value.trim();
+  const errEl = document.getElementById("login-error");
+  if (!pin) { errEl.textContent = "PIN wajib diisi."; return; }
+  await completeLogin(state._pendingNik, pin);
+}
+
+async function completeLogin(nik, pin) {
+  const errEl = document.getElementById("login-error");
+  if (errEl) errEl.textContent = "Menghubungkan...";
+  try {
+    const res = await apiGet("login", { nik, pin });
+    if (!res.found) {
+      if (errEl) errEl.textContent = res.error === "invalid_pin" ? "PIN salah. Coba lagi." : "NIK tidak ditemukan.";
+      return;
+    }
+    state.user = res;
+    await refreshUnreadCount();
+    goToRoleMenu();
+  } catch (err) {
+    console.error(err);
+    if (errEl) errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
+  }
+}
+
+// A person can have several capabilities at once (e.g. a Floor Supervisor is
+// both a Staff who gets self-appraised AND a Leader who appraises their team).
+// If only one screen applies, skip straight to it; otherwise show a picker.
+function availableScreensGrouped(user) {
+  const groups = [];
+
+  if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1) {
+    groups.push({ name: "MyAppraisal", items: [
+      { key: "self", label: "Appraise Yourself" },
+      { key: "history", label: "Track Your Progress" },
+    ]});
+  }
+
+  const teamItems = [];
+  if (user.isLeader || user.isManagement || user.isExecutive) {
+    teamItems.push({ key: "myEvaluations", label: user.appraiseLabel || "Team Appraisal" });
+  }
+  if (user.isLeader || user.isManagement) {
+    teamItems.push({ key: "review", label: "Review Your Team" });
+  }
+  if (user.isManagement) {
+    teamItems.push({ key: "company", label: "Compare Departments" });
+  }
+  if (user.isExecutive) {
+    teamItems.push({ key: "gm", label: "Approve Final Decisions" });
+  }
+  if (teamItems.length) groups.push({ name: "MyTeams", items: teamItems });
+
+  if (user.isExecutive) {
+    groups.push({ name: "MyReport", items: [
+      { key: "progress", label: "Track Team Compliance" },
+      { key: "company", label: "Compare Departments" },
+      { key: "feedback", label: "Read Staff Feedback" },
+    ]});
+  }
+
+  if (user.isHR) {
+    groups.push({ name: "MyHR", items: [
+      { key: "myEvaluations", label: user.appraiseLabel || "Appraise All Staff" },
+      { key: "review", label: "Review Everyone's Records" },
+      { key: "sc", label: "Calculate Service Charge" },
+      { key: "hrTodos", label: "Track Pending Follow-Ups" },
+      { key: "feedback", label: "Read Staff Feedback" },
+    ]});
+  }
+
+  if (user.isAdminOperational) {
+    groups.push({ name: "MyOperational", items: [
+      { key: "historical", label: "Input Data Historis" },
+      { key: "review", label: "Review Everyone's Records" },
+      { key: "progress", label: "Track Team Compliance" },
+      { key: "company", label: "Compare Departments" },
+      { key: "feedback", label: "Read Staff Feedback" },
+    ]});
+  }
+
+  return groups;
+}
+
+function availableScreens(user) {
+  const groups = availableScreensGrouped(user);
+  const flat = [];
+  const seen = new Set();
+  groups.forEach(g => g.items.forEach(item => {
+    if (!seen.has(item.key)) { seen.add(item.key); flat.push(item); }
+  }));
+  return flat;
+}
+
+function goToRoleMenu() {
+  const options = availableScreens(state.user);
+  if (options.length === 0) {
+    app.innerHTML = topbar("Akses belum diatur") + `
+      <div class="card">
+        <div class="hint" style="font-size:14px;">
+          NIK <strong>${state.user.staffId}</strong> (${state.user.name}) berhasil login, tapi belum ada akses
+          apapun yang diaktifkan. Cek Job Title untuk NIK ini di HR Sheet — pastikan ada di Config_PositionMap
+          dengan Tier yang sesuai.
+        </div>
+        <button class="secondary" onclick="logout()" style="margin-top:12px;">Kembali ke login</button>
+      </div>`;
+    return;
+  }
+  // Always land on the hub (chart if self-eligible, plus grouped menu) — never auto-skip
+  // straight into a single screen, so people can always see everything they have access to.
+  state.screen = "dashboard";
+  render();
+}
+
+function menuItemHtml(o) {
+  const ACTION_KEYS = ["self", "myEvaluations", "gm", "sc", "hrTodos", "historical"];
+  const isAction = ACTION_KEYS.indexOf(o.key) !== -1;
+  const color = isAction ? "var(--coral)" : "var(--teal)";
+  const tag = isAction ? "AKSI" : "LIHAT";
+  const bg = isAction ? "var(--red-bg)" : "var(--green-bg)";
+  return `
+    <div class="staff-row" style="border-left: 4px solid ${color};" onclick="goToScreen('${o.key}')">
+      <div class="name">${o.label}</div>
+      <span class="badge" style="background:${bg}; color:${color};">${tag}</span>
+    </div>`;
+}
+
+function renderRoleMenu() {
+  const options = availableScreens(state.user);
+  app.innerHTML = topbar("Pilih menu") + `
+    <div class="card">
+      <div class="hint">${state.user.name} punya lebih dari satu akses:</div>
+      ${options.map(menuItemHtml).join("")}
+    </div>`;
+}
+
+async function renderDashboard() {
+  app.innerHTML = topbar("Dashboard Saya") + `<div class="loading">Memuat...</div>`;
+  const hasSelfCapability = ["Staff", "Leader", "Management"].indexOf(state.user.tier) !== -1;
+  const groups = availableScreensGrouped(state.user);
+
+  let chartBlock = "";
+  let selfDoneThisMonth = false;
+
+  if (hasSelfCapability) {
+    const [historyRes, statusRes] = await Promise.all([
+      apiGet("getMyAppraisalHistory", { staffId: state.user.staffId }),
+      apiGet("getMyAppraisalStatus", { staffId: state.user.staffId }),
+    ]);
+    const history = historyRes.history || [];
+    selfDoneThisMonth = !!statusRes.selfDone;
+
+    if (history.length > 1) {
+      const latest = history[history.length - 1];
+      chartBlock = `
+        <div class="card" style="background:linear-gradient(135deg, var(--teal), var(--teal-dark)); border:none;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:2px;">
+            <div style="color:rgba(255,255,255,0.75); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Skor Appraisal Saya</div>
+            <div style="color:#fff; font-size:28px; font-weight:800;">${Number(latest.finalScore || 0).toFixed(1)}</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.94); border-radius:12px; padding:10px 6px 2px; margin-top:10px;">
+            ${buildScoreChartSvg(history)}
+          </div>
+        </div>`;
+    } else if (history.length === 1) {
+      chartBlock = `
+        <div class="card" style="background:linear-gradient(135deg, var(--teal), var(--teal-dark)); border:none; text-align:center;">
+          <div style="color:rgba(255,255,255,0.75); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Skor Bulan ${history[0].month}</div>
+          <div style="color:#fff; font-size:36px; font-weight:800; margin-top:4px;">${Number(history[0].finalScore || 0).toFixed(1)}</div>
+          <div style="color:rgba(255,255,255,0.7); font-size:12px; margin-top:6px;">Grafik akan muncul begitu ada 2 bulan data atau lebih.</div>
+        </div>`;
+    } else {
+      chartBlock = `<div class="card"><div class="hint">Belum ada riwayat skor — grafik akan muncul begitu appraisal pertamamu selesai diproses.</div></div>`;
+    }
+  }
+
+  const groupColors = {
+    MyAppraisal: { accent: "var(--teal)", light: "#E4F0EF" },
+    MyTeams: { accent: "var(--coral)", light: "#FFE9E3" },
+    MyReport: { accent: "#B36B00", light: "#FBF0DE" },
+    MyHR: { accent: "#6C4FB6", light: "#EEE8F7" },
+  };
+
+  app.innerHTML = topbar("Dashboard Saya") + chartBlock +
+    groups.map((g, gi) => {
+      const color = groupColors[g.name] || groupColors.MyAppraisal;
+      const groupId = `group-${gi}`;
+      const soleGroup = groups.length === 1;
+      const itemsHtml = g.items.map(item => {
+        if (item.key === "self" && selfDoneThisMonth) {
+          return `
+            <div class="staff-row" style="opacity:0.55; cursor:not-allowed; border-left: 4px solid var(--border);">
+              <div class="name">${item.label}</div>
+              <span class="badge pending">Sudah Diisi</span>
+            </div>`;
+        }
+        return menuItemHtml(item);
+      }).join("");
+
+      if (soleGroup) {
+        // Only one group total — no point hiding it behind a click, just show it plainly.
+        return `
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div style="padding:16px 18px; background:${color.light};">
+            <div style="font-weight:800; color:${color.accent}; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">${g.name}</div>
+          </div>
+          <div style="padding:14px;">${itemsHtml}</div>
+        </div>`;
+      }
+
+      return `
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div onclick="toggleGroup('${groupId}')" style="cursor:pointer; padding:16px 18px; display:flex; justify-content:space-between; align-items:center; background:${color.light};">
+          <div style="font-weight:800; color:${color.accent}; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">${g.name}</div>
+          <span id="${groupId}-chevron" style="color:${color.accent}; font-size:16px; display:inline-block; transition:transform 0.2s ease;">▾</span>
+        </div>
+        <div id="${groupId}" style="display:none; padding:14px;">${itemsHtml}</div>
+      </div>`;
+    }).join("");
+}
+
+function toggleGroup(id) {
+  const el = document.getElementById(id);
+  const chevron = document.getElementById(id + "-chevron");
+  if (!el) return;
+  const isOpen = el.style.display === "block";
+  el.style.display = isOpen ? "none" : "block";
+  if (chevron) chevron.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+}
+
+function goToScreen(key) {
+  state.screen = key;
+  render();
+}
+
+function logout() {
+  state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {} };
+  render();
+}
+
+// =================================================================
+// My Evaluations — unified todo list for Leader / Management / Executive / HR.
+// Each target already comes back from the backend with the correct `slot`
+// (leader/hr) for THIS viewer, so the frontend doesn't need to know the
+// tier rules itself.
+// =================================================================
+async function renderMyEvaluations() {
+  app.innerHTML = topbar(state.user.appraiseLabel || "Team Appraisal") + `<div class="loading">Memuat daftar...</div>`;
+  const res = await apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId });
+  if (res.error) {
+    app.innerHTML = topbar(state.user.appraiseLabel || "Team Appraisal") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  const list = res.targets || [];
+  list.sort((a, b) => {
+    if (a.status === b.status) return a.name.localeCompare(b.name);
+    return a.status === "Not started" ? -1 : 1;
+  });
+  const showMenuLink = availableScreens(state.user).length > 1;
+  app.innerHTML = topbar(state.user.appraiseLabel || "Team Appraisal") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <input type="text" placeholder="Cari nama..." oninput="updateMyEvalFilter('search', this.value)" style="margin-bottom:10px;" />
+    <div class="row-flex" style="margin-bottom:10px;">
+      <select onchange="sortMyEvalList(this.value)">
+        <option value="">Urutkan...</option>
+        <option value="name-asc">Nama (A-Z)</option>
+        <option value="name-desc">Nama (Z-A)</option>
+      </select>
+      <select onchange="updateMyEvalFilter('department', this.value)">
+        <option value="">Semua Department</option>
+        ${[...new Set(list.map(s => s.department !== "-" ? s.department : s.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
+      </select>
+    </div>
+    <button class="secondary" id="myeval-notdone-btn" onclick="toggleMyEvalFilterBtn('notDoneOnly', 'myeval-notdone-btn')" style="margin-bottom:10px;">Belum Diisi Saja</button>
+    <div class="hint">${list.length} orang — klik untuk isi appraisal</div>
+    <div id="myeval-list-container">
+    ${list.map(s => `
+      <div class="staff-row" data-search="${escapeAttr(s.name.toLowerCase())}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-mystatus="${s.status}" data-name="${escapeAttr(s.name)}" onclick="openForm('${s.slot}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}', '${s.tier}')">
+        <div>
+          <div class="name">${s.name} <span style="font-weight:700; font-size:11px; color:var(--coral); text-transform:uppercase;">· ${s.slot === "hr" ? "HR" : "Leader/Mgmt"}</span></div>
+          <div class="dept">${s.department !== "-" ? s.department : s.tier} · ${s.tier}</div>
+          <div class="dept" style="margin-top:4px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+            <span>${s.selfDone ? "✅" : "❌"} Self</span>
+            <span style="color:var(--border);">|</span>
+            <span>${s.leaderDone ? "✅" : "❌"} Leader/Mgmt</span>
+            <span style="color:var(--border);">|</span>
+            <span>${s.hrDone ? "✅" : "❌"} HR</span>
+            <span style="color:var(--border);">|</span>
+            <span>${s.executiveDone ? "✅" : "❌"} Executive</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+          <span class="badge ${s.status === 'Submitted' ? 'done' : 'pending'}">${statusLabelID(s.status)}</span>
+          ${s.slot === "hr" && s.leaderDone && s.status !== "Submitted" ? `
+            <button class="secondary" style="font-size:11px; padding:6px 10px; white-space:nowrap;" onclick="event.stopPropagation(); copyLeaderToHr('${s.staffId}', '${escapeAttr(s.name)}')">Samakan dgn Leader/Mgmt</button>
+          ` : ""}
+        </div>
+      </div>`).join("")}
+    </div>
+    ${!list.length ? '<div class="hint">Tidak ada yang perlu di-appraisal saat ini.</div>' : ""}
+  `;
+  state._myEvalFilters = { search: "", department: "", notDoneOnly: false };
+}
+
+function toggleMyEvalFilterBtn(filterKey, btnId) {
+  const btn = document.getElementById(btnId);
+  const isActive = btn.dataset.active === "true";
+  btn.dataset.active = isActive ? "false" : "true";
+  btn.style.background = isActive ? "" : "var(--coral)";
+  btn.style.color = isActive ? "" : "#fff";
+  btn.style.borderColor = isActive ? "" : "var(--coral)";
+  updateMyEvalFilter(filterKey, !isActive);
+}
+
+function updateMyEvalFilter(key, value) {
+  state._myEvalFilters = state._myEvalFilters || {};
+  state._myEvalFilters[key] = value;
+  const f = state._myEvalFilters;
+  document.querySelectorAll("#myeval-list-container [data-search]").forEach(el => {
+    let show = true;
+    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
+    if (f.department && el.dataset.department !== f.department) show = false;
+    if (f.notDoneOnly && el.dataset.mystatus === "Submitted") show = false;
+    el.style.display = show ? "" : "none";
+  });
+}
+
+function sortMyEvalList(criteria) {
+  if (!criteria) return;
+  const container = document.getElementById("myeval-list-container");
+  if (!container) return;
+  const cards = Array.from(container.children);
+  cards.sort((a, b) => {
+    if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
+    if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
+    return 0;
+  });
+  cards.forEach(c => container.appendChild(c));
+}
+
+
+function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
+
+// =================================================================
+// Review — read-only, scoped by Tier/Oversees (Management sees their
+// area, HR & Executive see everyone). No approve buttons here; approval
+// stays on the Executive-only GM dashboard.
+// =================================================================
+async function renderCompanySummary() {
+  app.innerHTML = topbar("Compare Departments") + `<div class="loading">Memuat ringkasan...</div>`;
+  const res = await apiGet("getCompanySummary", { month: state.month });
+  if (res.error) {
+    app.innerHTML = topbar("Compare Departments") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  const showMenuLink = availableScreens(state.user).length > 1;
+  const statBox = (label, value, color) => `
+    <div style="flex:1; min-width:120px; background:var(--sand); border-radius:12px; padding:12px; text-align:center;">
+      <div style="font-size:22px; font-weight:800; color:${color || "var(--teal)"};">${value}</div>
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${label}</div>
+    </div>`;
+
+  app.innerHTML = topbar("Compare Departments") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <label>Bulan</label>
+      <input type="month" id="month-picker" value="${state.month}" onchange="changeCompanyMonth(this.value)" />
+    </div>
+    <div class="card">
+      <div class="row-flex" style="flex-wrap:wrap; gap:8px;">
+        ${statBox("Total Appraisal", res.total)}
+        ${statBox("Rata-rata Skor", res.avgScore.toFixed(1))}
+        ${statBox("Performer", res.performerCount, "var(--green)")}
+        ${statBox("Underperform", res.underperformCount, "var(--red)")}
+        ${statBox("Sudah Di-approve", `${res.approvedCount}/${res.total}`, "var(--gold)")}
+      </div>
+    </div>
+    <div class="card">
+      <h2>Rata-rata Skor per Department/Tier</h2>
+      ${res.departmentBreakdown.map(d => `
+        <div class="staff-row" style="cursor:default; display:block;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="name">${d.department} <span style="font-weight:400; color:var(--text-muted);">(${d.count} orang)</span></div>
+            <span class="badge ${d.avgScore >= 60 ? "performer" : "underperform"}">${d.avgScore.toFixed(1)}</span>
+          </div>
+          ${d.underperformCount > 0 ? `<div class="dept" style="margin-top:4px; color:var(--red);">${d.underperformCount} underperform</div>` : ""}
+        </div>`).join("")}
+      ${!res.departmentBreakdown.length ? '<div class="hint">Belum ada data untuk bulan ini.</div>' : ""}
+    </div>`;
+}
+
+function changeCompanyMonth(value) {
+  if (!value) return;
+  state.month = value;
+  renderCompanySummary();
+}
+
+async function renderHistoricalInput() {
+  app.innerHTML = topbar("Input Data Historis") + `<div class="loading">Memuat data...</div>`;
+  if (!state._historicalMonth) state._historicalMonth = "2026-06"; // default starting point: June
+  await loadHistoricalStaffList(state._historicalMonth);
+}
+
+async function loadHistoricalStaffList(month) {
+  state._historicalMonth = month;
+  const res = await apiGet("getHistoricalCompletionStatus", { month });
+  const staffList = res.staff || [];
+  const doneCount = staffList.filter(s => s.hasData).length;
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  app.innerHTML = topbar("Input Data Historis") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <div class="hint" style="margin-bottom:8px;">Buat data appraisal SEBELUM sistem ini ada — cuma skor Leader yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan untuk perhitungan Service Charge.</div>
+      <label>Bulan historis</label>
+      <input type="month" id="historical-month-picker" value="${month}" onchange="loadHistoricalStaffList(this.value)" />
+    </div>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+        <h2 style="margin:0;">Progress ${monthLabelID(month)}</h2>
+        <div class="hint" style="font-weight:700; color:${doneCount === staffList.length ? "var(--green)" : "var(--coral)"};">${doneCount} dari ${staffList.length} sudah diisi</div>
+      </div>
+      <label>Cari nama staff</label>
+      <input type="text" id="historical-search" placeholder="Ketik nama..." oninput="filterHistoricalStaffList(this.value)" />
+      <div id="historical-staff-list" style="max-height:340px; overflow-y:auto; margin-top:8px;">
+        ${staffList.map(s => `
+          <div class="staff-row" data-search="${escapeAttr(s.name.toLowerCase())}" onclick="selectHistoricalStaff('${s.staffId}', '${escapeAttr(s.name)}')">
+            <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department})</span></div>
+            <span class="badge ${s.hasData ? "done" : "pending"}">${s.hasData ? "✅ Sudah Diisi" : "⭕ Belum Diisi"}</span>
+          </div>`).join("")}
+      </div>
+    </div>
+    <div id="historical-form-container"></div>
+  `;
+}
+
+function filterHistoricalStaffList(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll("#historical-staff-list [data-search]").forEach(el => {
+
+    el.style.display = el.dataset.search.includes(q) ? "" : "none";
+  });
+}
+
+async function selectHistoricalStaff(staffId, name) {
+  state._historicalStaffId = staffId;
+  state._historicalStaffName = name;
+  const container = document.getElementById("historical-form-container");
+  container.innerHTML = `<div class="card"><h2>${name} — ${monthLabelID(state._historicalMonth)}</h2><div id="historical-existing-note" class="hint"></div></div><div id="historical-detail-form"></div>`;
+  await loadHistoricalForm();
+}
+
+async function loadHistoricalForm() {
+  const month = state._historicalMonth;
+  if (!month || !state._historicalStaffId) return;
+
+  const detailContainer = document.getElementById("historical-detail-form");
+  detailContainer.innerHTML = `<div class="loading">Memuat kriteria...</div>`;
+
+  const [existing, cfg] = await Promise.all([
+    apiGet("getHistoricalAppraisal", { staffId: state._historicalStaffId, month }),
+    apiGet("getKpiConfigForTarget", { targetStaffId: state._historicalStaffId }),
+  ]);
+  state._historicalCfg = cfg;
+
+  const noteEl = document.getElementById("historical-existing-note");
+  noteEl.textContent = !existing.found ? "" : (existing.selfTotal || existing.hrTotal)
+    ? "⚠️ Bulan ini sudah punya data Self/HR (siklus normal) — hati-hati kalau ditimpa."
+    : `Sudah ada data historis bulan ini (Final Score: ${Number(existing.finalScore).toFixed(1)}) — isi ulang semua kriteria di bawah untuk menimpanya, kriteria detail sebelumnya tidak tersimpan per-item.`;
+
+  const scoreRow = (label, desc, id) => `
+    <div class="criterion-row">
+      <div class="name">${label}</div>
+      ${desc ? `<div class="desc">${desc}</div>` : ""}
+      <div class="score-select" data-crit-id="${id}">
+        ${[1,2,3,4,5].map(n => `<div class="score-opt" onclick="pickHistoricalScore(this, '${id}', ${n})">${n}</div>`).join("")}
+      </div>
+    </div>`;
+
+  detailContainer.innerHTML = `
+    <div class="card">
+      <div class="section-title">Section A — Attitude</div>
+      ${cfg.attitude.map((c, i) => scoreRow(c.name, c.description, "A" + i)).join("")}
+      <div class="section-title">Section B — Discipline</div>
+      ${cfg.discipline.map((c, i) => scoreRow(c.name, `${c.dataSource} — Target: ${c.target}`, "B" + i)).join("")}
+      ${cfg.placeholder ? `<div class="hint">${cfg.placeholderNote}</div>` : `
+        <div class="section-title">Section C — Performance KPI</div>
+        ${cfg.kpi.map((c, i) => scoreRow(c.name, `${c.howToMeasure} — Target: ${c.target}`, "C" + i)).join("")}
+      `}
+      <div class="section-title">Section D — Bonus / Deduction</div>
+      ${cfg.bonus.map((b, i) => `
+        <div class="criterion-row">
+          <div class="name">${b.item} (${b.points > 0 ? "+" : ""}${b.points}/kejadian)</div>
+          <input type="number" id="historical-bonus-${i}" min="0" placeholder="Jumlah kejadian (kosongkan jika 0)" style="max-width:200px;" />
+        </div>`).join("")}
+      <button class="primary" onclick="saveHistoricalAppraisal()" style="margin-top:16px;">Simpan Data Historis</button>
+    </div>`;
+}
+
+function pickHistoricalScore(el, critId, value) {
+  const row = el.closest(".score-select");
+  row.dataset.value = value;
+  row.querySelectorAll(".score-opt").forEach(o => o.classList.remove("selected"));
+  el.classList.add("selected");
+}
+
+async function saveHistoricalAppraisal() {
+  const month = state._historicalMonth;
+  if (!month) { showToast("Pilih bulan dulu.", "error"); return; }
+  const cfg = state._historicalCfg;
+
+  const collectScores = (list, prefix) => {
+    const scores = {};
+    for (let i = 0; i < list.length; i++) {
+      const row = document.querySelector(`.score-select[data-crit-id="${prefix}${i}"]`);
+      if (!row || !row.dataset.value) return null;
+      scores[list[i].name] = Number(row.dataset.value);
+    }
+    return scores;
+  };
+
+  const attitudeScores = collectScores(cfg.attitude, "A");
+  if (!attitudeScores) { showToast("Isi semua kriteria Section A dulu.", "error"); return; }
+  const disciplineScores = collectScores(cfg.discipline, "B");
+  if (!disciplineScores) { showToast("Isi semua kriteria Section B dulu.", "error"); return; }
+  let kpiScores = {};
+  if (!cfg.placeholder) {
+    kpiScores = collectScores(cfg.kpi, "C");
+    if (!kpiScores) { showToast("Isi semua kriteria Section C dulu.", "error"); return; }
+  }
+  const bonusEntries = cfg.bonus.map((b, i) => ({
+    item: b.item, count: Number(document.getElementById(`historical-bonus-${i}`).value || 0),
+  })).filter(e => e.count > 0);
+
+  const res = await apiPost("submitHistoricalAppraisal", {
+    enteredById: state.user.staffId, staffId: state._historicalStaffId, month,
+    attitudeScores, disciplineScores, kpiScores, bonusEntries,
+  });
+  if (res.error || res.success === false) { showToast("Gagal simpan: " + friendlyError(res.error), "error"); return; }
+  showToast(`Data historis ${state._historicalStaffName} bulan ${monthLabelID(month)} tersimpan! Final Score: ${res.finalScore.toFixed(1)}`);
+  loadHistoricalStaffList(month); // refresh list so the ✅ indicator updates immediately
+}
+
+async function renderStaffFeedback() {
+  app.innerHTML = topbar("Read Staff Feedback") + `<div class="loading">Memuat...</div>`;
+  if (!state._feedbackMonth) state._feedbackMonth = state.month;
+
+  const [feedbackRes, summaryRes, actionsRes, catRes] = await Promise.all([
+    apiGet("getAllManagementFeedback", { requesterId: state.user.staffId }),
+    apiGet("getIssueSummary", { requesterId: state.user.staffId, month: state._feedbackMonth }),
+    apiGet("getActionItems", {}),
+    apiGet("getFeedbackCategories", {}),
+  ]);
+  if (!feedbackRes.found) {
+    app.innerHTML = topbar("Read Staff Feedback") + `<div class="card"><div class="error">${friendlyError(feedbackRes.error)}</div></div>`;
+    return;
+  }
+  state._feedbackCategories = catRes.categories || [];
+  const feedback = (feedbackRes.feedback || []).filter(f => f.month === state._feedbackMonth);
+  const summary = summaryRes.summary || [];
+  const actions = actionsRes.items || [];
+  const showMenuLink = availableScreens(state.user).length > 1;
+  const catOptions = (extra) => `<option value="">— pilih —</option>` + state._feedbackCategories.map(c => `<option value="${c.code}" ${c.code === extra ? "selected" : ""}>${c.label}</option>`).join("");
+
+  app.innerHTML = topbar("Read Staff Feedback") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <div class="hint" style="font-weight:700; color:var(--purple, #6C4FB6);">🔒 Confidential — cuma Executive, HR, dan Admin Operational yang bisa lihat halaman ini.</div>
+      <label style="margin-top:8px;">Bulan</label>
+      <input type="month" value="${state._feedbackMonth}" onchange="changeFeedbackMonth(this.value)" />
+    </div>
+
+    <div class="card">
+      <h2>1. Issue Summary — ${monthLabelID(state._feedbackMonth)}</h2>
+      <div class="hint" style="margin-bottom:10px;">${summaryRes.taggedCount || 0} dari ${summaryRes.totalRespondents || 0} feedback udah di-tag kategorinya.</div>
+      <table class="mini">
+        <tr><th>Kategori</th><th>Jumlah Orang</th><th>%</th><th>Prioritas</th></tr>
+        ${summary.map(s => `
+          <tr>
+            <td>${s.label}</td><td>${s.employeeCount}</td>
+            <td>${(s.pct * 100).toFixed(1)}%</td>
+            <td><span class="badge ${s.priority === "TOP 5" ? "underperform" : s.priority === "Monitor" ? "pending" : ""}">${s.priority}</span></td>
+          </tr>`).join("")}
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>2. Comment Master — ${feedback.length} feedback</h2>
+      ${feedback.map(f => `
+        <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline;">
+            <div class="name">${f.staffName}</div>
+            <div class="hint" style="font-size:11px;">${fullDateLabelID(f.timestamp)}</div>
+          </div>
+          <div style="font-size:14px; color:var(--text); margin:8px 0;">"${f.feedback}"</div>
+          ${state.user.isAdminOperational ? `
+            <div class="row-flex" style="gap:8px;">
+              <select id="tag-primary-${f.staffId}">${catOptions(f.primaryIssue)}</select>
+              <select id="tag-secondary-${f.staffId}">${catOptions(f.secondaryIssue)}</select>
+              <button class="secondary" style="flex:0 0 auto;" onclick="doTagFeedback('${f.staffId}')">Simpan Tag</button>
+            </div>
+          ` : (f.primaryIssue ? `<div class="hint">Tag: ${f.primaryIssue}${f.secondaryIssue ? " / " + f.secondaryIssue : ""}</div>` : `<div class="hint">Belum di-tag.</div>`)}
+        </div>`).join("")}
+      ${!feedback.length ? '<div class="hint">Belum ada feedback bulan ini.</div>' : ""}
+    </div>
+
+    <div class="card">
+      <h2>3. Action Tracker</h2>
+      <button class="secondary" onclick="showNewActionForm()" style="margin-bottom:10px;">+ Tambah Action Item</button>
+      <div id="new-action-form"></div>
+      ${actions.map(a => `
+        <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between;">
+            <div class="name">${a.actionId} — ${a.issue}</div>
+            <span class="badge ${a.status === "Done" ? "done" : a.status === "In Progress" ? "pending" : "underperform"}">${a.status}</span>
+          </div>
+          <div style="font-size:13px; margin:6px 0;">${a.action}</div>
+          <div class="hint">Owner: ${a.owner || "-"} · Target: ${a.target || "-"}</div>
+          <button class="ghost" style="font-size:12px; margin-top:6px;" onclick="showEditActionForm('${a.actionId}', '${escapeAttr(a.issue)}', '${escapeAttr(a.action)}', '${escapeAttr(a.owner)}', '${escapeAttr(a.target)}', '${a.status}', '${escapeAttr(a.actualCompletion)}', '${escapeAttr(a.remarks)}')">Edit</button>
+        </div>`).join("")}
+      ${!actions.length ? '<div class="hint">Belum ada action item.</div>' : ""}
+    </div>
+  `;
+}
+
+function changeFeedbackMonth(month) {
+  state._feedbackMonth = month;
+  renderStaffFeedback();
+}
+
+async function doTagFeedback(staffId) {
+  const primaryIssue = document.getElementById(`tag-primary-${staffId}`).value;
+  const secondaryIssue = document.getElementById(`tag-secondary-${staffId}`).value;
+  if (!primaryIssue) { showToast("Pilih Primary Issue dulu.", "error"); return; }
+  const res = await apiPost("tagFeedback", {
+    enteredById: state.user.staffId, staffId, month: state._feedbackMonth, primaryIssue, secondaryIssue,
+  });
+  if (res.error || res.success === false) { showToast("Gagal simpan tag: " + friendlyError(res.error), "error"); return; }
+  showToast("Tag tersimpan!");
+  renderStaffFeedback();
+}
+
+function actionFormHtml(a) {
+  a = a || {};
+  return `
+    <div class="card" style="background:var(--sand);">
+      <label>Issue</label>
+      <select id="action-issue">${state._feedbackCategories.map(c => `<option value="${c.label}" ${c.label === a.issue ? "selected" : ""}>${c.label}</option>`).join("")}</select>
+      <label>Action</label>
+      <textarea id="action-action" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px;">${a.action || ""}</textarea>
+      <label>Owner</label>
+      <input type="text" id="action-owner" value="${a.owner || ""}" placeholder="Misal: Restaurant Manager" />
+      <label>Target</label>
+      <input type="text" id="action-target" value="${a.target || ""}" placeholder="Misal: 2 weeks / Immediate / 30 days" />
+      <label>Status</label>
+      <select id="action-status">
+        ${["Not Started", "In Progress", "Done"].map(s => `<option value="${s}" ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}
+      </select>
+      <label>Actual Completion</label>
+      <input type="text" id="action-completion" value="${a.actualCompletion || ""}" />
+      <label>Remarks</label>
+      <textarea id="action-remarks" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px;">${a.remarks || ""}</textarea>
+      <button class="primary" style="margin-top:10px;" onclick="doSaveActionItem('${a.actionId || ""}')">Simpan</button>
+    </div>`;
+}
+
+function showNewActionForm() {
+  document.getElementById("new-action-form").innerHTML = actionFormHtml({});
+}
+
+function showEditActionForm(actionId, issue, action, owner, target, status, actualCompletion, remarks) {
+  document.getElementById("new-action-form").innerHTML = actionFormHtml({ actionId, issue, action, owner, target, status, actualCompletion, remarks });
+}
+
+async function doSaveActionItem(actionId) {
+  const payload = {
+    enteredById: state.user.staffId,
+    actionId: actionId || undefined,
+    issue: document.getElementById("action-issue").value,
+    action: document.getElementById("action-action").value,
+    owner: document.getElementById("action-owner").value,
+    target: document.getElementById("action-target").value,
+    status: document.getElementById("action-status").value,
+    actualCompletion: document.getElementById("action-completion").value,
+    remarks: document.getElementById("action-remarks").value,
+  };
+  const res = await apiPost("saveActionItem", payload);
+  if (res.error || res.success === false) { showToast("Gagal simpan: " + friendlyError(res.error), "error"); return; }
+  showToast("Action item tersimpan!");
+  renderStaffFeedback();
+}
+
+async function renderEvaluatorProgress() {
+  app.innerHTML = topbar("Track Team Compliance") + `<div class="loading">Memuat progress...</div>`;
+  const res = await apiGet("getEvaluatorProgress", {});
+  if (res.error) {
+    app.innerHTML = topbar("Track Team Compliance") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  const progress = (res.progress || []).sort((a, b) => a.percentage - b.percentage);
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  const groupOrder = ["Leader", "Management", "HR"];
+  const groupLabel = { Leader: "Leader", Management: "Management", HR: "HR" };
+
+  const rowHtml = (p) => {
+    const barColor = p.percentage >= 100 ? "var(--green)" : p.percentage >= 50 ? "var(--amber)" : "var(--red)";
+    return `
+      <div class="staff-row" style="cursor:default; display:block;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="name">${p.name}</div>
+          <span class="badge" style="background:${p.percentage >= 100 ? "var(--green-bg)" : p.percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${p.doneTargets}/${p.totalTargets} (${p.percentage}%)</span>
+        </div>
+        <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin-top:8px; overflow:hidden;">
+          <div style="width:${p.percentage}%; height:100%; background:${barColor};"></div>
+        </div>
+      </div>`;
+  };
+
+  app.innerHTML = topbar("Track Team Compliance") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="hint" style="margin-top:8px;">Progress evaluator bulan ini — belum termasuk skor, cuma status "sudah/belum isi appraisal".</div>
+    ${groupOrder.map(tier => {
+      const group = progress.filter(p => p.tier === tier);
+      if (!group.length) return "";
+      return `<div class="card"><h2>${groupLabel[tier]} (${group.length} orang)</h2>${group.map(rowHtml).join("")}</div>`;
+    }).join("")}
+    ${!progress.length ? '<div class="card"><div class="hint">Belum ada evaluator (Leader/Management/HR) yang terdaftar.</div></div>' : ""}
+  `;
+}
+
+function changeReviewMonth(value) {
+  if (!value) return;
+  state.month = value;
+  renderReview();
+}
+
+async function renderReview() {
+  app.innerHTML = topbar(state.user.isHR ? "Review Everyone's Records" : "Review Your Team") + `<div class="loading">Memuat data...</div>`;
+  const res = await apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month });
+  if (res.error) {
+    app.innerHTML = topbar(state.user.isHR ? "Review Everyone's Records" : "Review Your Team") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  const rows = res.rows || [];
+  const showMenuLink = availableScreens(state.user).length > 1;
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+
+  app.innerHTML = topbar(state.user.isHR ? "Review Everyone's Records" : "Review Your Team") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <label>Bulan</label>
+      <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
+    </div>
+    <input type="text" placeholder="Cari nama..." oninput="updateReviewFilter('search', this.value)" style="margin-bottom:10px;" />
+    <div class="row-flex" style="margin-bottom:10px;">
+      <select onchange="sortReviewList(this.value)">
+        <option value="">Urutkan...</option>
+        <option value="name-asc">Nama (A-Z)</option>
+        <option value="name-desc">Nama (Z-A)</option>
+        <option value="score-desc">Skor Tertinggi</option>
+        <option value="score-asc">Skor Terendah</option>
+      </select>
+      <select onchange="updateReviewFilter('department', this.value)">
+        <option value="">Semua Department</option>
+        ${[...new Set(rows.map(r => r.department !== "-" ? r.department : r.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
+      </select>
+    </div>
+    <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">Underperform Saja</button>
+    <div class="hint">${rows.length} appraisal record — read only</div>
+    <div id="review-list-container">
+    ${rows.map(r => `
+      <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-department="${escapeAttr(r.department !== "-" ? r.department : r.tier)}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:default;">
+        <div>
+          <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
+          <div class="dept">${monthLabelID(r.month)} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
+          <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? fullDateLabelID(r.contractEndDate) : "-"}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+          <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
+          <span class="badge ${r.approvalStatus === 'Approved' ? 'done' : 'pending'}">${statusLabelID(r.approvalStatus || 'Pending')}</span>
+        </div>
+      </div>`).join("")}
+    </div>
+    ${!rows.length ? '<div class="hint">Belum ada data appraisal di scope kamu.</div>' : ""}
+  `;
+  state._reviewFilters = { search: "", department: "", underperformOnly: false };
+}
+
+function toggleReviewFilterBtn(filterKey, btnId) {
+  const btn = document.getElementById(btnId);
+  const isActive = btn.dataset.active === "true";
+  btn.dataset.active = isActive ? "false" : "true";
+  btn.style.background = isActive ? "" : "var(--coral)";
+  btn.style.color = isActive ? "" : "#fff";
+  btn.style.borderColor = isActive ? "" : "var(--coral)";
+  updateReviewFilter(filterKey, !isActive);
+}
+
+function updateReviewFilter(key, value) {
+  state._reviewFilters = state._reviewFilters || {};
+  state._reviewFilters[key] = value;
+  const f = state._reviewFilters;
+  document.querySelectorAll("#review-list-container [data-search]").forEach(el => {
+    let show = true;
+    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
+    if (f.department && el.dataset.department !== f.department) show = false;
+    if (f.underperformOnly && el.dataset.status !== "Underperform") show = false;
+    el.style.display = show ? "" : "none";
+  });
+}
+
+function sortReviewList(criteria) {
+  if (!criteria) return;
+  const container = document.getElementById("review-list-container");
+  if (!container) return;
+  const cards = Array.from(container.children);
+  cards.sort((a, b) => {
+    if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
+    if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
+    if (criteria === "score-desc") return Number(b.dataset.score) - Number(a.dataset.score);
+    if (criteria === "score-asc") return Number(a.dataset.score) - Number(b.dataset.score);
+    return 0;
+  });
+  cards.forEach(c => container.appendChild(c));
+
+}
+
+function openForm(evaluatorType, staffId, name, department, tier) {
+  state.evaluatorType = evaluatorType;
+  state.targetStaff = { staffId, name, department, tier };
+  state.screen = "form";
+  render();
+}
+
+async function copyLeaderToHr(staffId, name) {
+  const ok = confirm(`Yakin mau samakan appraisal HR untuk ${name} dengan hasil Leader/Management?\n\nIni langsung submit tanpa isi form manual, dan cuma bisa dipakai 1x (sama seperti appraisal biasa).`);
+  if (!ok) return;
+  showToast("Menyalin...");
+  const res = await apiPost("copyLeaderToHr", { staffId, evaluatorId: state.user.staffId });
+  if (res.computeError) {
+    console.error("computeEvaluatorTotal error:", res.computeError);
+    showToast("Gagal hitung skor: " + res.computeError.slice(0, 150) + " — coba lagi (belum kepakai kuota submit-nya).", "error");
+    renderMyEvaluations();
+    return;
+  }
+  if (res.error || res.success === false) { showToast("Gagal: " + friendlyError(res.error || res.reason), "error"); return; }
+  showToast(`Appraisal HR untuk ${name} disamakan dengan Leader/Management!`);
+  renderMyEvaluations();
+}
+
+// =================================================================
+// Appraisal form (shared by Self / Leader / Management / Executive / HR)
+// =================================================================
+async function renderMyAppraisalStatus(target) {
+  app.innerHTML = topbar("Status Appraisal Saya") + `<div class="loading">Memuat status...</div>`;
+  const res = await apiGet("getMyAppraisalStatus", { staffId: target.staffId });
+  if (!res.found) {
+    app.innerHTML = topbar("Status Appraisal Saya") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+
+  const checklistRow = (label, done) => `<span>${done ? "✅" : "⏳"} ${label}</span>`;
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+
+  let decisionBlock = "";
+  if (res.executiveDone && res.details) {
+    const d = res.details;
+    if (!state.decisionOptionsByTier || !state.decisionOptionsByTier[res.tier]) {
+      const dRes = await apiGet("getDecisionOptions", { tier: res.tier });
+      state.decisionOptionsByTier = state.decisionOptionsByTier || {};
+      state.decisionOptionsByTier[res.tier] = dRes.options || [];
+    }
+    if (!state.oneOnOneOptions) {
+      const oRes = await apiGet("getOneOnOneOptions", {});
+      state.oneOnOneOptions = oRes.options || [];
+    }
+    const decisionLabel = findLabel(state.decisionOptionsByTier[res.tier], d.decision);
+    const oneOnOneLabel = findLabel(state.oneOnOneOptions, d.oneOnOneStatus);
+    decisionBlock = `
+      <div class="card">
+        <h2>Hasil Appraisal Bulan Ini</h2>
+        <table class="mini">
+          <tr><td>Skor Self</td><td>${Number(d.selfTotal || 0).toFixed(1)}</td></tr>
+          <tr><td>Skor Leader/Management</td><td>${Number(d.leaderTotal || 0).toFixed(1)}</td></tr>
+          <tr><td>Skor HR</td><td>${Number(d.hrTotal || 0).toFixed(1)}</td></tr>
+          <tr><td>Skor Akhir</td><td>${Number(d.finalScore || 0).toFixed(1)}</td></tr>
+        </table>
+        <div class="hint" style="font-weight:700; color:var(--teal); margin:14px 0 6px;">Breakdown per Section (biar tau bagian mana yang lemah)</div>
+        <table class="mini">
+          <tr><td>Section A — Attitude</td><td>${Number(d.sectionABlend || 0).toFixed(1)} / 30</td></tr>
+          <tr><td>Section B — Discipline</td><td>${Number(d.sectionBBlend || 0).toFixed(1)} / 30</td></tr>
+          <tr><td>Section C — Performance KPI</td><td>${Number(d.sectionCBlend || 0).toFixed(1)} / 40</td></tr>
+          <tr><td>Section D — Bonus/Deduction</td><td>${Number(d.sectionDBlend || 0) >= 0 ? "+" : ""}${Number(d.sectionDBlend || 0).toFixed(1)}</td></tr>
+        </table>
+        <div class="mode-banner" style="background:var(--sand); margin-top:14px;">
+          <span class="mode-label" style="color:var(--teal);">Decision</span>
+        </div>
+        <div class="hint" style="font-size:14px; color:var(--text);"><strong>${decisionLabel}</strong></div>
+        ${d.mutationToPosition ? `<div class="hint" style="font-size:14px;">Mutasi: ${d.mutationFromPosition} → ${d.mutationToPosition}</div>` : ""}
+        ${d.extensionDuration ? `<div class="hint" style="font-size:14px;">Perpanjangan Probation/Kontrak: ${d.extensionDuration}</div>` : ""}
+        <div class="hint" style="font-size:14px; margin-top:8px;">1-on-1: <strong>${oneOnOneLabel}</strong></div>
+        ${d.decisionNotes ? `<div class="hint" style="font-size:14px; margin-top:8px;">Catatan: "${d.decisionNotes}"</div>` : ""}
+        <div class="hint" style="margin-top:10px; font-size:12px;">Disetujui oleh ${d.approvedBy || "-"}</div>
+      </div>`;
+  }
+
+  app.innerHTML = topbar("Status Appraisal Saya") + `
+    <div class="card">
+      <div class="hint" style="font-size:14px; margin-bottom:12px;">Appraisal kamu bulan ini (${res.month}) sudah terkirim dan sedang berjalan lewat proses berikut:</div>
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:14px;">
+        ${checklistRow("Self", res.selfDone)}
+        <span style="color:var(--border);">|</span>
+        ${checklistRow("Leader/Mgmt", res.leaderDone)}
+        <span style="color:var(--border);">|</span>
+        ${checklistRow("HR", res.hrDone)}
+        <span style="color:var(--border);">|</span>
+        ${checklistRow("Executive", res.executiveDone)}
+      </div>
+      ${!res.executiveDone ? '<div class="hint" style="margin-top:12px; font-size:13px;">Kamu akan dapat notifikasi (🔔) begitu semua tahap selesai dan hasilnya keluar.</div>' : ""}
+    </div>
+    ${decisionBlock}
+    <div class="card center">
+      <button class="secondary" onclick="renderMyAppraisalHistory('${target.staffId}')" style="margin-bottom:10px;">📈 Lihat Riwayat Appraisal Saya</button><br/>
+      <button class="secondary" onclick="goToRoleMenu()" style="margin-bottom:10px;">Kembali ke Dashboard</button><br/>
+      <button class="secondary" onclick="logout()">Keluar</button>
+    </div>`;
+}
+
+async function renderMyAppraisalHistory(staffId) {
+  app.innerHTML = topbar("Riwayat Appraisal Saya") + `<div class="loading">Memuat riwayat...</div>`;
+  const res = await apiGet("getMyAppraisalHistory", { staffId });
+  if (res.error) {
+    app.innerHTML = topbar("Riwayat Appraisal Saya") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+
+  // Make sure decision labels are loaded — this screen can be opened directly from the
+  // Dashboard, without ever visiting a screen that would've fetched these already.
+  state.decisionOptionsByTier = state.decisionOptionsByTier || {};
+  if (state.user.tier && !state.decisionOptionsByTier[state.user.tier]) {
+    const dRes = await apiGet("getDecisionOptions", { tier: state.user.tier });
+    state.decisionOptionsByTier[state.user.tier] = dRes.options || [];
+  }
+  const history = res.history || [];
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+
+  app.innerHTML = topbar("Riwayat Appraisal Saya") + `
+    <button class="ghost" onclick="goBackFromHistory()">&larr; Kembali</button>
+    ${history.length > 1 ? `<div class="card">${buildScoreChartSvg(history)}</div>` : ""}
+    <div class="hint" style="margin-top:8px;">${history.length} bulan tercatat</div>
+    ${history.slice().reverse().map(h => `
+      <div class="staff-row" style="cursor:default;">
+        <div>
+          <div class="name">${monthLabelID(h.month)}</div>
+          <div class="dept">${h.selfTotal === "" && h.hrTotal === "" ? `📜 Data Historis (cuma Leader Appraisal) · Leader ${Number(h.leaderTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}` : `Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}`}</div>
+          ${h.selfTotal === "" && h.hrTotal === "" ? "" : `<div class="dept" style="margin-top:2px; font-size:11px;">Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}</div>`}
+          ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findLabel(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
+        </div>
+        <span class="badge ${h.status === 'Performer' ? 'performer' : 'underperform'}">${h.status}</span>
+      </div>`).join("")}
+    ${!history.length ? '<div class="hint">Belum ada riwayat appraisal.</div>' : ""}
+  `;
+}
+
+function monthShortLabelID(monthKey) {
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  const idx = Number(String(monthKey).split("-")[1]) - 1;
+  return months[idx] || monthKey;
+}
+
+function buildScoreChartSvg(history) {
+  const width = 600, height = 220, padTop = 24, padBottom = 30, padSide = 30;
+  const innerH = height - padTop - padBottom;
+  const stepX = history.length > 1 ? (width - padSide * 2) / (history.length - 1) : 0;
+  const yFor = (score) => padTop + innerH - (Math.max(0, Math.min(100, Number(score) || 0)) / 100) * innerH;
+  const points = history.map((h, i) => ({ x: padSide + i * stepX, y: yFor(h.finalScore), month: h.month, score: Number(h.finalScore || 0) }));
+  const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
+  const thresholdY = yFor(60);
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">
+      <line x1="${padSide}" y1="${thresholdY.toFixed(1)}" x2="${width - padSide}" y2="${thresholdY.toFixed(1)}" stroke="#946017" stroke-dasharray="4 4" stroke-width="1.2" />
+      <text x="${width - padSide}" y="${(thresholdY - 6).toFixed(1)}" text-anchor="end" font-size="10" fill="#946017">Threshold 60</text>
+      <path d="${pathD}" fill="none" stroke="#0E4749" stroke-width="2.5" />
+      ${points.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${p.score >= 60 ? "#1A6B49" : "#B8352B"}" />`).join("")}
+      ${points.map(p => `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="10" fill="#6B5D4F">${monthShortLabelID(p.month)}</text>`).join("")}
+    </svg>`;
+}
+
+function goBackFromHistory() {
+  goToRoleMenu();
+}
+
+async function renderAppraisalForm({ evaluatorType, target }) {
+  state.targetStaff = target; // always keep this in sync so submitForm can read it reliably
+  const subtitle = `${target.department && target.department !== "-" ? target.department : ""}${target.tier ? (target.department && target.department !== "-" ? " · " : "") + target.tier + " tier" : ""}`;
+  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memeriksa akses...</div>`;
+
+  const access = await apiGet("checkAccess", { staffId: target.staffId, evaluatorType });
+  if (access.error) {
+    app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
+      <div class="card"><div class="error">${friendlyError(access.error)}</div>
+      <button class="secondary" onclick="goBack()">Kembali</button></div>`;
+    return;
+  }
+  if (!access.allowed) {
+    if (evaluatorType === "self" && access.reason === "max_attempts_reached") {
+      renderMyAppraisalStatus(target);
+      return;
+    }
+    if (evaluatorType === "self" && access.reason === "too_late") {
+      // "too_late" alone is ambiguous — could mean "already submitted, now just waiting
+      // on others" OR "never submitted at all, window quietly closed". Check which one
+      // this actually is before deciding what to tell them.
+      const statusCheck = await apiGet("getMyAppraisalStatus", { staffId: target.staffId });
+      if (statusCheck.found && statusCheck.selfDone) {
+        renderMyAppraisalStatus(target);
+      } else {
+        app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
+          <div class="card">
+            <div class="hint" style="font-size:14px;">Waktu buat Appraise Yourself bulan ini sudah lewat, dan kamu belum sempat mengisinya. Bagian Self kamu akan dihitung 0 untuk bulan ini. Hubungi HR kalau ada alasan khusus.</div>
+            <button class="secondary" onclick="goBack()" style="margin-top:12px;">Kembali</button>
+          </div>`;
+      }
+      return;
+    }
+    let msg;
+    if (access.reason === "too_early") {
+      msg = `Belum waktunya. Coba lagi mulai <strong>${access.retryDateLabel}</strong>.`;
+    } else if (access.reason === "too_late") {
+      msg = "Waktu untuk mengisi appraisal ini sudah lewat.";
+    } else if (access.reason === "max_attempts_reached") {
+      msg = `Appraisal ini sudah diisi ${access.submissionCount}× (maksimal ${access.submissionCount}×). Tidak bisa diisi ulang lagi. Hubungi HR kalau butuh koreksi.`;
+    } else if (access.reason === "deferred_to_previous_cycle") {
+      msg = "Kontrak staff ini berakhir terlalu awal bulan ini untuk siklus appraisal baru — keputusan appraisal bulan lalu yang berlaku untuk periode ini.";
+    } else {
+      msg = "Data kontrak untuk staff ini tidak ditemukan. Hubungi HR.";
+    }
+    app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
+      <div class="card">
+        <div class="hint" style="font-size:14px;">${msg}</div>
+        <button class="secondary" onclick="goBack()" style="margin-top:12px;">Kembali</button>
+      </div>`;
+    return;
+  }
+
+  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memuat form...</div>`;
+  const cfg = await apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId });
+  if (cfg.error) {
+    app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
+      <div class="card"><div class="error">${friendlyError(cfg.error)}</div>
+      <button class="secondary" onclick="goBack()">Kembali</button></div>`;
+    return;
+  }
+  state.kpiConfig = cfg;
+  if (!state._preserveScores) state.scores = {};
+  state._preserveScores = false;
+
+  // For anyone evaluating someone ELSE (not self), pull that person's own Self
+  // scores as reference context, if they've already submitted it.
+  state.selfReference = null;
+  if (evaluatorType !== "self") {
+    const selfRes = await apiGet("getSelfScoresForTarget", { staffId: target.staffId });
+    if (selfRes.found) state.selfReference = selfRes.scores;
+  }
+
+  renderFormBody(evaluatorType, target, cfg);
+}
+
+function renderFormBody(evaluatorType, target, cfg) {
+  state._totalCriteria = cfg.attitude.length + cfg.discipline.length + (cfg.placeholder ? 0 : cfg.kpi.length);
+
+  const scoreRow = (criterion, desc) => `
+    <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
+      <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}</div>
+      ${desc ? `<div class="desc">${desc}</div>` : ""}
+      <div class="score-select">
+        ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
+      </div>
+    </div>`;
+
+  const bonusRow = (item, points, idx, inputType) => `
+    <div class="criterion-row">
+      <div class="name">${item} <span style="font-weight:600; color:${points > 0 ? "var(--green)" : "var(--red)"};">${points > 0 ? "+" : ""}${points} pts</span></div>
+      <div class="row-flex" style="align-items:center;">
+        ${inputType === "checkbox"
+          ? `<label style="display:flex; align-items:center; gap:8px; flex:0 0 80px; margin-bottom:0; cursor:pointer;">
+               <input type="checkbox" class="bonus-count" data-idx="${idx}" style="width:20px; height:20px; margin:0;" />
+               <span style="font-size:13px; color:var(--text-muted);">Terjadi</span>
+             </label>`
+          : `<input type="number" min="0" class="bonus-count" data-idx="${idx}" value="0" style="margin-bottom:0; flex:0 0 80px;" />`}
+        <input type="text" class="bonus-notes" data-idx="${idx}" placeholder="Evidence / notes (opsional)" style="margin-bottom:0;" />
+      </div>
+    </div>`;
+
+  const isSelf = evaluatorType === "self";
+
+  app.innerHTML = topbar("Appraisal — " + target.name) + `
+    <div class="card">
+      <div class="mode-banner mode-${evaluatorType}">
+        <span class="mode-label">${evaluatorType === "self" ? "Appraise Yourself" : evaluatorType === "hr" ? "HR Appraisal" : "Leader / Management Appraisal"}</span>
+        <span class="mode-meta">${target.department !== "-" ? target.department : target.tier} · ${state.month}</span>
+      </div>
+
+      <div class="hint" style="background:var(--sand); padding:9px 12px; border-radius:10px; margin-bottom:8px;">
+        Skor: <strong>1</strong> Sangat Kurang · <strong>2</strong> Kurang · <strong>3</strong> Cukup · <strong>4</strong> Baik · <strong>5</strong> Sangat Baik
+      </div>
+      ${evaluatorType !== "self" ? (state.selfReference
+        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself — skornya ditampilkan sebagai referensi di tiap kriteria (label "Self: X").</div>`
+        : `<div class="hint" style="background:var(--amber-bg); color:var(--amber); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">⚠️ ${target.name} belum Appraise Yourself — kamu menilai tanpa referensi dari dia.</div>`
+      ) : ""}
+      <div class="hint" id="progress-counter" style="text-align:right; font-weight:700; color:var(--teal); margin-bottom:14px;"></div>
+
+      <div class="section-title">Section A — Attitude</div>
+      ${cfg.attitude.map(c => scoreRow(c.name, c.description)).join("")}
+
+      <div class="section-title">Section B — Discipline</div>
+      ${cfg.discipline.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
+
+      <div class="section-title">Section C — Performance KPI</div>
+      ${cfg.placeholder
+        ? `<div class="hint" style="background:var(--sand); padding:12px; border-radius:8px;">${cfg.placeholderNote}</div>`
+        : cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
+
+      ${isSelf ? "" : `
+        <div class="section-title">Section D — Bonus &amp; Deduction</div>
+        <div class="hint">Isi jumlah kejadian bulan ini. Biarkan 0 kalau tidak ada.</div>
+        ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i, b.inputType)).join("")}
+      `}
+
+      ${isSelf ? `
+        <div class="section-title">Feedback to Management</div>
+        <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
+          🔒 Kotak ini dibaca terbatas oleh level manajemen & HR yang berwenang — gak akan bocor ke Leader/Manager langsungmu. Ngomong aja apa yang perlu disampaikan.
+        </div>
+        <textarea id="management-feedback" rows="4" placeholder="Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
+      ` : ""}
+
+      <div class="error" id="form-error"></div>
+      <button class="primary" onclick="reviewBeforeSubmit('${evaluatorType}')" style="margin-top: 14px;">Submit Appraisal</button>
+      <div class="center" style="margin-top: 10px;">
+        <button class="ghost" onclick="cancelForm()">Batal</button>
+      </div>
+    </div>`;
+
+  // Re-apply previously selected pills + bonus values (used when returning from the review screen).
+  Object.keys(state.scores).forEach(criterion => {
+    const row = app.querySelector(`.criterion-row[data-criterion="${CSS.escape(criterion)}"]`);
+    if (!row) return;
+    const val = state.scores[criterion];
+    row.querySelectorAll(".score-opt").forEach(opt => {
+      if (Number(opt.textContent) === val) opt.classList.add("selected");
+    });
+  });
+  if (state._pendingBonusEntries) {
+    state._pendingBonusEntries.forEach((b, i) => {
+      const idx = cfg.bonus.findIndex(bc => bc.item === b.item);
+      if (idx === -1) return;
+      const countEl = document.querySelector(`.bonus-count[data-idx="${idx}"]`);
+      const notesEl = document.querySelector(`.bonus-notes[data-idx="${idx}"]`);
+      if (countEl) {
+        if (countEl.type === "checkbox") countEl.checked = b.count > 0;
+        else countEl.value = b.count;
+      }
+      if (notesEl) notesEl.value = b.notes || "";
+    });
+  }
+  if (state._pendingFeedback) {
+    const feedbackEl = document.getElementById("management-feedback");
+    if (feedbackEl) feedbackEl.value = state._pendingFeedback;
+  }
+  updateProgressCounter();
+}
+
+function updateProgressCounter() {
+  const el = document.getElementById("progress-counter");
+  if (el) el.textContent = `${Object.keys(state.scores).length} dari ${state._totalCriteria} kriteria terisi`;
+}
+
+function selectScore(el, criterion, value) {
+  const row = el.closest(".criterion-row");
+  row.querySelectorAll(".score-opt").forEach(o => o.classList.remove("selected"));
+  el.classList.add("selected");
+  state.scores[criterion] = value;
+  updateProgressCounter();
+}
+
+function renderDoneScreen() {
+  app.innerHTML = topbar("Selesai") + `
+    <div class="card" style="text-align:center;">
+      <div style="font-size:40px; margin-bottom:8px;">✅</div>
+      <h2>Appraisal tersimpan!</h2>
+      <div class="hint" style="font-size:14px;">Jawaban Anda sudah tercatat dan akan diproses ke tahap berikutnya secara otomatis. Anda akan dapat notifikasi (🔔) kalau ada keputusan appraisal yang keluar. Tidak ada lagi yang perlu diisi bulan ini — terima kasih!</div>
+      <button class="secondary" onclick="logout()" style="margin-top:16px;">Keluar</button>
+    </div>`;
+}
+
+function goBack() {
+  // Reuse the exact same routing logic as right after login — it already handles
+  // 0 / 1 / multi available screens correctly for every role combination.
+  goToRoleMenu();
+}
+
+function cancelForm() {
+  if (Object.keys(state.scores).length > 0) {
+    const ok = confirm("Jawaban yang sudah diisi akan hilang kalau keluar sekarang. Yakin mau keluar?");
+    if (!ok) return;
+  }
+  state.scores = {};
+  state._pendingBonusEntries = null;
+  state._pendingFeedback = null;
+  goBack();
+}
+
+function reviewBeforeSubmit(evaluatorType) {
+  const cfg = state.kpiConfig;
+  const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
+  const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];
+  const missing = allCriteria.filter(c => !(c in state.scores));
+  if (missing.length) {
+    document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
+    return;
+  }
+
+  if (evaluatorType === "self") {
+    const feedbackEl = document.getElementById("management-feedback");
+    state._pendingFeedback = feedbackEl ? feedbackEl.value : "";
+  }
+
+  const bonusEntries = [];
+  if (evaluatorType !== "self") {
+    cfg.bonus.forEach((b, i) => {
+      const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
+      let count = 0;
+      if (countInput) {
+        count = countInput.type === "checkbox" ? (countInput.checked ? 1 : 0) : (Number(countInput.value) || 0);
+      }
+      if (count > 0) {
+        const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
+        bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
+      }
+    });
+  }
+  state._pendingBonusEntries = bonusEntries;
+
+  const target = state.targetStaff;
+  const sectionTable = (rows) => `<table class="mini">${rows.map(r => `<tr><td>${r.label}</td><td>${r.score}</td></tr>`).join("")}</table>`;
+
+  app.innerHTML = topbar("Cek Jawaban — " + target.name) + `
+    <div class="card">
+      <div class="hint" style="font-size:14px; margin-bottom:14px;">Cek lagi jawaban di bawah sebelum kirim final. Appraisal ini <strong>cuma bisa dikirim 1 kali</strong> dan tidak bisa diubah lagi setelah terkirim.</div>
+
+      <div class="section-title" style="margin-top:8px;">Section A — Attitude</div>
+      ${sectionTable(cfg.attitude.map(c => ({ label: c.name, score: state.scores[c.name] })))}
+
+      <div class="section-title">Section B — Discipline</div>
+      ${sectionTable(cfg.discipline.map(c => ({ label: c.name, score: state.scores[c.name] })))}
+
+      <div class="section-title">Section C — Performance KPI</div>
+      ${cfg.placeholder
+        ? `<div class="hint" style="background:var(--sand); padding:12px; border-radius:8px;">${cfg.placeholderNote}</div>`
+        : sectionTable(kpiCriteria.map(c => ({ label: c, score: state.scores[c] })))}
+
+      ${bonusEntries.length ? `
+        <div class="section-title">Section D — Bonus &amp; Deduction</div>
+        <table class="mini">${bonusEntries.map(b => `<tr><td>${b.item}</td><td>${b.count}×</td></tr>`).join("")}</table>
+      ` : ""}
+
+      <div class="row-flex" style="margin-top:16px;">
+        <button class="secondary" onclick="backToEditForm('${evaluatorType}')">&larr; Kembali, Cek Lagi</button>
+        <button class="primary" onclick="confirmAndSubmit('${evaluatorType}')">Ya, Kirim Sekarang</button>
+      </div>
+    </div>`;
+}
+
+function backToEditForm(evaluatorType) {
+  state._preserveScores = true;
+  renderFormBody(evaluatorType, state.targetStaff, state.kpiConfig);
+}
+
+async function confirmAndSubmit(evaluatorType) {
+  try {
+    const cfg = state.kpiConfig;
+    const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
+    const target = state.targetStaff;
+    if (!target || !target.staffId) {
+      showToast("Error internal: target appraisal tidak ditemukan. Coba kembali dan buka ulang form ini.", "error");
+      return;
+    }
+    const payload = {
+      staffId: target.staffId,
+      evaluatorId: state.user.staffId,
+      slot: evaluatorType,
+      attitudeScores: cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+      disciplineScores: cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+      kpiScores: kpiCriteria.map(c => ({ criterion: c, score: state.scores[c] })),
+      bonusEntries: state._pendingBonusEntries || [],
+    };
+    showToast("Menyimpan...");
+    const res = await apiPost("submitAppraisal", payload);
+    if (res.computeError) {
+      console.error("computeEvaluatorTotal error:", res.computeError);
+      showToast("Gagal hitung skor: " + res.computeError.slice(0, 150) + " — silakan coba submit lagi (kuota submit belum kepakai).", "error");
+      return;
+    }
+    if (res.success) {
+      showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
+      state.scores = {};
+      state._pendingBonusEntries = null;
+      if (evaluatorType === "self") {
+        if (state._pendingFeedback && state._pendingFeedback.trim()) {
+          await apiPost("submitManagementFeedback", { staffId: target.staffId, feedback: state._pendingFeedback.trim() });
+        }
+        state._pendingFeedback = null;
+      }
+      if (evaluatorType !== "self") {
+        // Came from "Tugas Appraisal Saya" — land back there directly so the person
+        // can keep appraising the next staff quickly, instead of bouncing to the menu.
+        renderMyEvaluations();
+      } else {
+        const options = availableScreens(state.user);
+        if (options.length <= 1) {
+          renderDoneScreen();
+        } else {
+          goBack();
+        }
+      }
+    } else {
+      showToast("Gagal menyimpan: " + friendlyError(res.error || res.reason), "error");
+    }
+  } catch (err) {
+    console.error("confirmAndSubmit crashed:", err);
+    showToast("Terjadi error tak terduga: " + err.message, "error");
+  }
+}
+
+// =================================================================
+// Executive Approval dashboard (approve only — no Service Charge here)
+// =================================================================
+async function renderGm() {
+  app.innerHTML = topbar("Approve Final Decisions") + `<div class="loading">Memuat data...</div>`;
+  const final = await apiGet("getFinalAppraisal", { month: state.month });
+  if (final.error) {
+    app.innerHTML = topbar("Approve Final Decisions") + `<div class="card"><div class="error">${friendlyError(final.error)}</div></div>`;
+    return;
+  }
+  const list = final.staff || [];
+  state._currentGmList = list;
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  // Decision options depend on the target's tier — fetch once per distinct tier present.
+  const tiers = [...new Set(list.map(s => s.tier).filter(Boolean))];
+  state.decisionOptionsByTier = state.decisionOptionsByTier || {};
+  for (const t of tiers) {
+    if (!state.decisionOptionsByTier[t]) {
+      const res = await apiGet("getDecisionOptions", { tier: t });
+      state.decisionOptionsByTier[t] = res.options || [];
+    }
+  }
+  if (!state.oneOnOneOptions) {
+    const oneOnOneRes = await apiGet("getOneOnOneOptions", {});
+    state.oneOnOneOptions = oneOnOneRes.options || [];
+  }
+
+  if (!state.positionTitlesByTier) state.positionTitlesByTier = {};
+  for (const t of tiers) {
+    if (!state.positionTitlesByTier[t]) {
+      const posRes = await apiGet("getAllPositionTitles", { tier: t });
+      state.positionTitlesByTier[t] = posRes.titles || [];
+    }
+  }
+
+  const decisionForm = (s) => {
+    const opts = state.decisionOptionsByTier[s.tier] || [];
+    return `
+      <div id="decision-form-${s.staffId}" style="display:none; padding:12px; margin-top:8px; background:var(--sand); border-radius:12px;">
+        <label>Decision (wajib)</label>
+        <select id="decision-select-${s.staffId}" onchange="toggleDecisionExtras('${s.staffId}')">
+          <option value="">— pilih —</option>
+          ${opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
+        </select>
+
+        <div id="extend-fields-${s.staffId}" style="display:none;">
+          <label>Berapa lama extend probation/kontrak-nya? (wajib)</label>
+          <div class="row-flex">
+            <input type="number" min="1" id="extension-value-${s.staffId}" placeholder="Jumlah" style="flex:0 0 100px;" />
+            <select id="extension-unit-${s.staffId}">
+              <option value="Hari">Hari</option>
+              <option value="Minggu">Minggu</option>
+              <option value="Bulan" selected>Bulan</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="mutation-fields-${s.staffId}" style="display:none;">
+          <label>Dari Posisi</label>
+          <input type="text" value="${s.jobTitle || s.department || s.tier}" disabled style="background:var(--border); opacity:0.7;" />
+          <label>Ke Posisi (wajib — cuma level sama/di bawah)</label>
+          <select id="mutation-to-${s.staffId}">
+            <option value="">— pilih —</option>
+            ${(state.positionTitlesByTier[s.tier] || []).filter(t => t !== s.jobTitle).map(t => `<option value="${t}">${t}</option>`).join("")}
+          </select>
+        </div>
+
+        <label>1-on-1 Status (wajib)</label>
+        <select id="oneonone-select-${s.staffId}">
+          <option value="">— pilih —</option>
+          ${state.oneOnOneOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
+        </select>
+        <label>Catatan (wajib)</label>
+        <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
+        <button class="primary" style="margin-top:10px;" onclick="submitDecision('${s.staffId}')">Konfirmasi Approval</button>
+      </div>`;
+  };
+
+  app.innerHTML = topbar("Approve Final Decisions") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <label>Bulan appraisal</label>
+      <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
+      <div class="hint">Approval cuma bisa dilakukan tanggal 28 sampai tanggal 4 bulan depan.</div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+        <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
+        <button class="secondary" onclick="approveAll()">Approve Semua (kecuali yang di bawah standar) — default "Approved, Lanjut"</button>
+      </div>
+      <input type="text" placeholder="Cari nama..." oninput="updateGmFilter('search', this.value)" style="margin-bottom:10px;" />
+      <div class="row-flex" style="margin-bottom:10px;">
+        <select onchange="sortGmList(this.value)">
+          <option value="">Urutkan...</option>
+          <option value="name-asc">Nama (A-Z)</option>
+          <option value="name-desc">Nama (Z-A)</option>
+          <option value="score-desc">Skor Tertinggi</option>
+          <option value="score-asc">Skor Terendah</option>
+        </select>
+        <select onchange="updateGmFilter('department', this.value)">
+          <option value="">Semua Department</option>
+          ${[...new Set(list.map(s => s.department !== "-" ? s.department : s.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
+        </select>
+      </div>
+      <div class="row-flex" style="margin-bottom:10px;">
+        <button class="secondary" id="underperform-filter-btn" onclick="toggleGmFilterBtn('underperformOnly', 'underperform-filter-btn')">Underperform Saja</button>
+        <button class="secondary" id="not-approved-filter-btn" onclick="toggleGmFilterBtn('notApprovedOnly', 'not-approved-filter-btn')">Belum Diputuskan Saja</button>
+      </div>
+      <div id="gm-list-container">
+      ${list.map(s => `
+        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-approved="${s.approvalStatus === 'Approved'}" data-name="${escapeAttr(s.name)}" data-score="${s.finalScore || 0}" class="clickable-card" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
+          <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />
+              <div id="photo-fallback-${s.staffId}" style="width:44px; height:44px; border-radius:10px; background:var(--sand); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:16px;">${s.name.charAt(0)}</div>
+              <div>
+                <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
+                <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
+                <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
+                <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">(Appraised by ${s.leaderEvaluatorName || "-"})</span></div>
+                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">(Appraised by ${s.hrEvaluatorName || "-"})</span></div>
+                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
+              ${s.approvalStatus === 'Approved'
+                ? `<span class="badge done">Disetujui</span>`
+                : `<button class="secondary" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Approve</button>`}
+            </div>
+          </div>
+          <div onclick="event.stopPropagation();">${s.approvalStatus !== 'Approved' ? decisionForm(s) : ""}</div>
+        </div>`).join("")}
+      </div>
+      ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.</div>' : ""}
+    </div>`;
+
+  state._gmFilters = { search: "", department: "", underperformOnly: false, notApprovedOnly: false };
+  loadStaffPhotos(list.map(s => s.staffId));
+}
+
+async function loadStaffPhotos(staffIds) {
+  if (!staffIds.length) return;
+  const res = await apiGet("getStaffPhotosBatch", { staffIds: staffIds.join(",") });
+  const photos = res.photos || {};
+  staffIds.forEach(id => {
+    const r = photos[id];
+    if (!r || !r.found) return;
+    const img = document.getElementById(`photo-${id}`);
+    if (!img) return;
+    img.src = r.dataUri || r.url;
+    img.style.display = "block";
+    const fallback = document.getElementById(`photo-fallback-${id}`);
+    if (fallback) fallback.style.display = "none";
+  });
+}
+
+function toggleGmFilterBtn(filterKey, btnId) {
+  const btn = document.getElementById(btnId);
+  const isActive = btn.dataset.active === "true";
+  btn.dataset.active = isActive ? "false" : "true";
+  btn.style.background = isActive ? "" : "var(--coral)";
+  btn.style.color = isActive ? "" : "#fff";
+  btn.style.borderColor = isActive ? "" : "var(--coral)";
+  updateGmFilter(filterKey, !isActive);
+}
+
+function updateGmFilter(key, value) {
+  state._gmFilters = state._gmFilters || {};
+  state._gmFilters[key] = value;
+  const f = state._gmFilters;
+  document.querySelectorAll("#gm-list-container [data-search]").forEach(el => {
+    let show = true;
+    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
+    if (f.department && el.dataset.department !== f.department) show = false;
+    if (f.underperformOnly && el.dataset.status !== "Underperform") show = false;
+    if (f.notApprovedOnly && el.dataset.approved !== "false") show = false;
+    el.style.display = show ? "" : "none";
+  });
+}
+
+function sortGmList(criteria) {
+  if (!criteria) return;
+  const container = document.getElementById("gm-list-container");
+  if (!container) return;
+  const cards = Array.from(container.children);
+  cards.sort((a, b) => {
+    if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
+    if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
+    if (criteria === "score-desc") return Number(b.dataset.score) - Number(a.dataset.score);
+    if (criteria === "score-asc") return Number(a.dataset.score) - Number(b.dataset.score);
+    return 0;
+  });
+  cards.forEach(c => container.appendChild(c));
+}
+
+async function showComparisonModal(staffId, name) {
+  // Show an instant loading placeholder — the fetch below can take a moment, and without
+  // this the click feels unresponsive (nothing visibly happens until data arrives).
+  const loadingOverlay = document.createElement("div");
+  loadingOverlay.id = "comparison-modal";
+  loadingOverlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px;";
+  loadingOverlay.onclick = (e) => { if (e.target === loadingOverlay) loadingOverlay.remove(); };
+  loadingOverlay.innerHTML = `<div class="card" style="background:#fff; padding:24px 32px;">Memuat...</div>`;
+  document.body.appendChild(loadingOverlay);
+
+  const s = (state._currentGmList || []).find(x => String(x.staffId) === String(staffId)) || {};
+  const res = await apiGet("getMyAppraisalHistory", { staffId });
+  const history = res.history || [];
+  const existing = document.getElementById("comparison-modal");
+  if (existing) existing.remove();
+
+  const last3 = history.slice(-3);
+  let trendBlock;
+  if (last3.length >= 2) {
+    trendBlock = `<div class="row-flex" style="margin-bottom:6px;">
+      ${last3.map((m, i) => `
+        <div style="flex:1; text-align:center;">
+          <div class="hint">${monthLabelID(m.month)}</div>
+          <div style="font-size:${last3.length === 3 ? 22 : 26}px; font-weight:800; color:${i === 0 ? "var(--text)" : (Number(m.finalScore) >= Number(last3[i-1].finalScore) ? "var(--green)" : "var(--red)")};">${Number(m.finalScore).toFixed(1)}</div>
+        </div>`).join("")}
+    </div>`;
+    const prev = last3[last3.length - 2], curr = last3[last3.length - 1];
+    const diff = Number(curr.finalScore) - Number(prev.finalScore);
+    const pct = Number(prev.finalScore) !== 0 ? (diff / Number(prev.finalScore) * 100) : 0;
+    trendBlock += `<div class="hint" style="text-align:center; margin-bottom:12px; font-weight:700; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)} poin (${Math.abs(pct).toFixed(1)}%) dari bulan lalu</div>`;
+  } else if (last3.length === 1) {
+    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Skor bulan ${monthLabelID(last3[0].month)}: <strong style="font-size:20px;">${Number(last3[0].finalScore).toFixed(1)}</strong><br/>Belum ada data bulan sebelumnya buat dibandingin.</div>`;
+  } else {
+    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Belum ada riwayat appraisal yang di-approve.</div>`;
+  }
+  if (history.length > 1) trendBlock += buildScoreChartSvg(history);
+
+  const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
+    <div class="section-title" style="margin:16px -18px 8px;">Decision</div>
+    <div style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
+    ${s.mutationToPosition ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Mutasi: ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
+    ${s.extensionDuration ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Perpanjangan: ${s.extensionDuration}</div>` : ""}
+    <div style="font-size:13px; color:var(--text); margin-top:8px;">1-on-1: <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
+    ${s.decisionNotes ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Catatan:<br/>"${s.decisionNotes}"</div>` : ""}
+  ` : "";
+
+  const overlay = document.createElement("div");
+  overlay.id = "comparison-modal";
+  overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px; overflow-y:auto;";
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div class="card" style="max-width:420px; width:100%; background:#fff; max-height:85vh; overflow-y:auto;" onclick="event.stopPropagation();">
+      <div style="text-align:center; margin-bottom:14px;">
+        ${document.getElementById(`photo-${staffId}`) && document.getElementById(`photo-${staffId}`).style.display !== "none"
+          ? `<img src="${document.getElementById(`photo-${staffId}`).src}" style="width:110px; height:110px; border-radius:16px; object-fit:cover; background:var(--sand); margin:0 auto 10px; display:block; cursor:pointer;" onclick="event.stopPropagation(); showPhotoModal('${document.getElementById(`photo-${staffId}`).src}', '${escapeAttr(name)}')" />`
+          : `<div style="width:110px; height:110px; border-radius:16px; background:var(--sand); margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:42px;">${name.charAt(0)}</div>`}
+        <h2 style="margin:0;">${name}</h2>
+        <div class="hint" style="font-size:12px; margin-top:2px;">${s.department !== "-" ? s.department : s.tier} · Kontrak berakhir: ${s.contractEndDate ? fullDateLabelID(s.contractEndDate) : "-"}</div>
+      </div>
+      ${trendBlock}
+      ${decisionBlock}
+      <button class="secondary" style="width:100%; margin-top:12px;" onclick="document.getElementById('comparison-modal').remove()">Tutup</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function showPhotoModal(src, name) {
+  const existing = document.getElementById("photo-modal");
+  if (existing) existing.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "photo-modal";
+  overlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:300; display:flex; align-items:center; justify-content:center; padding:24px;";
+  overlay.onclick = () => overlay.remove();
+  overlay.innerHTML = `
+    <div style="max-width:90%; max-height:90%; text-align:center;">
+      <img src="${src}" alt="${name}" style="max-width:100%; max-height:80vh; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.5);" />
+      <div style="color:#fff; margin-top:12px; font-weight:700;">${name}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function toggleDecisionForm(staffId) {
+  const el = document.getElementById(`decision-form-${staffId}`);
+  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+function toggleDecisionExtras(staffId) {
+  const decision = document.getElementById(`decision-select-${staffId}`).value;
+  const extendEl = document.getElementById(`extend-fields-${staffId}`);
+  const mutationEl = document.getElementById(`mutation-fields-${staffId}`);
+  if (extendEl) extendEl.style.display = decision === "extend_probation" ? "block" : "none";
+  if (mutationEl) mutationEl.style.display = decision === "demotion_mutation" ? "block" : "none";
+}
+
+async function submitDecision(staffId) {
+  const decision = document.getElementById(`decision-select-${staffId}`).value;
+  const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
+  const notes = document.getElementById(`decision-notes-${staffId}`).value;
+  if (!decision) { showToast("Decision wajib dipilih dulu.", "error"); return; }
+  if (!oneOnOneStatus) { showToast("1-on-1 Status wajib dipilih dulu.", "error"); return; }
+  if (!notes || !notes.trim()) { showToast("Catatan wajib diisi.", "error"); return; }
+
+  const payload = { month: state.month, staffId, approvedBy: state.user.name, decision, oneOnOneStatus, notes };
+
+  if (decision === "extend_probation") {
+    const extensionValue = document.getElementById(`extension-value-${staffId}`).value;
+    const extensionUnit = document.getElementById(`extension-unit-${staffId}`).value;
+    if (!extensionValue || Number(extensionValue) <= 0) { showToast("Durasi extend wajib diisi (angka lebih dari 0).", "error"); return; }
+    payload.extensionValue = extensionValue;
+    payload.extensionUnit = extensionUnit;
+  }
+  if (decision === "demotion_mutation") {
+    const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
+    if (!mutationToPosition) { showToast("Posisi tujuan mutasi wajib dipilih.", "error"); return; }
+    payload.mutationToPosition = mutationToPosition;
+  }
+
+  const res = await apiPost("approveStaff", payload);
+  if (res.error || res.success === false) { showToast("Gagal approve: " + friendlyError(res.error), "error"); return; }
+  showToast("Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.");
+  renderGm();
+}
+
+// =================================================================
+// Total Service Charge input — HR only
+// =================================================================
+async function renderHrFollowUpTodos() {
+  app.innerHTML = topbar("Track Pending Follow-Ups") + `<div class="loading">Memuat...</div>`;
+  const res = await apiGet("getHrFollowUpTodos", {});
+  if (res.error) {
+    app.innerHTML = topbar("Track Pending Follow-Ups") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  const todos = res.todos || [];
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  app.innerHTML = topbar("Track Pending Follow-Ups") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="hint" style="margin-top:8px;">${todos.length} follow-up sudah jatuh tempo dan perlu ditindaklanjuti.</div>
+    ${todos.map(t => `
+      <div class="staff-row" style="cursor:default; border-color:var(--amber); display:block;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+          <div>
+            <div class="name">${t.name} <span style="font-weight:400; color:var(--text-muted);">(${t.department})</span></div>
+            <div class="dept">Extend: ${t.extensionDuration} — jatuh tempo ${fullDateLabelID(t.extensionExpiryDate)}</div>
+            ${t.decisionNotes ? `<div class="dept" style="margin-top:2px;">Catatan waktu itu: "${t.decisionNotes}"</div>` : ""}
+            <div class="dept" style="margin-top:2px; font-size:11px;">Disetujui oleh ${t.approvedBy}</div>
+          </div>
+          <button class="secondary" style="white-space:nowrap;" onclick="resolveFollowUp('${t.month}', '${t.staffId}')">Sudah Ditindaklanjuti</button>
+        </div>
+      </div>`).join("")}
+    ${!todos.length ? '<div class="card"><div class="hint">Gak ada follow-up yang jatuh tempo saat ini. 👍</div></div>' : ""}
+  `;
+}
+
+async function resolveFollowUp(month, staffId) {
+  const ok = confirm("Tandai follow-up ini sudah ditindaklanjuti? Ini akan hilang dari list To-Do.");
+  if (!ok) return;
+  const res = await apiPost("markFollowUpResolved", { month, staffId });
+  if (res.error || res.success === false) { showToast("Gagal: " + friendlyError(res.error), "error"); return; }
+  showToast("Ditandai selesai!");
+  renderHrFollowUpTodos();
+}
+
+async function renderScInput() {
+  app.innerHTML = topbar("Calculate Service Charge") + `<div class="loading">Memuat data...</div>`;
+  const pool = await apiGet("getScPool", { month: state.month });
+  if (pool.error) {
+    app.innerHTML = topbar("Calculate Service Charge") + `<div class="card"><div class="error">${friendlyError(pool.error)}</div></div>`;
+    return;
+  }
+  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  const quota = pool.roleBonusQuota || { Service: 2, Cashier: 1, Hostess: 1, Runner: 2, Bar: 2, Kitchen: 2 };
+  const selections = pool.roleBonusSelections || [];
+  state._roleBonusStaffOptions = state._roleBonusStaffOptions || {};
+
+  // Load staff options for each department (once, cached in state).
+  for (const dept of Object.keys(quota)) {
+    if (!state._roleBonusStaffOptions[dept]) {
+      const res = await apiGet("getStaffByDepartment", { department: dept });
+      state._roleBonusStaffOptions[dept] = res.staff || [];
+    }
+  }
+
+  const roleBonusRows = (dept, qty) => {
+    const picked = selections.filter(s => s.department === dept).map(s => s.staffId);
+    const options = state._roleBonusStaffOptions[dept] || [];
+    let rows = "";
+    for (let i = 0; i < qty; i++) {
+      const currentPick = picked[i] || "";
+      rows += `
+        <select class="role-bonus-select" data-dept="${dept}" style="margin-bottom:6px;">
+          <option value="">— kosongkan —</option>
+          ${options.map(o => `<option value="${o.staffId}" ${o.staffId === currentPick ? "selected" : ""}>${o.name}</option>`).join("")}
+        </select>`;
+    }
+    return rows;
+  };
+
+  app.innerHTML = topbar("Calculate Service Charge") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <label>Bulan</label>
+      <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
+    </div>
+    <div class="card">
+      <h2>Total Service Charge — ${monthLabelID(state.month)}</h2>
+      <label>Total SC bulan ini (Rp, sebelum potongan apapun)</label>
+      <input type="number" id="sc-input" value="${pool.found ? pool.totalSC : ""}" placeholder="150000000" />
+      <button class="secondary" onclick="saveTotalSC()">Simpan Total SC</button>
+      ${pool.found ? `
+        <table class="mini" style="margin-top:12px;">
+          <tr><td>Total SC (Net)</td><td>${idr(pool.totalSC)}</td></tr>
+          <tr><td>Staff Bonus Pool (tetap)</td><td>− ${idr(pool.staffBonusPoolAmount)}</td></tr>
+          <tr><td><strong>Distributable Amount</strong></td><td><strong>${idr(pool.distributableAmount)}</strong></td></tr>
+          <tr><td>Base Share / staff</td><td>${idr(pool.baseShare)}</td></tr>
+          <tr><td>Deduction Pool (dari Underperform)</td><td>${idr(pool.poolTotal)}</td></tr>
+          <tr><td># Performer</td><td>${pool.performerCount}</td></tr>
+          <tr><td>Pool Share / performer</td><td>${idr(pool.poolShare)}</td></tr>
+        </table>
+        <button class="secondary" style="margin-top:10px;" onclick="doExportSc()">📊 Export ke Excel (buat Finance)</button>
+        <div class="hint" id="sc-export-note" style="margin-top:6px;"></div>` : ""}
+    </div>
+    <div class="card">
+      <h2>Monthly Role-Based Bonus — ${idr(pool.roleBonusPerPerson || 300000)}/orang</h2>
+      <div class="hint" style="margin-bottom:10px;">Pilih staff yang dapat bonus tambahan bulan ini, sesuai kuota tiap role (Memo 122/HR-IM/VIII/2026). Dikonsolidasikan dari usulan Leader/Department Head masing-masing.</div>
+      ${Object.entries(quota).map(([dept, qty]) => `
+        <div style="margin-bottom:14px;">
+          <label style="font-weight:700;">${dept} (${qty} orang)</label>
+          ${roleBonusRows(dept, qty)}
+        </div>`).join("")}
+      <button class="primary" onclick="saveRoleBonusSelections()">Simpan Role-Based Bonus</button>
+    </div>`;
+}
+
+function changeGmMonth(value) {
+  if (!value) return;
+  state.month = value;
+  renderGm();
+}
+
+async function doExportSc() {
+  const noteEl = document.getElementById("sc-export-note");
+  noteEl.textContent = "Membuat sheet export...";
+  const res = await apiPost("exportScBreakdown", { month: state.month });
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    return;
+  }
+  noteEl.innerHTML = `Sheet siap! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Microsoft Excel (.xlsx).`;
+}
+
+async function saveTotalSC() {
+  const val = document.getElementById("sc-input").value;
+  if (!val) return;
+  const res = await apiPost("setTotalSC", { month: state.month, totalSC: Number(val), inputBy: state.user.name });
+  if (res.error) { showToast("Gagal simpan Total SC: " + friendlyError(res.error), "error"); return; }
+  showToast("Total SC tersimpan!");
+  renderScInput();
+}
+
+async function saveRoleBonusSelections() {
+  const selects = document.querySelectorAll(".role-bonus-select");
+  const selections = [];
+  const seen = {};
+  for (const el of selects) {
+    const dept = el.dataset.dept;
+    const staffId = el.value;
+    if (!staffId) continue;
+    const key = dept + "|" + staffId;
+    if (seen[key]) { showToast(`${staffId} dipilih dobel untuk ${dept} — cek lagi.`, "error"); return; }
+    seen[key] = true;
+    selections.push({ department: dept, staffId });
+  }
+  const res = await apiPost("setRoleBonusSelections", { month: state.month, selections });
+  if (res.error || res.success === false) {
+    showToast(`Gagal simpan: kuota ${res.department || ""} kelebihan.`, "error");
+    return;
+  }
+  showToast("Role-Based Bonus tersimpan!");
+  renderScInput();
+}
+
+async function approveAll() {
+  const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
+  if (res.error) { showToast("Gagal approve semua: " + friendlyError(res.error), "error"); return; }
+  showToast(`${res.approvedCount || 0} appraisal ter-approve! Notifikasi terkirim.`);
+  renderGm();
+}
+
+// =================================================================
+render();
+</script>
+</body>
+</html>

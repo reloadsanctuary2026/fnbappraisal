@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-68</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-70</div>
 
 <script>
 // =================================================================
@@ -355,7 +355,7 @@ function renderFaq() {
     company: "Ringkasan rata-rata skor per department/tier — buat lihat gambaran besar performa. Gak nampilin skor personal individu, cuma agregat.",
     gm: "Approve hasil akhir semua tier + wajib pilih Decision, 1-on-1 Status, dan Catatan. Bisa juga geser bulan buat sekedar lihat-lihat skor bulan lain.",
     progress: "Pantau siapa aja Leader/Management/HR yang UDAH vs BELUM ngerjain tugas appraisal-nya bulan ini — soal kepatuhan/compliance, bukan soal skor bagus/jelek.",
-    feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal — cuma Executive yang bisa lihat halaman ini.",
+    feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal, lengkap dengan Issue Summary & Action Tracker — Executive, HR, dan Admin Operational bisa lihat halaman ini.",
     historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan buat perhitungan Service Charge.",
     sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
     hrTodos: "Daftar Decision 'Extend Probation/Kontrak' yang tanggal jatuh temponya udah lewat dan perlu ditindaklanjuti — supaya gak ada yang keslip.",
@@ -622,6 +622,7 @@ function availableScreensGrouped(user) {
       { key: "review", label: "Review Everyone's Records" },
       { key: "sc", label: "Calculate Service Charge" },
       { key: "hrTodos", label: "Track Pending Follow-Ups" },
+      { key: "feedback", label: "Read Staff Feedback" },
     ]});
   }
 
@@ -631,6 +632,7 @@ function availableScreensGrouped(user) {
       { key: "review", label: "Review Everyone's Records" },
       { key: "progress", label: "Track Team Compliance" },
       { key: "company", label: "Compare Departments" },
+      { key: "feedback", label: "Read Staff Feedback" },
     ]});
   }
 
@@ -1098,32 +1100,151 @@ async function saveHistoricalAppraisal() {
 
 async function renderStaffFeedback() {
   app.innerHTML = topbar("Read Staff Feedback") + `<div class="loading">Memuat...</div>`;
-  const res = await apiGet("getAllManagementFeedback", { requesterId: state.user.staffId });
-  if (!res.found) {
-    app.innerHTML = topbar("Read Staff Feedback") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+  if (!state._feedbackMonth) state._feedbackMonth = state.month;
+
+  const [feedbackRes, summaryRes, actionsRes, catRes] = await Promise.all([
+    apiGet("getAllManagementFeedback", { requesterId: state.user.staffId }),
+    apiGet("getIssueSummary", { requesterId: state.user.staffId, month: state._feedbackMonth }),
+    apiGet("getActionItems", {}),
+    apiGet("getFeedbackCategories", {}),
+  ]);
+  if (!feedbackRes.found) {
+    app.innerHTML = topbar("Read Staff Feedback") + `<div class="card"><div class="error">${friendlyError(feedbackRes.error)}</div></div>`;
     return;
   }
-  const feedback = res.feedback || [];
+  state._feedbackCategories = catRes.categories || [];
+  const feedback = (feedbackRes.feedback || []).filter(f => f.month === state._feedbackMonth);
+  const summary = summaryRes.summary || [];
+  const actions = actionsRes.items || [];
   const showMenuLink = availableScreens(state.user).length > 1;
+  const catOptions = (extra) => `<option value="">— pilih —</option>` + state._feedbackCategories.map(c => `<option value="${c.code}" ${c.code === extra ? "selected" : ""}>${c.label}</option>`).join("");
 
   app.innerHTML = topbar("Read Staff Feedback") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
-      <div class="hint" style="font-weight:700; color:var(--purple, #6C4FB6);">🔒 Confidential — cuma kamu yang bisa lihat halaman ini.</div>
-      <div class="hint" style="margin-top:6px;">Ini ditulis staff lewat kolom "Feedback to Management" pas mereka isi Self Appraisal. Tidak dibaca Leader/Manager/MOD.</div>
+      <div class="hint" style="font-weight:700; color:var(--purple, #6C4FB6);">🔒 Confidential — cuma Executive, HR, dan Admin Operational yang bisa lihat halaman ini.</div>
+      <label style="margin-top:8px;">Bulan</label>
+      <input type="month" value="${state._feedbackMonth}" onchange="changeFeedbackMonth(this.value)" />
     </div>
-    <div class="hint">${feedback.length} feedback tercatat, terbaru duluan.</div>
-    ${feedback.map(f => `
-      <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:baseline;">
-          <div class="name">${f.staffName}</div>
-          <div class="hint" style="font-size:11px;">${monthLabelID(f.month)}</div>
-        </div>
-        <div class="hint" style="font-size:11px; margin-bottom:8px;">${fullDateLabelID(f.timestamp)}</div>
-        <div style="font-size:14px; color:var(--text);">"${f.feedback}"</div>
-      </div>`).join("")}
-    ${!feedback.length ? '<div class="card"><div class="hint">Belum ada feedback yang masuk.</div></div>' : ""}
+
+    <div class="card">
+      <h2>1. Issue Summary — ${monthLabelID(state._feedbackMonth)}</h2>
+      <div class="hint" style="margin-bottom:10px;">${summaryRes.taggedCount || 0} dari ${summaryRes.totalRespondents || 0} feedback udah di-tag kategorinya.</div>
+      <table class="mini">
+        <tr><th>Kategori</th><th>Jumlah Orang</th><th>%</th><th>Prioritas</th></tr>
+        ${summary.map(s => `
+          <tr>
+            <td>${s.label}</td><td>${s.employeeCount}</td>
+            <td>${(s.pct * 100).toFixed(1)}%</td>
+            <td><span class="badge ${s.priority === "TOP 5" ? "underperform" : s.priority === "Monitor" ? "pending" : ""}">${s.priority}</span></td>
+          </tr>`).join("")}
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>2. Comment Master — ${feedback.length} feedback</h2>
+      ${feedback.map(f => `
+        <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline;">
+            <div class="name">${f.staffName}</div>
+            <div class="hint" style="font-size:11px;">${fullDateLabelID(f.timestamp)}</div>
+          </div>
+          <div style="font-size:14px; color:var(--text); margin:8px 0;">"${f.feedback}"</div>
+          ${state.user.isAdminOperational ? `
+            <div class="row-flex" style="gap:8px;">
+              <select id="tag-primary-${f.staffId}">${catOptions(f.primaryIssue)}</select>
+              <select id="tag-secondary-${f.staffId}">${catOptions(f.secondaryIssue)}</select>
+              <button class="secondary" style="flex:0 0 auto;" onclick="doTagFeedback('${f.staffId}')">Simpan Tag</button>
+            </div>
+          ` : (f.primaryIssue ? `<div class="hint">Tag: ${f.primaryIssue}${f.secondaryIssue ? " / " + f.secondaryIssue : ""}</div>` : `<div class="hint">Belum di-tag.</div>`)}
+        </div>`).join("")}
+      ${!feedback.length ? '<div class="hint">Belum ada feedback bulan ini.</div>' : ""}
+    </div>
+
+    <div class="card">
+      <h2>3. Action Tracker</h2>
+      <button class="secondary" onclick="showNewActionForm()" style="margin-bottom:10px;">+ Tambah Action Item</button>
+      <div id="new-action-form"></div>
+      ${actions.map(a => `
+        <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between;">
+            <div class="name">${a.actionId} — ${a.issue}</div>
+            <span class="badge ${a.status === "Done" ? "done" : a.status === "In Progress" ? "pending" : "underperform"}">${a.status}</span>
+          </div>
+          <div style="font-size:13px; margin:6px 0;">${a.action}</div>
+          <div class="hint">Owner: ${a.owner || "-"} · Target: ${a.target || "-"}</div>
+          <button class="ghost" style="font-size:12px; margin-top:6px;" onclick="showEditActionForm('${a.actionId}', '${escapeAttr(a.issue)}', '${escapeAttr(a.action)}', '${escapeAttr(a.owner)}', '${escapeAttr(a.target)}', '${a.status}', '${escapeAttr(a.actualCompletion)}', '${escapeAttr(a.remarks)}')">Edit</button>
+        </div>`).join("")}
+      ${!actions.length ? '<div class="hint">Belum ada action item.</div>' : ""}
+    </div>
   `;
+}
+
+function changeFeedbackMonth(month) {
+  state._feedbackMonth = month;
+  renderStaffFeedback();
+}
+
+async function doTagFeedback(staffId) {
+  const primaryIssue = document.getElementById(`tag-primary-${staffId}`).value;
+  const secondaryIssue = document.getElementById(`tag-secondary-${staffId}`).value;
+  if (!primaryIssue) { showToast("Pilih Primary Issue dulu.", "error"); return; }
+  const res = await apiPost("tagFeedback", {
+    enteredById: state.user.staffId, staffId, month: state._feedbackMonth, primaryIssue, secondaryIssue,
+  });
+  if (res.error || res.success === false) { showToast("Gagal simpan tag: " + friendlyError(res.error), "error"); return; }
+  showToast("Tag tersimpan!");
+  renderStaffFeedback();
+}
+
+function actionFormHtml(a) {
+  a = a || {};
+  return `
+    <div class="card" style="background:var(--sand);">
+      <label>Issue</label>
+      <select id="action-issue">${state._feedbackCategories.map(c => `<option value="${c.label}" ${c.label === a.issue ? "selected" : ""}>${c.label}</option>`).join("")}</select>
+      <label>Action</label>
+      <textarea id="action-action" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px;">${a.action || ""}</textarea>
+      <label>Owner</label>
+      <input type="text" id="action-owner" value="${a.owner || ""}" placeholder="Misal: Restaurant Manager" />
+      <label>Target</label>
+      <input type="text" id="action-target" value="${a.target || ""}" placeholder="Misal: 2 weeks / Immediate / 30 days" />
+      <label>Status</label>
+      <select id="action-status">
+        ${["Not Started", "In Progress", "Done"].map(s => `<option value="${s}" ${s === a.status ? "selected" : ""}>${s}</option>`).join("")}
+      </select>
+      <label>Actual Completion</label>
+      <input type="text" id="action-completion" value="${a.actualCompletion || ""}" />
+      <label>Remarks</label>
+      <textarea id="action-remarks" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px;">${a.remarks || ""}</textarea>
+      <button class="primary" style="margin-top:10px;" onclick="doSaveActionItem('${a.actionId || ""}')">Simpan</button>
+    </div>`;
+}
+
+function showNewActionForm() {
+  document.getElementById("new-action-form").innerHTML = actionFormHtml({});
+}
+
+function showEditActionForm(actionId, issue, action, owner, target, status, actualCompletion, remarks) {
+  document.getElementById("new-action-form").innerHTML = actionFormHtml({ actionId, issue, action, owner, target, status, actualCompletion, remarks });
+}
+
+async function doSaveActionItem(actionId) {
+  const payload = {
+    enteredById: state.user.staffId,
+    actionId: actionId || undefined,
+    issue: document.getElementById("action-issue").value,
+    action: document.getElementById("action-action").value,
+    owner: document.getElementById("action-owner").value,
+    target: document.getElementById("action-target").value,
+    status: document.getElementById("action-status").value,
+    actualCompletion: document.getElementById("action-completion").value,
+    remarks: document.getElementById("action-remarks").value,
+  };
+  const res = await apiPost("saveActionItem", payload);
+  if (res.error || res.success === false) { showToast("Gagal simpan: " + friendlyError(res.error), "error"); return; }
+  showToast("Action item tersimpan!");
+  renderStaffFeedback();
 }
 
 async function renderEvaluatorProgress() {
@@ -1568,7 +1689,7 @@ function renderFormBody(evaluatorType, target, cfg) {
       ${isSelf ? `
         <div class="section-title">Feedback to Management</div>
         <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
-          🔒 Kotak ini CUMA dibaca Executive (GM/OM) — MOD, Leader, atau Manager tidak akan baca ini. Ngomong aja apa yang perlu disampaikan, gak akan bocor ke siapa-siapa.
+          🔒 Kotak ini dibaca terbatas oleh level manajemen & HR yang berwenang — gak akan bocor ke Leader/Manager langsungmu. Ngomong aja apa yang perlu disampaikan.
         </div>
         <textarea id="management-feedback" rows="4" placeholder="Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
       ` : ""}

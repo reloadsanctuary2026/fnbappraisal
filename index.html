@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-65</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-66</div>
 
 <script>
 // =================================================================
@@ -240,7 +240,9 @@ function friendlyError(code) {
     access_denied: "Akses ditolak.",
     max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
   };
-  return map[code] || code || "Terjadi kendala tidak dikenal";
+  if (map[code]) return map[code];
+  if (code && /lock/i.test(code)) return "Server lagi sibuk (banyak orang submit bersamaan) — tunggu beberapa detik lalu coba lagi.";
+  return code || "Terjadi kendala tidak dikenal";
 }
 
 function showToast(message, type = "success") {

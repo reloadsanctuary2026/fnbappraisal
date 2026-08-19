@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-71 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-73 — TEST</div>
 
 <script>
 // =================================================================
@@ -1531,17 +1531,34 @@ function buildScoreChartSvg(history) {
   const width = 600, height = 220, padTop = 24, padBottom = 30, padSide = 30;
   const innerH = height - padTop - padBottom;
   const stepX = history.length > 1 ? (width - padSide * 2) / (history.length - 1) : 0;
-  const yFor = (score) => padTop + innerH - (Math.max(0, Math.min(100, Number(score) || 0)) / 100) * innerH;
+
+  // Dynamic Y-axis — zooms into the actual score range instead of always showing the full
+  // 0-100 scale, so small-but-real differences (e.g. 60 -> 69) don't look flat and invisible.
+  // Threshold 60 is always included in the range so the dashed line stays meaningful.
+  const scores = history.map(h => Number(h.finalScore) || 0);
+  const allValues = scores.concat([60]);
+  const rawMin = Math.min.apply(null, allValues);
+  const rawMax = Math.max.apply(null, allValues);
+  const span = Math.max(rawMax - rawMin, 10); // avoid a degenerate near-zero range
+  const padding = span * 0.2;
+  const yMin = Math.max(0, rawMin - padding);
+  const yMax = Math.min(100, rawMax + padding);
+  const yRange = (yMax - yMin) || 1;
+
+  const yFor = (score) => padTop + innerH - ((Math.max(0, Math.min(100, Number(score) || 0)) - yMin) / yRange) * innerH;
   const points = history.map((h, i) => ({ x: padSide + i * stepX, y: yFor(h.finalScore), month: h.month, score: Number(h.finalScore || 0) }));
   const pathD = points.map((p, i) => (i === 0 ? "M" : "L") + p.x.toFixed(1) + "," + p.y.toFixed(1)).join(" ");
   const thresholdY = yFor(60);
 
   return `
     <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">
+      <text x="${padSide - 6}" y="${padTop + 4}" text-anchor="end" font-size="9" fill="#6B5D4F">${yMax.toFixed(0)}</text>
+      <text x="${padSide - 6}" y="${padTop + innerH}" text-anchor="end" font-size="9" fill="#6B5D4F">${yMin.toFixed(0)}</text>
       <line x1="${padSide}" y1="${thresholdY.toFixed(1)}" x2="${width - padSide}" y2="${thresholdY.toFixed(1)}" stroke="#946017" stroke-dasharray="4 4" stroke-width="1.2" />
       <text x="${width - padSide}" y="${(thresholdY - 6).toFixed(1)}" text-anchor="end" font-size="10" fill="#946017">Threshold 60</text>
       <path d="${pathD}" fill="none" stroke="#0E4749" stroke-width="2.5" />
       ${points.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${p.score >= 60 ? "#1A6B49" : "#B8352B"}" />`).join("")}
+      ${points.map(p => `<text x="${p.x.toFixed(1)}" y="${(p.y - 12).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="#20302F">${p.score.toFixed(1)}</text>`).join("")}
       ${points.map(p => `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="10" fill="#6B5D4F">${monthShortLabelID(p.month)}</text>`).join("")}
     </svg>`;
 }
@@ -1618,9 +1635,16 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   // For anyone evaluating someone ELSE (not self), pull that person's own Self
   // scores as reference context, if they've already submitted it.
   state.selfReference = null;
+  state.leaderReference = null;
   if (evaluatorType !== "self") {
     const selfRes = await apiGet("getSelfScoresForTarget", { staffId: target.staffId });
     if (selfRes.found) state.selfReference = selfRes.scores;
+  }
+  // HR appraises LAST (day 18-27) — by then Self AND Leader/Mgmt should both already be
+  // submitted, so HR gets both as reference instead of just Self.
+  if (evaluatorType === "hr") {
+    const leaderRes = await apiGet("getLeaderScoresForTarget", { staffId: target.staffId });
+    if (leaderRes.found) state.leaderReference = leaderRes.scores;
   }
 
   renderFormBody(evaluatorType, target, cfg);
@@ -1631,7 +1655,7 @@ function renderFormBody(evaluatorType, target, cfg) {
 
   const scoreRow = (criterion, desc) => `
     <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
-      <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}</div>
+      <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}${state.leaderReference && state.leaderReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--teal);">· Leader/Mgmt: ${state.leaderReference[criterion]}</span>` : ""}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ""}
       <div class="score-select">
         ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
@@ -1665,7 +1689,7 @@ function renderFormBody(evaluatorType, target, cfg) {
         Skor: <strong>1</strong> Sangat Kurang · <strong>2</strong> Kurang · <strong>3</strong> Cukup · <strong>4</strong> Baik · <strong>5</strong> Sangat Baik
       </div>
       ${evaluatorType !== "self" ? (state.selfReference
-        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself — skornya ditampilkan sebagai referensi di tiap kriteria (label "Self: X").</div>`
+        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself — skornya ditampilkan sebagai referensi di tiap kriteria (label "Self: X").${state.leaderReference ? ` Skor Leader/Mgmt juga ditampilkan (label "Leader/Mgmt: X").` : ""}</div>`
         : `<div class="hint" style="background:var(--amber-bg); color:var(--amber); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">⚠️ ${target.name} belum Appraise Yourself — kamu menilai tanpa referensi dari dia.</div>`
       ) : ""}
       <div class="hint" id="progress-counter" style="text-align:right; font-weight:700; color:var(--teal); margin-bottom:14px;"></div>
@@ -2103,7 +2127,10 @@ async function showComparisonModal(staffId, name) {
   document.body.appendChild(loadingOverlay);
 
   const s = (state._currentGmList || []).find(x => String(x.staffId) === String(staffId)) || {};
-  const res = await apiGet("getMyAppraisalHistory", { staffId });
+  const [res, critRes] = await Promise.all([
+    apiGet("getMyAppraisalHistory", { staffId }),
+    apiGet("getCriterionHistoryComparison", { staffId, evaluatorType: "leader" }),
+  ]);
   const history = res.history || [];
   const existing = document.getElementById("comparison-modal");
   if (existing) existing.remove();
@@ -2129,6 +2156,30 @@ async function showComparisonModal(staffId, name) {
   }
   if (history.length > 1) trendBlock += buildScoreChartSvg(history);
 
+  // Per-criterion comparison — highlights whether a specific weak spot (e.g. Communication)
+  // is still a problem this month vs last month, not just the blended Section totals.
+  let criterionBlock = "";
+  if (critRes.found && critRes.rows.length) {
+    const stillWeak = critRes.rows.filter(r => r.current !== null && r.current <= 3);
+    criterionBlock = `
+      <div class="section-title" style="margin:16px -18px 8px;">Detail per Kriteria (Leader/Mgmt)</div>
+      <table class="mini">
+        <tr><th>Kriteria</th><th>${monthLabelID(critRes.prevMonth)}</th><th>${monthLabelID(critRes.currentMonth)}</th></tr>
+        ${critRes.rows.map(r => {
+          const isStillWeak = r.current !== null && r.current <= 3;
+          const improved = r.previous !== null && r.current !== null && r.current > r.previous;
+          const worsened = r.previous !== null && r.current !== null && r.current < r.previous;
+          return `<tr style="${isStillWeak ? "background:var(--red-bg);" : ""}">
+            <td>${r.criterion}</td>
+            <td>${r.previous !== null ? r.previous : "-"}</td>
+            <td style="font-weight:700; color:${improved ? "var(--green)" : worsened ? "var(--red)" : "var(--text)"};">${r.current !== null ? r.current : "-"}${improved ? " ▲" : worsened ? " ▼" : ""}</td>
+          </tr>`;
+        }).join("")}
+      </table>
+      ${stillWeak.length ? `<div class="hint" style="color:var(--red); font-weight:600; margin-top:6px;">⚠️ ${stillWeak.length} kriteria masih rendah (≤3) bulan ini: ${stillWeak.map(r => r.criterion).join(", ")}.</div>` : ""}
+    `;
+  }
+
   const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
     <div class="section-title" style="margin:16px -18px 8px;">Decision</div>
     <div style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
@@ -2152,6 +2203,7 @@ async function showComparisonModal(staffId, name) {
         <div class="hint" style="font-size:12px; margin-top:2px;">${s.department !== "-" ? s.department : s.tier} · Kontrak berakhir: ${s.contractEndDate ? fullDateLabelID(s.contractEndDate) : "-"}</div>
       </div>
       ${trendBlock}
+      ${criterionBlock}
       ${decisionBlock}
       <button class="secondary" style="width:100%; margin-top:12px;" onclick="document.getElementById('comparison-modal').remove()">Tutup</button>
     </div>`;

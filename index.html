@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-73 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-74 — LIVE</div>
 
 <script>
 // =================================================================
@@ -187,6 +187,25 @@ async function apiGet(action, params = {}) {
     console.error("apiGet failed:", action, err);
     return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
   }
+}
+
+/** Wraps apiGet with automatic retries for the login flow specifically — Apps Script /
+ *  Google Sheets can occasionally hiccup transiently (cold start, brief API blip), which
+ *  looks like "NIK tidak ditemukan" even for a NIK that definitely exists. Instead of
+ *  making the person notice and manually retry, this quietly retries a couple times first. */
+async function apiGetWithRetry(action, params = {}, maxRetries = 2, shouldRetry) {
+  shouldRetry = shouldRetry || ((res) => !!res.error || res.found === false);
+  let lastRes = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    lastRes = await apiGet(action, params);
+    if (!shouldRetry(lastRes)) return lastRes;
+    if (attempt < maxRetries) {
+      const errEl = document.getElementById("login-error");
+      if (errEl) errEl.textContent = `Menghubungkan... (coba lagi ${attempt + 1}/${maxRetries})`;
+      await new Promise(r => setTimeout(r, 600 * (attempt + 1)));
+    }
+  }
+  return lastRes;
 }
 async function apiPost(action, payload) {
   // NOTE: no explicit Content-Type header — keeps this a "simple request"
@@ -509,7 +528,7 @@ async function doLoginStep1() {
   const errEl = document.getElementById("login-error");
   errEl.textContent = "Menghubungkan...";
   try {
-    const res = await apiGet("checkNikExists", { nik });
+    const res = await apiGetWithRetry("checkNikExists", { nik });
     if (!res.found) {
       errEl.textContent = "NIK tidak ditemukan.";
       return;
@@ -566,7 +585,7 @@ async function completeLogin(nik, pin) {
   const errEl = document.getElementById("login-error");
   if (errEl) errEl.textContent = "Menghubungkan...";
   try {
-    const res = await apiGet("login", { nik, pin });
+    const res = await apiGetWithRetry("login", { nik, pin }, 2, (r) => r.error !== "invalid_pin" && (!!r.error || r.found === false));
     if (!res.found) {
       if (errEl) errEl.textContent = res.error === "invalid_pin" ? "PIN salah. Coba lagi." : "NIK tidak ditemukan.";
       return;

@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-66</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-67</div>
 
 <script>
 // =================================================================
@@ -191,9 +191,19 @@ async function apiGet(action, params = {}) {
 async function apiPost(action, payload) {
   // NOTE: no explicit Content-Type header — keeps this a "simple request"
   // so the browser skips the CORS preflight, which Apps Script can't answer.
+  const fullPayload = {
+    ...payload,
+    sessionToken: state.user ? state.user.sessionToken : null,
+    sessionStaffId: state.user ? state.user.staffId : null,
+  };
   try {
-    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload }) });
-    return await res.json();
+    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload: fullPayload }) });
+    const json = await res.json();
+    if (json.error === "session_expired") {
+      showToast("Sesi kamu udah habis, login ulang ya.", "error");
+      setTimeout(() => { state.user = null; renderLogin(); }, 1500);
+    }
+    return json;
   } catch (err) {
     console.error("apiPost failed:", action, err);
     return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
@@ -239,6 +249,7 @@ function friendlyError(code) {
     appraisal_not_found: "Appraisal untuk staff ini belum lengkap.",
     access_denied: "Akses ditolak.",
     max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
+    session_expired: "Sesi kamu udah habis, login ulang ya.",
   };
   if (map[code]) return map[code];
   if (code && /lock/i.test(code)) return "Server lagi sibuk (banyak orang submit bersamaan) — tunggu beberapa detik lalu coba lagi.";
@@ -526,9 +537,22 @@ function showPinPrompt() {
       <div class="error" id="login-error"></div>
       <button class="primary" onclick="doLoginStep2()">Masuk</button>
       <button class="ghost" style="margin-top:8px;" onclick="renderLogin()">&larr; Ganti NIK</button>
+      <button class="ghost" style="margin-top:4px;" onclick="doRequestPinReset()">Lupa PIN?</button>
     </div>`;
   document.getElementById("pin-code-input").focus();
   document.getElementById("pin-code-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep2(); });
+}
+
+async function doRequestPinReset() {
+  const errEl = document.getElementById("login-error");
+  errEl.textContent = "Mengirim permintaan ke HR...";
+  const res = await apiPost("requestPinReset", { nik: state._pendingNik });
+  if (res.error || res.success === false) {
+    errEl.textContent = "Gagal kirim permintaan. Hubungi HR langsung ya.";
+    return;
+  }
+  errEl.style.color = "var(--green)";
+  errEl.textContent = "Permintaan terkirim ke HR — tunggu PIN baru kamu, ya.";
 }
 
 async function doLoginStep2() {
@@ -604,6 +628,9 @@ function availableScreensGrouped(user) {
   if (user.isAdminOperational) {
     groups.push({ name: "MyOperational", items: [
       { key: "historical", label: "Input Data Historis" },
+      { key: "review", label: "Review Everyone's Records" },
+      { key: "progress", label: "Track Team Compliance" },
+      { key: "company", label: "Compare Departments" },
     ]});
   }
 
@@ -2164,7 +2191,9 @@ async function renderScInput() {
           <tr><td>Deduction Pool (dari Underperform)</td><td>${idr(pool.poolTotal)}</td></tr>
           <tr><td># Performer</td><td>${pool.performerCount}</td></tr>
           <tr><td>Pool Share / performer</td><td>${idr(pool.poolShare)}</td></tr>
-        </table>` : ""}
+        </table>
+        <button class="secondary" style="margin-top:10px;" onclick="doExportSc()">📊 Export ke Excel (buat Finance)</button>
+        <div class="hint" id="sc-export-note" style="margin-top:6px;"></div>` : ""}
     </div>
     <div class="card">
       <h2>Monthly Role-Based Bonus — ${idr(pool.roleBonusPerPerson || 300000)}/orang</h2>
@@ -2182,6 +2211,17 @@ function changeGmMonth(value) {
   if (!value) return;
   state.month = value;
   renderGm();
+}
+
+async function doExportSc() {
+  const noteEl = document.getElementById("sc-export-note");
+  noteEl.textContent = "Membuat sheet export...";
+  const res = await apiPost("exportScBreakdown", { month: state.month });
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    return;
+  }
+  noteEl.innerHTML = `Sheet siap! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Microsoft Excel (.xlsx).`;
 }
 
 async function saveTotalSC() {

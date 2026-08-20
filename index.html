@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-74 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-75 — LIVE</div>
 
 <script>
 // =================================================================
@@ -2195,6 +2195,7 @@ async function showComparisonModal(staffId, name) {
         }).join("")}
       </table>
       ${stillWeak.length ? `<div class="hint" style="color:var(--red); font-weight:600; margin-top:6px;">⚠️ ${stillWeak.length} kriteria masih rendah (≤3) bulan ini: ${stillWeak.map(r => r.criterion).join(", ")}.</div>` : ""}
+      ${critRes.rows.some(r => r.previous === null) ? `<div class="hint" style="margin-top:6px; font-style:italic;">Kolom bulan sebelumnya kosong ("-") kalau bulan itu diinput lewat "Input Data Historis" — data itu cuma nyimpen total per section, bukan per kriteria.</div>` : ""}
     `;
   }
 

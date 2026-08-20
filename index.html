@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-75 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-76 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1149,6 +1149,8 @@ async function renderStaffFeedback() {
     <div class="card">
       <h2>1. Issue Summary — ${monthLabelID(state._feedbackMonth)}</h2>
       <div class="hint" style="margin-bottom:10px;">${summaryRes.taggedCount || 0} dari ${summaryRes.totalRespondents || 0} feedback udah di-tag kategorinya.</div>
+      <button class="secondary" onclick="doExportFeedbackReport()" style="margin-bottom:10px;">📊 Export Issue Summary + Action Tracker</button>
+      <div class="hint" id="feedback-export-note" style="margin-bottom:10px;"></div>
       <table class="mini">
         <tr><th>Kategori</th><th>Jumlah Orang</th><th>%</th><th>Prioritas</th></tr>
         ${summary.map(s => `
@@ -1199,9 +1201,20 @@ async function renderStaffFeedback() {
   `;
 }
 
-function changeFeedbackMonth(month) {
+async function changeFeedbackMonth(month) {
   state._feedbackMonth = month;
   renderStaffFeedback();
+}
+
+async function doExportFeedbackReport() {
+  const noteEl = document.getElementById("feedback-export-note");
+  noteEl.textContent = "Membuat sheet export...";
+  const res = await apiPost("exportFeedbackReport", { requesterId: state.user.staffId, month: state._feedbackMonth });
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    return;
+  }
+  noteEl.innerHTML = `Sheet siap! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel.`;
 }
 
 async function doTagFeedback(staffId) {
@@ -1343,7 +1356,11 @@ async function renderReview() {
       </select>
     </div>
     <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">Underperform Saja</button>
-    <div class="hint">${rows.length} appraisal record — read only</div>
+    <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
+      <div class="hint">${rows.length} appraisal record — read only</div>
+      <button class="secondary" onclick="doExportReview()">📊 Export ke Excel</button>
+    </div>
+    <div class="hint" id="review-export-note"></div>
     <div id="review-list-container">
     ${rows.map(r => `
       <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-department="${escapeAttr(r.department !== "-" ? r.department : r.tier)}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:default;">
@@ -1384,6 +1401,28 @@ function updateReviewFilter(key, value) {
     if (f.underperformOnly && el.dataset.status !== "Underperform") show = false;
     el.style.display = show ? "" : "none";
   });
+}
+
+async function doExportDecisionLog() {
+  const noteEl = document.getElementById("decision-log-export-note");
+  noteEl.textContent = "Membuat sheet export...";
+  const res = await apiPost("exportDecisionLog", {});
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    return;
+  }
+  noteEl.innerHTML = `Sheet siap (${res.rowCount} record)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel.`;
+}
+
+async function doExportReview() {
+  const noteEl = document.getElementById("review-export-note");
+  noteEl.textContent = "Membuat sheet export...";
+  const res = await apiPost("exportReviewData", { requesterId: state.user.staffId, month: state.month });
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    return;
+  }
+  noteEl.innerHTML = `Sheet siap (${res.rowCount} record)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel.`;
 }
 
 function sortReviewList(criteria) {
@@ -1972,14 +2011,15 @@ async function renderGm() {
     }
   }
 
-  const decisionForm = (s) => {
+  const decisionForm = (s, isEdit) => {
     const opts = state.decisionOptionsByTier[s.tier] || [];
     return `
       <div id="decision-form-${s.staffId}" style="display:none; padding:12px; margin-top:8px; background:var(--sand); border-radius:12px;">
+        ${isEdit ? '<div class="hint" style="font-weight:700; color:var(--coral); margin-bottom:8px;">✏️ Mode Edit — mengubah Decision yang udah di-approve sebelumnya.</div>' : ""}
         <label>Decision (wajib)</label>
         <select id="decision-select-${s.staffId}" onchange="toggleDecisionExtras('${s.staffId}')">
           <option value="">— pilih —</option>
-          ${opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
+          ${opts.map(o => `<option value="${o.value}" ${isEdit && o.value === s.decision ? "selected" : ""}>${o.label}</option>`).join("")}
         </select>
 
         <div id="extend-fields-${s.staffId}" style="display:none;">
@@ -2007,11 +2047,11 @@ async function renderGm() {
         <label>1-on-1 Status (wajib)</label>
         <select id="oneonone-select-${s.staffId}">
           <option value="">— pilih —</option>
-          ${state.oneOnOneOptions.map(o => `<option value="${o.value}">${o.label}</option>`).join("")}
+          ${state.oneOnOneOptions.map(o => `<option value="${o.value}" ${isEdit && o.value === s.oneOnOneStatus ? "selected" : ""}>${o.label}</option>`).join("")}
         </select>
         <label>Catatan (wajib)</label>
-        <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
-        <button class="primary" style="margin-top:10px;" onclick="submitDecision('${s.staffId}')">Konfirmasi Approval</button>
+        <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
+        <button class="primary" style="margin-top:10px;" onclick="${isEdit ? `submitDecisionEdit('${s.staffId}')` : `submitDecision('${s.staffId}')`}">${isEdit ? "Simpan Perubahan" : "Konfirmasi Approval"}</button>
       </div>`;
   };
 
@@ -2028,6 +2068,8 @@ async function renderGm() {
         <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
         <button class="secondary" onclick="approveAll()">Approve Semua (kecuali yang di bawah standar) — default "Approved, Lanjut"</button>
       </div>
+      <button class="secondary" onclick="doExportDecisionLog()" style="margin-bottom:10px;">📊 Export Decision Log (semua bulan)</button>
+      <div class="hint" id="decision-log-export-note" style="margin-bottom:10px;"></div>
       <input type="text" placeholder="Cari nama..." oninput="updateGmFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:10px;">
         <select onchange="sortGmList(this.value)">
@@ -2065,11 +2107,11 @@ async function renderGm() {
             <div style="display:flex; align-items:center; gap:8px;">
               <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
               ${s.approvalStatus === 'Approved'
-                ? `<span class="badge done">Disetujui</span>`
+                ? `<span class="badge done">Disetujui</span><button class="ghost" style="font-size:12px;" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Edit</button>`
                 : `<button class="secondary" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Approve</button>`}
             </div>
           </div>
-          <div onclick="event.stopPropagation();">${s.approvalStatus !== 'Approved' ? decisionForm(s) : ""}</div>
+          <div onclick="event.stopPropagation();">${decisionForm(s, s.approvalStatus === 'Approved')}</div>
         </div>`).join("")}
       </div>
       ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.</div>' : ""}
@@ -2255,6 +2297,35 @@ function toggleDecisionExtras(staffId) {
   const mutationEl = document.getElementById(`mutation-fields-${staffId}`);
   if (extendEl) extendEl.style.display = decision === "extend_probation" ? "block" : "none";
   if (mutationEl) mutationEl.style.display = decision === "demotion_mutation" ? "block" : "none";
+}
+
+async function submitDecisionEdit(staffId) {
+  const decision = document.getElementById(`decision-select-${staffId}`).value;
+  const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
+  const notes = document.getElementById(`decision-notes-${staffId}`).value;
+  if (!decision) { showToast("Decision wajib dipilih dulu.", "error"); return; }
+  if (!oneOnOneStatus) { showToast("1-on-1 Status wajib dipilih dulu.", "error"); return; }
+  if (!notes || !notes.trim()) { showToast("Catatan wajib diisi.", "error"); return; }
+
+  const payload = { editedById: state.user.staffId, month: state.month, staffId, decision, oneOnOneStatus, notes };
+
+  if (decision === "extend_probation") {
+    const extensionValue = document.getElementById(`extension-value-${staffId}`).value;
+    const extensionUnit = document.getElementById(`extension-unit-${staffId}`).value;
+    if (!extensionValue || Number(extensionValue) <= 0) { showToast("Durasi extend wajib diisi (angka lebih dari 0).", "error"); return; }
+    payload.extensionValue = extensionValue;
+    payload.extensionUnit = extensionUnit;
+  }
+  if (decision === "demotion_mutation") {
+    const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
+    if (!mutationToPosition) { showToast("Posisi tujuan mutasi wajib dipilih.", "error"); return; }
+    payload.mutationToPosition = mutationToPosition;
+  }
+
+  const res = await apiPost("editDecision", payload);
+  if (res.error || res.success === false) { showToast("Gagal simpan perubahan: " + friendlyError(res.error), "error"); return; }
+  showToast("Decision berhasil diperbarui! Notifikasi [DIEDIT] terkirim ke pihak terkait.");
+  renderGm();
 }
 
 async function submitDecision(staffId) {

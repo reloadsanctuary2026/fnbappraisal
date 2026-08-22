@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-80 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-82 — TEST</div>
 
 <script>
 // =================================================================
@@ -661,7 +661,7 @@ function availableScreensGrouped(user) {
   }
 
   const settingsItems = [{ key: "settings", label: "Pengaturan Akun" }];
-  if (String(user.staffId) === "1046") {
+  if (user.hasStaffMappingAccess) {
     settingsItems.push({ key: "staffMapping", label: "Staff Mapping" });
   }
   groups.push({ name: "MySettings", items: settingsItems });
@@ -1039,7 +1039,10 @@ async function doChangeOwnPin() {
 
 async function renderStaffMapping() {
   app.innerHTML = topbar("Staff Mapping") + `<div class="loading">Memuat...</div>`;
-  const res = await apiGet("getStaffMapping", { requesterId: state.user.staffId });
+  const [res, editRes] = await Promise.all([
+    apiGet("getStaffMapping", { requesterId: state.user.staffId }),
+    apiGet("getEditableDepartmentLeaders", { requesterId: state.user.staffId }),
+  ]);
   const showMenuLink = availableScreens(state.user).length > 1;
 
   if (!res.found) {
@@ -1048,16 +1051,51 @@ async function renderStaffMapping() {
   }
 
   const rows = res.rows || [];
+  const editRows = editRes.rows || [];
+  const candidates = editRes.candidates || [];
+
   app.innerHTML = topbar("Staff Mapping") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
-      <div class="hint" style="margin-bottom:10px;">${rows.length} orang (Staff/Leader/Management) — siapa yang jadi evaluator siapa, dihitung otomatis dari Config_PositionMap.</div>
+      <h2>Kelola Department Leader</h2>
+      <div class="hint" style="margin-bottom:10px;">Ganti siapa yang jadi Leader tetap buat Service/Cashier/Runner/Hostess — pilih dari dropdown, gak perlu edit Sheet manual.</div>
+      ${editRows.map(r => `
+        <div style="margin-bottom:12px;">
+          <label style="font-weight:700;">${r.department}</label>
+          <div class="row-flex" style="gap:8px;">
+            <select id="dept-leader-select-${r.department}" style="flex:1;">
+              ${candidates.map(c => `<option value="${escapeAttr(c.name)}" ${c.name === r.currentLeaderName ? "selected" : ""}>${c.name}</option>`).join("")}
+            </select>
+            <button class="secondary" style="flex:0 0 auto;" onclick="doSetDepartmentLeader('${r.department}')">Simpan</button>
+          </div>
+        </div>`).join("")}
+      <div class="hint" id="dept-leader-save-note"></div>
+    </div>
+    <div class="card">
+      <h2>Semua Staff/Leader/Management</h2>
+      <div class="hint" style="margin-bottom:10px;">${rows.length} orang — siapa yang jadi evaluator siapa, dihitung otomatis dari Config_PositionMap.</div>
       <table class="mini">
         <tr><th>Nama</th><th>Tier</th><th>Dept/Job Title</th><th>Dinilai Oleh</th></tr>
         ${rows.map(r => `<tr><td>${r.name}</td><td>${r.tier}</td><td>${r.departmentOrJobTitle}</td><td>${r.evaluatedBy}</td></tr>`).join("")}
       </table>
     </div>
   `;
+}
+
+async function doSetDepartmentLeader(department) {
+  const select = document.getElementById(`dept-leader-select-${department}`);
+  const leaderName = select.value;
+  const noteEl = document.getElementById("dept-leader-save-note");
+  noteEl.textContent = "Menyimpan...";
+  const res = await apiPost("setDepartmentLeader", { requesterId: state.user.staffId, department, leaderName });
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal simpan: " + friendlyError(res.error);
+    noteEl.style.color = "var(--red)";
+    return;
+  }
+  noteEl.textContent = `✅ ${department} sekarang di-handle ${leaderName}.`;
+  noteEl.style.color = "var(--green)";
+  renderStaffMapping();
 }
 
 async function renderHistoricalInput() {

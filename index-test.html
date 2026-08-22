@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-77 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-79 — TEST</div>
 
 <script>
 // =================================================================
@@ -1055,6 +1055,11 @@ async function loadHistoricalForm() {
     </div>`;
 
   detailContainer.innerHTML = `
+    <div class="card" style="position:sticky; top:0; z-index:5; background:var(--sand); border:2px solid var(--teal);">
+      <div class="hint" style="font-weight:700; margin-bottom:4px;">📊 Preview Final Score (update otomatis tiap klik — cocokkan sama kertas SEBELUM simpan)</div>
+      <div id="historical-live-preview" style="font-size:28px; font-weight:800; color:var(--teal);">–</div>
+      <div class="hint" id="historical-live-preview-detail" style="font-size:11px;"></div>
+    </div>
     <div class="card">
       <div class="section-title">Section A — Attitude</div>
       ${cfg.attitude.map((c, i) => scoreRow(c.name, c.description, "A" + i)).join("")}
@@ -1068,7 +1073,7 @@ async function loadHistoricalForm() {
       ${cfg.bonus.map((b, i) => `
         <div class="criterion-row">
           <div class="name">${b.item} (${b.points > 0 ? "+" : ""}${b.points}/kejadian)</div>
-          <input type="number" id="historical-bonus-${i}" min="0" placeholder="Jumlah kejadian (kosongkan jika 0)" style="max-width:200px;" />
+          <input type="number" id="historical-bonus-${i}" min="0" placeholder="Jumlah kejadian (kosongkan jika 0)" oninput="updateHistoricalPreview()" style="max-width:200px;" />
         </div>`).join("")}
       <button class="primary" onclick="saveHistoricalAppraisal()" style="margin-top:16px;">Simpan Data Historis</button>
     </div>`;
@@ -1079,6 +1084,54 @@ function pickHistoricalScore(el, critId, value) {
   row.dataset.value = value;
   row.querySelectorAll(".score-opt").forEach(o => o.classList.remove("selected"));
   el.classList.add("selected");
+  updateHistoricalPreview();
+}
+
+function updateHistoricalPreview() {
+  const cfg = state._historicalCfg;
+  if (!cfg) return;
+  const previewEl = document.getElementById("historical-live-preview");
+  const detailEl = document.getElementById("historical-live-preview-detail");
+  if (!previewEl) return;
+
+  const sumSection = (list, prefix) => {
+    let sum = 0, filledCount = 0;
+    list.forEach((c, i) => {
+      const row = document.querySelector(`.score-select[data-crit-id="${prefix}${i}"]`);
+      if (row && row.dataset.value) { sum += Number(row.dataset.value); filledCount++; }
+    });
+    return { sum, filledCount, total: list.length };
+  };
+
+  const a = sumSection(cfg.attitude, "A");
+  const b = sumSection(cfg.discipline, "B");
+  const c = cfg.placeholder ? { sum: 0, filledCount: 0, total: 0 } : sumSection(cfg.kpi, "C");
+  const kpiFactor = cfg.placeholder ? 0 : 20 / cfg.kpi.length;
+
+  let bonusTotal = 0;
+  cfg.bonus.forEach((bItem, i) => {
+    const input = document.getElementById(`historical-bonus-${i}`);
+    const count = Number(input && input.value || 0);
+    bonusTotal += bItem.points * count;
+  });
+
+  const sectionAWeighted = a.sum * 1.0;
+  const sectionBWeighted = b.sum * 1.0;
+  const sectionCWeighted = c.sum * 0.5 * kpiFactor;
+  const finalScore = sectionAWeighted + sectionBWeighted + sectionCWeighted + bonusTotal;
+
+  const totalFilled = a.filledCount + b.filledCount + c.filledCount;
+  const totalCriteria = a.total + b.total + c.total;
+
+  if (totalFilled === 0) {
+    previewEl.textContent = "–";
+    detailEl.textContent = "Belum ada kriteria yang diisi.";
+    return;
+  }
+  previewEl.textContent = finalScore.toFixed(1);
+  detailEl.textContent = totalFilled < totalCriteria
+    ? `⚠️ Baru ${totalFilled}/${totalCriteria} kriteria diisi — angka ini masih PARSIAL, belum final.`
+    : `Semua ${totalCriteria} kriteria terisi — A: ${sectionAWeighted.toFixed(1)} · B: ${sectionBWeighted.toFixed(1)} · C: ${sectionCWeighted.toFixed(1)} · Bonus: ${bonusTotal >= 0 ? "+" : ""}${bonusTotal}`;
 }
 
 async function saveHistoricalAppraisal() {
@@ -2240,6 +2293,11 @@ async function showComparisonModal(staffId, name) {
       </table>
       ${stillWeak.length ? `<div class="hint" style="color:var(--red); font-weight:600; margin-top:6px;">⚠️ ${stillWeak.length} kriteria masih rendah (≤3) bulan ini: ${stillWeak.map(r => r.criterion).join(", ")}.</div>` : ""}
       ${critRes.rows.some(r => r.previous === null) ? `<div class="hint" style="margin-top:6px; font-style:italic;">Kolom bulan sebelumnya kosong ("-") kalau bulan itu diinput lewat "Input Data Historis" — data itu cuma nyimpen total per section, bukan per kriteria.</div>` : ""}
+    `;
+  } else {
+    criterionBlock = `
+      <div class="section-title" style="margin:16px -18px 8px;">Detail per Kriteria (Leader/Mgmt)</div>
+      <div class="hint" style="font-style:italic;">Belum ada data per kriteria buat dibandingkan bulan ini — kemungkinan bulan ini diinput lewat "Input Data Historis" (cuma nyimpen total per section, bukan per kriteria), atau Leader/Mgmt belum submit appraisal bulan ini.</div>
     `;
   }
 

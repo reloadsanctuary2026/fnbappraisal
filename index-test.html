@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-79 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-80 — TEST</div>
 
 <script>
 // =================================================================
@@ -320,6 +320,8 @@ function render() {
   if (state.screen === "progress") return renderEvaluatorProgress();
   if (state.screen === "feedback") return renderStaffFeedback();
   if (state.screen === "historical") return renderHistoricalInput();
+  if (state.screen === "settings") return renderSettings();
+  if (state.screen === "staffMapping") return renderStaffMapping();
   if (state.screen === "company") return renderCompanySummary();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
@@ -377,6 +379,8 @@ function renderFaq() {
     progress: "Pantau siapa aja Leader/Management/HR yang UDAH vs BELUM ngerjain tugas appraisal-nya bulan ini — soal kepatuhan/compliance, bukan soal skor bagus/jelek.",
     feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal, lengkap dengan Issue Summary & Action Tracker — Executive, HR, dan Admin Operational bisa lihat halaman ini.",
     historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan buat perhitungan Service Charge.",
+    settings: "Ganti PIN sendiri dan lihat profil kamu — Nama, NIK, Job Title, Department, Tier.",
+    staffMapping: "Lihat siapa dinilai siapa untuk semua Staff/Leader/Management — dihitung otomatis dari Config_PositionMap, bukan diketik manual.",
     sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
     hrTodos: "Daftar Decision 'Extend Probation/Kontrak' yang tanggal jatuh temponya udah lewat dan perlu ditindaklanjuti — supaya gak ada yang keslip.",
   };
@@ -655,6 +659,12 @@ function availableScreensGrouped(user) {
       { key: "feedback", label: "Read Staff Feedback" },
     ]});
   }
+
+  const settingsItems = [{ key: "settings", label: "Pengaturan Akun" }];
+  if (String(user.staffId) === "1046") {
+    settingsItems.push({ key: "staffMapping", label: "Staff Mapping" });
+  }
+  groups.push({ name: "MySettings", items: settingsItems });
 
   return groups;
 }
@@ -970,6 +980,84 @@ function changeCompanyMonth(value) {
   if (!value) return;
   state.month = value;
   renderCompanySummary();
+}
+
+async function renderSettings() {
+  app.innerHTML = topbar("Pengaturan Akun") + `<div class="loading">Memuat...</div>`;
+  const profile = await apiGet("getMyProfile", { staffId: state.user.staffId });
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  app.innerHTML = topbar("Pengaturan Akun") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <h2>Profil Saya</h2>
+      <table class="mini">
+        <tr><td>Nama</td><td>${profile.name || "-"}</td></tr>
+        <tr><td>NIK</td><td>${profile.staffId || "-"}</td></tr>
+        <tr><td>Job Title</td><td>${profile.jobTitle || "-"}</td></tr>
+        <tr><td>Department</td><td>${profile.department && profile.department !== "-" ? profile.department : "-"}</td></tr>
+        <tr><td>Tier</td><td>${profile.tier || "-"}</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Ganti PIN</h2>
+      <label>PIN Sekarang</label>
+      <input type="password" id="current-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" />
+      <label>PIN Baru (4 digit)</label>
+      <input type="password" id="new-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" />
+      <label>Ulangi PIN Baru</label>
+      <input type="password" id="confirm-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" />
+      <div class="hint" id="change-pin-note" style="margin-top:8px;"></div>
+      <button class="primary" onclick="doChangeOwnPin()" style="margin-top:10px;">Simpan PIN Baru</button>
+    </div>
+  `;
+}
+
+async function doChangeOwnPin() {
+  const currentPin = document.getElementById("current-pin-input").value;
+  const newPin = document.getElementById("new-pin-input").value;
+  const confirmPin = document.getElementById("confirm-pin-input").value;
+  const noteEl = document.getElementById("change-pin-note");
+
+  if (!/^\d{4}$/.test(newPin)) { noteEl.textContent = "PIN baru harus 4 digit angka."; noteEl.style.color = "var(--red)"; return; }
+  if (newPin !== confirmPin) { noteEl.textContent = "PIN baru dan ulangannya gak sama."; noteEl.style.color = "var(--red)"; return; }
+
+  noteEl.textContent = "Menyimpan...";
+  noteEl.style.color = "var(--text-muted)";
+  const res = await apiPost("changeOwnPin", { staffId: state.user.staffId, currentPin, newPin });
+  if (res.error || res.success === false) {
+    noteEl.textContent = res.error === "invalid_pin" ? "PIN sekarang salah." : "Gagal ganti PIN: " + friendlyError(res.error);
+    noteEl.style.color = "var(--red)";
+    return;
+  }
+  noteEl.textContent = "✅ PIN berhasil diganti! Dipakai mulai login berikutnya.";
+  noteEl.style.color = "var(--green)";
+  document.getElementById("current-pin-input").value = "";
+  document.getElementById("new-pin-input").value = "";
+  document.getElementById("confirm-pin-input").value = "";
+}
+
+async function renderStaffMapping() {
+  app.innerHTML = topbar("Staff Mapping") + `<div class="loading">Memuat...</div>`;
+  const res = await apiGet("getStaffMapping", { requesterId: state.user.staffId });
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  if (!res.found) {
+    app.innerHTML = topbar("Staff Mapping") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+
+  const rows = res.rows || [];
+  app.innerHTML = topbar("Staff Mapping") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <div class="hint" style="margin-bottom:10px;">${rows.length} orang (Staff/Leader/Management) — siapa yang jadi evaluator siapa, dihitung otomatis dari Config_PositionMap.</div>
+      <table class="mini">
+        <tr><th>Nama</th><th>Tier</th><th>Dept/Job Title</th><th>Dinilai Oleh</th></tr>
+        ${rows.map(r => `<tr><td>${r.name}</td><td>${r.tier}</td><td>${r.departmentOrJobTitle}</td><td>${r.evaluatedBy}</td></tr>`).join("")}
+      </table>
+    </div>
+  `;
 }
 
 async function renderHistoricalInput() {

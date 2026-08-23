@@ -167,7 +167,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-84 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-85 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1018,11 +1018,11 @@ async function renderSettings() {
       <div class="section-title" style="margin-top:0;">🔒 Ganti PIN</div>
       <div class="hint" style="margin-bottom:12px;">Pakai PIN yang gampang kamu inget tapi gak gampang ditebak orang lain.</div>
       <label>PIN Sekarang</label>
-      <input type="password" id="current-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" />
+      <input type="password" id="current-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" required minlength="4" />
       <label>PIN Baru (4 digit)</label>
-      <input type="password" id="new-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" />
+      <input type="password" id="new-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" required minlength="4" />
       <label>Ulangi PIN Baru</label>
-      <input type="password" id="confirm-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" />
+      <input type="password" id="confirm-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" required minlength="4" />
       <div class="hint" id="change-pin-note" style="margin-top:8px;"></div>
       <button class="primary" onclick="doChangeOwnPin()" style="margin-top:10px;">Simpan PIN Baru</button>
     </div>
@@ -1090,6 +1090,9 @@ async function doChangeOwnPin() {
   const confirmPin = document.getElementById("confirm-pin-input").value;
   const noteEl = document.getElementById("change-pin-note");
 
+  if (!currentPin) { noteEl.textContent = "PIN Sekarang wajib diisi."; noteEl.style.color = "var(--red)"; return; }
+  if (!newPin) { noteEl.textContent = "PIN Baru wajib diisi."; noteEl.style.color = "var(--red)"; return; }
+  if (!confirmPin) { noteEl.textContent = "Ulangi PIN Baru wajib diisi."; noteEl.style.color = "var(--red)"; return; }
   if (!/^\d{4}$/.test(newPin)) { noteEl.textContent = "PIN baru harus 4 digit angka."; noteEl.style.color = "var(--red)"; return; }
   if (newPin !== confirmPin) { noteEl.textContent = "PIN baru dan ulangannya gak sama."; noteEl.style.color = "var(--red)"; return; }
 

@@ -168,13 +168,14 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-92 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-94 — TEST</div>
 
 <script>
 // =================================================================
 // CONFIG — set this to your Apps Script Web App URL
 // =================================================================
 const API_URL = "https://script.google.com/macros/s/AKfycbwqUUo-avmoBoj9ZqmdGUTMQtswX4Rj6aYoHc21oDLD6LfUsEluTLA2ccn4g3pUYaXLUw/exec";
+const LMS_URL = "https://script.google.com/macros/s/AKfycbx7ID6GZMXYoj8ymmwAcGuxHWb-hGli-FRDqcDgazgIL38JOT4jbARBht85PFosc34a_Q/exec";
 
 // =================================================================
 // API helpers
@@ -817,7 +818,16 @@ async function renderDashboard() {
         </div>
         <div id="${groupId}" style="display:none; padding:14px;">${itemsHtml}</div>
       </div>`;
-    }).join("");
+    }).join("") +
+    `<a href="${LMS_URL}" target="_blank" rel="noopener" style="text-decoration:none; display:block;">
+      <div class="card" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:20px;">🎓</span>
+          <span style="font-weight:700; color:var(--text);">LMS — Training & Materi</span>
+        </div>
+        <span style="color:var(--text-muted); font-size:16px;">↗</span>
+      </div>
+    </a>`;
 }
 
 function toggleGroup(id) {
@@ -2869,26 +2879,34 @@ function showInstallBanner(mode) {
   const isAndroid = /Android/.test(ua);
   if (!isIOS && !isAndroid) return; // desktop — not relevant
 
+  // Deliberately generic wording — the exact icon/position for "Share" varies across
+  // Safari/Chrome versions and toolbar states, so naming a specific icon or position
+  // (e.g. "the Share icon at the bottom") can end up flat-out wrong for what someone's
+  // actually looking at, which reads as unpolished. Point at the menu itself instead.
   let message, actionHtml;
   if (mode === "android-native") {
     message = "Install app ini biar lebih cepat diakses, kayak aplikasi asli.";
     actionHtml = `<button class="primary" style="flex:0 0 auto; padding:6px 14px; font-size:12px;" onclick="doNativeInstall()">Install</button>`;
   } else if (isIOS) {
-    message = "Tambahkan ke Home Screen: tap ikon Share (□↑) di bawah, lalu pilih \"Add to Home Screen\".";
+    message = "Buka menu Share di Safari, lalu pilih \"Add to Home Screen\" biar lebih gampang diakses.";
     actionHtml = "";
   } else {
-    message = "Tambahkan ke Home Screen: tap menu (⋮) di browser, lalu pilih \"Add to Home Screen\" / \"Install app\".";
+    message = "Buka menu browser (biasanya ikon titik tiga), lalu pilih \"Add to Home Screen\" / \"Install app\".";
     actionHtml = "";
   }
 
+  // Inserted into normal document flow at the very top (like the TEST MODE banner),
+  // NOT position:fixed — the topbar below is itself `position:sticky`, so a fixed banner
+  // at top:0 would float on top of it and cover the logo/title. Flowing naturally just
+  // pushes the topbar down instead, no overlap possible.
   const banner = document.createElement("div");
   banner.id = "install-banner";
-  banner.style.cssText = "position:fixed; bottom:0; left:0; right:0; background:var(--teal-dark); color:#fff; padding:10px 14px; z-index:400; display:flex; align-items:center; gap:10px; font-size:12px; box-shadow:0 -4px 12px rgba(0,0,0,0.15);";
+  banner.style.cssText = "background:var(--teal-dark); color:#fff; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px;";
   banner.innerHTML = `
-    <span style="flex:1;">📲 ${message}</span>
+    <span style="flex:1; line-height:1.4;">📲 ${message}</span>
     ${actionHtml}
     <button class="ghost" style="flex:0 0 auto; padding:4px 10px; font-size:11px; color:#fff; border-color:rgba(255,255,255,0.4);" onclick="dismissInstallBanner()">Tutup</button>`;
-  document.body.appendChild(banner);
+  document.body.insertBefore(banner, document.body.firstChild);
 }
 
 function dismissInstallBanner() {

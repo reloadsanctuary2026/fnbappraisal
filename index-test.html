@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-89 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-92 — TEST</div>
 
 <script>
 // =================================================================
@@ -335,14 +335,14 @@ function topbar(title) {
   const unread = state.unreadCount || 0;
   return `
     <div class="topbar">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <div class="logo-mark"></div>
-        <div>
+      <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1; overflow:hidden;">
+        <div class="logo-mark" style="flex-shrink:0;"></div>
+        <div style="min-width:0; overflow:hidden;">
           <h1>${title}</h1>
           <div class="sub">${state.user ? state.user.name + (state.user.jobTitle ? " — " + state.user.jobTitle : "") + " · " + monthLabelID(state.month) : ""}</div>
         </div>
       </div>
-      <div style="display:flex; align-items:center; gap:8px;">
+      <div style="display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:8px;">
         ${state.user ? `<button onclick="openFaq()">❓</button>` : ""}
         ${state.user ? `<button onclick="openSettings()">⚙️</button>` : ""}
         ${state.user ? `<button onclick="openNotifications()" style="position:relative;">🔔${unread > 0 ? `<span style="position:absolute; top:-6px; right:-6px; background:var(--coral); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:800;">${unread}</span>` : ""}</button>` : ""}
@@ -1543,7 +1543,7 @@ function actionFormHtml(a) {
       <label>Issue</label>
       <select id="action-issue">${state._feedbackCategories.map(c => `<option value="${c.label}" ${c.label === a.issue ? "selected" : ""}>${c.label}</option>`).join("")}</select>
       <label>Action</label>
-      <textarea id="action-action" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px;">${a.action || ""}</textarea>
+      <textarea id="action-action" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${a.action || ""}</textarea>
       <label>Owner</label>
       <input type="text" id="action-owner" value="${a.owner || ""}" placeholder="Misal: Restaurant Manager" />
       <label>Target</label>
@@ -1555,7 +1555,7 @@ function actionFormHtml(a) {
       <label>Actual Completion</label>
       <input type="text" id="action-completion" value="${a.actualCompletion || ""}" />
       <label>Remarks</label>
-      <textarea id="action-remarks" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px;">${a.remarks || ""}</textarea>
+      <textarea id="action-remarks" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${a.remarks || ""}</textarea>
       <button class="primary" style="margin-top:10px;" onclick="doSaveActionItem('${a.actionId || ""}')">Simpan</button>
     </div>`;
 }
@@ -2080,7 +2080,7 @@ function renderFormBody(evaluatorType, target, cfg) {
         <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
           🔒 Kotak ini dibaca terbatas oleh level manajemen & HR yang berwenang — gak akan bocor ke Leader/Manager langsungmu. Ngomong aja apa yang perlu disampaikan.
         </div>
-        <textarea id="management-feedback" rows="4" placeholder="Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;"></textarea>
+        <textarea id="management-feedback" rows="4" placeholder="Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
       ` : ""}
 
       <div class="error" id="form-error"></div>
@@ -2357,7 +2357,7 @@ async function renderGm() {
           ${state.oneOnOneOptions.map(o => `<option value="${o.value}" ${isEdit && o.value === s.oneOnOneStatus ? "selected" : ""}>${o.label}</option>`).join("")}
         </select>
         <label>Catatan (wajib)</label>
-        <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:14px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
+        <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
         <button class="primary" style="margin-top:10px;" onclick="${isEdit ? `submitDecisionEdit('${s.staffId}')` : `submitDecision('${s.staffId}')`}">${isEdit ? "Simpan Perubahan" : "Konfirmasi Approval"}</button>
       </div>`;
   };
@@ -2373,8 +2373,9 @@ async function renderGm() {
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
         <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
-        <button class="secondary" onclick="approveAll()">Approve Semua (kecuali yang di bawah standar) — default "Approved, Lanjut"</button>
+        <button class="secondary" onclick="approveAll()">Approve Semua yang Layak</button>
       </div>
+      <div class="hint" style="margin-bottom:10px;">"Approve Semua" otomatis approve yang Performer (skip yang di bawah standar), Decision default "Approved — Lanjut".</div>
       <button class="secondary" onclick="doExportDecisionLog()" style="margin-bottom:10px;">📊 Export Decision Log (semua bulan)</button>
       <div class="hint" id="decision-log-export-note" style="margin-bottom:10px;"></div>
       <input type="text" placeholder="Cari nama..." oninput="updateGmFilter('search', this.value)" style="margin-bottom:10px;" />
@@ -2841,6 +2842,73 @@ async function approveAll() {
 }
 
 // =================================================================
+
+/** "Add to Home Screen" prompt — iOS has no JS API to trigger this automatically (Apple
+ *  restriction), so this shows clear manual instructions instead. Android CAN get a real
+ *  native "Install" button via the beforeinstallprompt event, but only if a Web App
+ *  Manifest + icons are set up — without that, this still falls back to manual
+ *  instructions for Android too. Dismissal is remembered so it doesn't nag every visit. */
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  showInstallBanner("android-native");
+});
+
+function isRunningStandalone() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function showInstallBanner(mode) {
+  if (isRunningStandalone()) return; // already added — no need to nag
+  if (localStorage.getItem("installBannerDismissed") === "1") return;
+  if (document.getElementById("install-banner")) return; // already showing
+
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+  if (!isIOS && !isAndroid) return; // desktop — not relevant
+
+  let message, actionHtml;
+  if (mode === "android-native") {
+    message = "Install app ini biar lebih cepat diakses, kayak aplikasi asli.";
+    actionHtml = `<button class="primary" style="flex:0 0 auto; padding:6px 14px; font-size:12px;" onclick="doNativeInstall()">Install</button>`;
+  } else if (isIOS) {
+    message = "Tambahkan ke Home Screen: tap ikon Share (□↑) di bawah, lalu pilih \"Add to Home Screen\".";
+    actionHtml = "";
+  } else {
+    message = "Tambahkan ke Home Screen: tap menu (⋮) di browser, lalu pilih \"Add to Home Screen\" / \"Install app\".";
+    actionHtml = "";
+  }
+
+  const banner = document.createElement("div");
+  banner.id = "install-banner";
+  banner.style.cssText = "position:fixed; bottom:0; left:0; right:0; background:var(--teal-dark); color:#fff; padding:10px 14px; z-index:400; display:flex; align-items:center; gap:10px; font-size:12px; box-shadow:0 -4px 12px rgba(0,0,0,0.15);";
+  banner.innerHTML = `
+    <span style="flex:1;">📲 ${message}</span>
+    ${actionHtml}
+    <button class="ghost" style="flex:0 0 auto; padding:4px 10px; font-size:11px; color:#fff; border-color:rgba(255,255,255,0.4);" onclick="dismissInstallBanner()">Tutup</button>`;
+  document.body.appendChild(banner);
+}
+
+function dismissInstallBanner() {
+  localStorage.setItem("installBannerDismissed", "1");
+  const banner = document.getElementById("install-banner");
+  if (banner) banner.remove();
+}
+
+async function doNativeInstall() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  dismissInstallBanner();
+}
+
+// Fallback for iOS/Android without native install support — show manual instructions
+// a few seconds after load, so it doesn't compete with the login screen rendering first.
+setTimeout(() => { if (!deferredInstallPrompt) showInstallBanner("manual"); }, 3000);
+
 render();
 </script>
 </body>

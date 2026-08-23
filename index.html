@@ -173,7 +173,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-100 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-101 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1983,21 +1983,22 @@ function buildScoreChartSvg(history, peerAvg) {
 
   return `
     <svg viewBox="0 0 ${width} ${height}" style="width:100%; height:auto; display:block;">
+      <line x1="${padSide}" y1="${padTop}" x2="${width - padSide}" y2="${padTop}" stroke="#D8D0C4" stroke-width="1" />
+      <line x1="${padSide}" y1="${padTop + innerH}" x2="${width - padSide}" y2="${padTop + innerH}" stroke="#D8D0C4" stroke-width="1" />
       <text x="${padSide - 6}" y="${padTop + 4}" text-anchor="end" font-size="9" fill="#6B5D4F">${yMax.toFixed(0)}</text>
       <text x="${padSide - 6}" y="${padTop + innerH}" text-anchor="end" font-size="9" fill="#6B5D4F">${yMin.toFixed(0)}</text>
       <line x1="${padSide}" y1="${thresholdY.toFixed(1)}" x2="${width - padSide}" y2="${thresholdY.toFixed(1)}" stroke="#946017" stroke-dasharray="4 4" stroke-width="1.2" />
       <text x="${width - padSide}" y="${(thresholdY - 6).toFixed(1)}" text-anchor="end" font-size="10" fill="#946017">Threshold 60</text>
       ${peerY !== null ? `
         <line x1="${padSide}" y1="${peerY.toFixed(1)}" x2="${width - padSide}" y2="${peerY.toFixed(1)}" stroke="#6C4FB6" stroke-dasharray="2 3" stroke-width="1.2" />
-        <text x="${padSide}" y="${(peerY - 6).toFixed(1)}" text-anchor="start" font-size="10" fill="#6C4FB6">Rata-rata ${peerAvg.peerLabel}: ${peerAvg.average.toFixed(1)}</text>
+        <text x="${padSide}" y="${(peerY - 6).toFixed(1)}" text-anchor="start" font-size="10" fill="#6C4FB6">${peerAvg.peerLabel} Average Score: ${peerAvg.average.toFixed(1)}</text>
       ` : ""}
       <path d="${pathD}" fill="none" stroke="#0E4749" stroke-width="2.5" />
       ${points.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${p.score >= 60 ? "#1A6B49" : "#B8352B"}" />`).join("")}
       ${points.map(p => `<text x="${p.x.toFixed(1)}" y="${(p.y - 12).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="#20302F">${p.score.toFixed(1)}</text>`).join("")}
       ${points.map(p => `<text x="${p.x.toFixed(1)}" y="${height - 8}" text-anchor="middle" font-size="10" fill="#6B5D4F">${monthShortLabelID(p.month)}</text>`).join("")}
     </svg>
-    <div class="hint" style="text-align:center; margin-top:2px;">Angka ${yMin.toFixed(0)} & ${yMax.toFixed(0)} di kiri itu cuma batas skala grafik (biar naik-turunnya keliatan jelas) — bukan skor siapa-siapa.</div>
-    ${peerAvg ? `<div class="hint" style="text-align:center;">Garis ungu putus-putus = rata-rata ${peerAvg.peerLabel} bulan ${monthLabelID(peerAvg.month)} (${peerAvg.peerCount} orang) — cuma agregat, bukan skor orang tertentu.</div>` : ""}`;
+    <div class="hint" style="text-align:center; margin-top:2px;">Skala grafik: ${yMin.toFixed(0)}–${yMax.toFixed(0)} (rentang otomatis, disesuaikan agar tren lebih mudah dibaca).</div>`;
 }
 
 function goBackFromHistory() {

@@ -173,7 +173,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-94 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-96 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1250,13 +1250,14 @@ async function loadHistoricalStaffList(month) {
   state._historicalMonth = month;
   const res = await apiGet("getHistoricalCompletionStatus", { month });
   const staffList = res.staff || [];
+  state._historicalFullList = staffList;
   const doneCount = staffList.filter(s => s.hasData).length;
   const showMenuLink = availableScreens(state.user).length > 1;
 
   app.innerHTML = topbar("Input Data Historis") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
-      <div class="hint" style="margin-bottom:8px;">Buat data appraisal SEBELUM sistem ini ada — cuma skor Leader yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan untuk perhitungan Service Charge.</div>
+      <div class="hint" style="margin-bottom:8px;">Buat data appraisal SEBELUM sistem ini ada — cuma skor 1 evaluator yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan untuk perhitungan Service Charge.</div>
       <label>Bulan historis</label>
       <input type="month" id="historical-month-picker" value="${month}" onchange="loadHistoricalStaffList(this.value)" />
     </div>
@@ -1265,26 +1266,37 @@ async function loadHistoricalStaffList(month) {
         <h2 style="margin:0;">Progress ${monthLabelID(month)}</h2>
         <div class="hint" style="font-weight:700; color:${doneCount === staffList.length ? "var(--green)" : "var(--coral)"};">${doneCount} dari ${staffList.length} sudah diisi</div>
       </div>
-      <label>Cari nama staff</label>
-      <input type="text" id="historical-search" placeholder="Ketik nama..." oninput="filterHistoricalStaffList(this.value)" />
-      <div id="historical-staff-list" style="max-height:340px; overflow-y:auto; margin-top:8px;">
-        ${staffList.map(s => `
-          <div class="staff-row" data-search="${escapeAttr(s.name.toLowerCase())}" onclick="selectHistoricalStaff('${s.staffId}', '${escapeAttr(s.name)}')">
-            <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department})</span></div>
-            <span class="badge ${s.hasData ? "done" : "pending"}">${s.hasData ? "✅ Sudah Diisi" : "⭕ Belum Diisi"}</span>
-          </div>`).join("")}
-      </div>
+      <label>Cari nama</label>
+      <input type="text" id="historical-search" placeholder="Ketik nama..." oninput="filterHistoricalStaffList()" />
+      <label>Filter Tier</label>
+      <select id="historical-tier-filter" onchange="filterHistoricalStaffList()">
+        <option value="">Semua Tier (Staff, Leader, Management)</option>
+        <option value="Staff">Staff aja</option>
+        <option value="Leader">Leader aja</option>
+        <option value="Management">Management aja</option>
+      </select>
+      <div id="historical-staff-list" style="max-height:340px; overflow-y:auto; margin-top:8px;"></div>
     </div>
     <div id="historical-form-container"></div>
   `;
+  filterHistoricalStaffList();
 }
 
-function filterHistoricalStaffList(query) {
-  const q = query.trim().toLowerCase();
-  document.querySelectorAll("#historical-staff-list [data-search]").forEach(el => {
+function filterHistoricalStaffList() {
+  const query = (document.getElementById("historical-search").value || "").trim().toLowerCase();
+  const tierFilter = document.getElementById("historical-tier-filter").value;
+  const listContainer = document.getElementById("historical-staff-list");
+  const fullList = state._historicalFullList || [];
 
-    el.style.display = el.dataset.search.includes(q) ? "" : "none";
-  });
+  const filtered = fullList.filter(s =>
+    s.name.toLowerCase().includes(query) && (!tierFilter || s.tier === tierFilter)
+  );
+
+  listContainer.innerHTML = filtered.map(s => `
+    <div class="staff-row" onclick="selectHistoricalStaff('${s.staffId}', '${escapeAttr(s.name)}')">
+      <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.tier} — ${s.department})</span></div>
+      <span class="badge ${s.hasData ? "done" : "pending"}">${s.hasData ? "✅ Sudah Diisi" : "⭕ Belum Diisi"}</span>
+    </div>`).join("") || '<div class="hint" style="padding:12px;">Gak ada yang cocok.</div>';
 }
 
 async function selectHistoricalStaff(staffId, name) {
@@ -1327,6 +1339,7 @@ async function loadHistoricalForm() {
       <div class="hint" style="font-weight:700; margin-bottom:4px;">📊 Preview Final Score (update otomatis tiap klik — cocokkan sama kertas SEBELUM simpan)</div>
       <div id="historical-live-preview" style="font-size:28px; font-weight:800; color:var(--teal);">–</div>
       <div class="hint" id="historical-live-preview-detail" style="font-size:11px;"></div>
+      <div id="historical-section-breakdown"></div>
     </div>
     <div class="card">
       <div class="section-title">Section A — Attitude</div>
@@ -1360,6 +1373,7 @@ function updateHistoricalPreview() {
   if (!cfg) return;
   const previewEl = document.getElementById("historical-live-preview");
   const detailEl = document.getElementById("historical-live-preview-detail");
+  const sectionBreakdownEl = document.getElementById("historical-section-breakdown");
   if (!previewEl) return;
 
   const sumSection = (list, prefix) => {
@@ -1383,10 +1397,20 @@ function updateHistoricalPreview() {
     bonusTotal += bItem.points * count;
   });
 
+  // Current formula (25/25/50) — this is what actually gets saved to the system.
   const sectionAWeighted = a.sum * 1.0;
   const sectionBWeighted = b.sum * 1.0;
   const sectionCWeighted = c.sum * 0.5 * kpiFactor;
   const finalScore = sectionAWeighted + sectionBWeighted + sectionCWeighted + bonusTotal;
+
+  // Reference-only: what the OLD paper-template formula (30/30/40) would have produced
+  // from the SAME raw scores — purely so Admin Operational can cross-check against a
+  // physical paper record using the SAME math the paper used. NOT what gets saved.
+  const kpiMaxRaw = cfg.placeholder ? 0 : cfg.kpi.length * 5;
+  const oldSectionAWeighted = a.total ? (a.sum / (a.total * 5)) * 30 : 0;
+  const oldSectionBWeighted = b.total ? (b.sum / (b.total * 5)) * 30 : 0;
+  const oldSectionCWeighted = kpiMaxRaw ? (c.sum / kpiMaxRaw) * 40 : 0;
+  const oldFormulaScore = oldSectionAWeighted + oldSectionBWeighted + oldSectionCWeighted + bonusTotal;
 
   const totalFilled = a.filledCount + b.filledCount + c.filledCount;
   const totalCriteria = a.total + b.total + c.total;
@@ -1394,12 +1418,27 @@ function updateHistoricalPreview() {
   if (totalFilled === 0) {
     previewEl.textContent = "–";
     detailEl.textContent = "Belum ada kriteria yang diisi.";
+    if (sectionBreakdownEl) sectionBreakdownEl.innerHTML = "";
     return;
   }
   previewEl.textContent = finalScore.toFixed(1);
   detailEl.textContent = totalFilled < totalCriteria
     ? `⚠️ Baru ${totalFilled}/${totalCriteria} kriteria diisi — angka ini masih PARSIAL, belum final.`
-    : `Semua ${totalCriteria} kriteria terisi — A: ${sectionAWeighted.toFixed(1)} · B: ${sectionBWeighted.toFixed(1)} · C: ${sectionCWeighted.toFixed(1)} · Bonus: ${bonusTotal >= 0 ? "+" : ""}${bonusTotal}`;
+    : `Ini yang DISIMPAN sistem (formula 25/25/50).`;
+
+  if (sectionBreakdownEl) {
+    sectionBreakdownEl.innerHTML = `
+      <table class="mini" style="margin-top:8px;">
+        <tr><th>Section</th><th>Raw</th><th>Weighted (25/25/50)</th></tr>
+        <tr><td>A — Attitude</td><td>${a.sum} / ${a.total * 5}</td><td>${sectionAWeighted.toFixed(1)}</td></tr>
+        <tr><td>B — Discipline</td><td>${b.sum} / ${b.total * 5}</td><td>${sectionBWeighted.toFixed(1)}</td></tr>
+        <tr><td>C — KPI</td><td>${c.sum} / ${kpiMaxRaw}</td><td>${sectionCWeighted.toFixed(1)}</td></tr>
+        <tr><td>D — Bonus</td><td colspan="2">${bonusTotal >= 0 ? "+" : ""}${bonusTotal}</td></tr>
+      </table>
+      <div class="hint" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">
+        📋 <strong>Cuma buat cocokin ke kertas</strong> (formula LAMA 30/30/40, TIDAK disimpan): <strong>${oldFormulaScore.toFixed(1)}</strong>
+      </div>`;
+  }
 }
 
 async function saveHistoricalAppraisal() {

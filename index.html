@@ -173,7 +173,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-96 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-98 — LIVE</div>
 
 <script>
 // =================================================================
@@ -824,7 +824,8 @@ async function renderDashboard() {
         <div id="${groupId}" style="display:none; padding:14px;">${itemsHtml}</div>
       </div>`;
     }).join("") +
-    `<a href="${LMS_URL}" target="_blank" rel="noopener" style="text-decoration:none; display:block;">
+    (['Service', 'Runner', 'Cashier', 'Hostess'].indexOf(state.user.department) !== -1
+      ? `<a href="${LMS_URL}" target="_blank" rel="noopener" style="text-decoration:none; display:block;">
       <div class="card" style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;">
         <div style="display:flex; align-items:center; gap:10px;">
           <span style="font-size:20px;">🎓</span>
@@ -832,7 +833,8 @@ async function renderDashboard() {
         </div>
         <span style="color:var(--text-muted); font-size:16px;">↗</span>
       </div>
-    </a>`;
+    </a>`
+      : "");
 }
 
 function toggleGroup(id) {
@@ -1319,18 +1321,22 @@ async function loadHistoricalForm() {
     apiGet("getKpiConfigForTarget", { targetStaffId: state._historicalStaffId }),
   ]);
   state._historicalCfg = cfg;
+  const existingScores = (existing.found && existing.criterionScores) || { attitude: {}, discipline: {}, kpi: {} };
+  const hasDetailScores = Object.keys(existingScores.attitude).length || Object.keys(existingScores.discipline).length || Object.keys(existingScores.kpi).length;
 
   const noteEl = document.getElementById("historical-existing-note");
   noteEl.textContent = !existing.found ? "" : (existing.selfTotal || existing.hrTotal)
     ? "⚠️ Bulan ini sudah punya data Self/HR (siklus normal) — hati-hati kalau ditimpa."
-    : `Sudah ada data historis bulan ini (Final Score: ${Number(existing.finalScore).toFixed(1)}) — isi ulang semua kriteria di bawah untuk menimpanya, kriteria detail sebelumnya tidak tersimpan per-item.`;
+    : hasDetailScores
+      ? `✏️ Bulan ini udah ada data historis (Final Score: ${Number(existing.finalScore).toFixed(1)}) — form di bawah udah ke-isi otomatis, tinggal koreksi yang perlu terus Simpan ulang.`
+      : `Sudah ada data historis bulan ini (Final Score: ${Number(existing.finalScore).toFixed(1)}), tapi detail per-kriterianya gak ke-simpen (data lama sebelum fitur ini ada) — isi ulang semua kriteria dari awal.`;
 
-  const scoreRow = (label, desc, id) => `
+  const scoreRow = (label, desc, id, existingValue) => `
     <div class="criterion-row">
       <div class="name">${label}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ""}
-      <div class="score-select" data-crit-id="${id}">
-        ${[1,2,3,4,5].map(n => `<div class="score-opt" onclick="pickHistoricalScore(this, '${id}', ${n})">${n}</div>`).join("")}
+      <div class="score-select" data-crit-id="${id}" ${existingValue ? `data-value="${existingValue}"` : ""}>
+        ${[1,2,3,4,5].map(n => `<div class="score-opt ${n === existingValue ? "selected" : ""}" onclick="pickHistoricalScore(this, '${id}', ${n})">${n}</div>`).join("")}
       </div>
     </div>`;
 
@@ -1343,12 +1349,12 @@ async function loadHistoricalForm() {
     </div>
     <div class="card">
       <div class="section-title">Section A — Attitude</div>
-      ${cfg.attitude.map((c, i) => scoreRow(c.name, c.description, "A" + i)).join("")}
+      ${cfg.attitude.map((c, i) => scoreRow(c.name, c.description, "A" + i, existingScores.attitude[c.name])).join("")}
       <div class="section-title">Section B — Discipline</div>
-      ${cfg.discipline.map((c, i) => scoreRow(c.name, `${c.dataSource} — Target: ${c.target}`, "B" + i)).join("")}
+      ${cfg.discipline.map((c, i) => scoreRow(c.name, `${c.dataSource} — Target: ${c.target}`, "B" + i, existingScores.discipline[c.name])).join("")}
       ${cfg.placeholder ? `<div class="hint">${cfg.placeholderNote}</div>` : `
         <div class="section-title">Section C — Performance KPI</div>
-        ${cfg.kpi.map((c, i) => scoreRow(c.name, `${c.howToMeasure} — Target: ${c.target}`, "C" + i)).join("")}
+        ${cfg.kpi.map((c, i) => scoreRow(c.name, `${c.howToMeasure} — Target: ${c.target}`, "C" + i, existingScores.kpi[c.name])).join("")}
       `}
       <div class="section-title">Section D — Bonus / Deduction</div>
       ${cfg.bonus.map((b, i) => `
@@ -1358,6 +1364,8 @@ async function loadHistoricalForm() {
         </div>`).join("")}
       <button class="primary" onclick="saveHistoricalAppraisal()" style="margin-top:16px;">Simpan Data Historis</button>
     </div>`;
+
+  if (hasDetailScores) updateHistoricalPreview(); // reflect the pre-filled values immediately, not just after a click
 }
 
 function pickHistoricalScore(el, critId, value) {

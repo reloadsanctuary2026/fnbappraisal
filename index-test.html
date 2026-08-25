@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-104 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-105 — TEST</div>
 
 <script>
 // =================================================================
@@ -323,6 +323,8 @@ function render() {
   if (state.screen === "historical") return renderHistoricalInput();
   if (state.screen === "settings") return renderSettings();
   if (state.screen === "staffMapping") return renderStaffMapping();
+  if (state.screen === "trainingNeeds") return renderTrainingNeeds();
+  if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
   if (state.screen === "company") return renderCompanySummary();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
@@ -646,6 +648,7 @@ function availableScreensGrouped(user) {
     groups.push({ name: "MyAppraisal", items: [
       { key: "self", label: "Appraise Yourself" },
       { key: "history", label: "Track Your Progress" },
+      { key: "myDevelopmentPlan", label: "My Development Plan" },
     ]});
   }
 
@@ -662,6 +665,9 @@ function availableScreensGrouped(user) {
   if (user.isExecutive) {
     teamItems.push({ key: "gm", label: "Approve Final Decisions" });
   }
+  if (user.isLeader || user.isManagement) {
+    teamItems.push({ key: "trainingNeeds", label: "Training Needs" });
+  }
   if (teamItems.length) groups.push({ name: "MyTeams", items: teamItems });
 
   if (user.isExecutive) {
@@ -669,6 +675,7 @@ function availableScreensGrouped(user) {
       { key: "progress", label: "Track Team Compliance" },
       { key: "company", label: "Compare Departments" },
       { key: "feedback", label: "Read Staff Feedback" },
+      { key: "trainingNeeds", label: "Training Needs" },
     ]});
   }
 
@@ -679,6 +686,7 @@ function availableScreensGrouped(user) {
       { key: "sc", label: "Calculate Service Charge" },
       { key: "hrTodos", label: "Track Pending Follow-Ups" },
       { key: "feedback", label: "Read Staff Feedback" },
+      { key: "trainingNeeds", label: "Training Needs" },
     ]});
   }
 
@@ -689,6 +697,7 @@ function availableScreensGrouped(user) {
       { key: "progress", label: "Track Team Compliance" },
       { key: "company", label: "Compare Departments" },
       { key: "feedback", label: "Read Staff Feedback" },
+      { key: "trainingNeeds", label: "Training Needs" },
     ]});
   }
 
@@ -734,7 +743,7 @@ function goToRoleMenu() {
 }
 
 function menuItemHtml(o) {
-  const ACTION_KEYS = ["self", "myEvaluations", "gm", "sc", "hrTodos", "historical"];
+  const ACTION_KEYS = ["self", "myEvaluations", "gm", "sc", "hrTodos", "historical", "trainingNeeds"];
   const isAction = ACTION_KEYS.indexOf(o.key) !== -1;
   const color = isAction ? "var(--coral)" : "var(--teal)";
   const tag = isAction ? "AKSI" : "LIHAT";
@@ -1201,6 +1210,135 @@ async function doChangeOwnPin() {
   document.getElementById("current-pin-input").value = "";
   document.getElementById("new-pin-input").value = "";
   document.getElementById("confirm-pin-input").value = "";
+}
+
+let _isLoadingTrainingNeeds = false;
+async function renderTrainingNeeds() {
+  if (_isLoadingTrainingNeeds) return;
+  _isLoadingTrainingNeeds = true;
+  try {
+    app.innerHTML = topbar("Training Needs") + `<div class="loading">Memuat...</div>`;
+    const [res, staffRes] = await Promise.all([
+      apiGet("getTrainingNeeds", { requesterId: state.user.staffId }),
+      apiGet("getAllAppraisableEmployees", {}),
+    ]);
+    const showMenuLink = availableScreens(state.user).length > 1;
+
+    if (!res.found) {
+      app.innerHTML = topbar("Training Needs") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+      return;
+    }
+
+    const items = res.items || [];
+    const staffOptions = staffRes.staff || [];
+    const statusColor = { "Belum Dimulai": "underperform", "Sedang Berjalan": "pending", "Selesai": "performer" };
+
+    app.innerHTML = topbar("Training Needs") + `
+      ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+      <div class="card">
+        <h2>Tambah Kebutuhan Training</h2>
+        <label>Untuk Siapa</label>
+        <select id="training-staff-select">
+          <option value="">— pilih orang —</option>
+          ${staffOptions.map(s => `<option value="${s.staffId}">${s.name} (${s.tier} — ${s.department})</option>`).join("")}
+        </select>
+        <label>Topik Training</label>
+        <input type="text" id="training-topic-input" placeholder="Contoh: Cara handle komplain tamu" />
+        <label>Prioritas</label>
+        <select id="training-priority-select">
+          <option value="Rendah">Rendah</option>
+          <option value="Sedang" selected>Sedang</option>
+          <option value="Tinggi">Tinggi</option>
+        </select>
+        <label>Catatan (opsional)</label>
+        <input type="text" id="training-notes-input" placeholder="Catatan tambahan" />
+        <div class="hint" id="training-save-note" style="margin-top:8px;"></div>
+        <button class="primary" onclick="doSaveTrainingNeed()" style="margin-top:10px;">Simpan</button>
+      </div>
+      <div class="card">
+        <h2>Daftar Training Needs — ${items.length} entri</h2>
+        ${items.map(t => `
+          <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline;">
+              <div class="name">${t.staffName}</div>
+              <span class="badge ${statusColor[t.status] || "pending"}">${t.status}</span>
+            </div>
+            <div style="font-size:14px; margin:6px 0;">${t.topic}</div>
+            <div class="hint">Prioritas: ${t.priority} · Dicatat oleh: ${t.recordedBy} · ${fullDateLabelID(t.recordedDate)}</div>
+            ${t.notes ? `<div class="hint">Catatan: ${t.notes}</div>` : ""}
+            <select onchange="doUpdateTrainingStatus('${t.trainingId}', '${t.staffId}', this.value)" style="margin-top:6px; max-width:200px;">
+              <option value="Belum Dimulai" ${t.status === "Belum Dimulai" ? "selected" : ""}>Belum Dimulai</option>
+              <option value="Sedang Berjalan" ${t.status === "Sedang Berjalan" ? "selected" : ""}>Sedang Berjalan</option>
+              <option value="Selesai" ${t.status === "Selesai" ? "selected" : ""}>Selesai</option>
+            </select>
+          </div>`).join("")}
+        ${!items.length ? '<div class="hint">Belum ada training needs tercatat.</div>' : ""}
+      </div>
+    `;
+  } finally {
+    _isLoadingTrainingNeeds = false;
+  }
+}
+
+async function doSaveTrainingNeed() {
+  const staffId = document.getElementById("training-staff-select").value;
+  const topic = document.getElementById("training-topic-input").value.trim();
+  const priority = document.getElementById("training-priority-select").value;
+  const notes = document.getElementById("training-notes-input").value.trim();
+  const noteEl = document.getElementById("training-save-note");
+
+  if (!staffId) { noteEl.textContent = "Pilih orangnya dulu."; noteEl.style.color = "var(--red)"; return; }
+  if (!topic) { noteEl.textContent = "Topik training wajib diisi."; noteEl.style.color = "var(--red)"; return; }
+
+  noteEl.textContent = "Menyimpan...";
+  noteEl.style.color = "var(--text-muted)";
+  const res = await apiPost("saveTrainingNeed", { requesterId: state.user.staffId, staffId, topic, priority, notes });
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal simpan: " + friendlyError(res.error);
+    noteEl.style.color = "var(--red)";
+    return;
+  }
+  showToast("Training need tersimpan!");
+  renderTrainingNeeds();
+}
+
+async function doUpdateTrainingStatus(trainingId, staffId, status) {
+  const res = await apiPost("saveTrainingNeed", { requesterId: state.user.staffId, trainingId, staffId, topic: "-", status });
+  if (res.error || res.success === false) { showToast("Gagal update status: " + friendlyError(res.error), "error"); return; }
+  showToast("Status diperbarui!");
+  renderTrainingNeeds();
+}
+
+let _isLoadingMyDevelopmentPlan = false;
+async function renderMyDevelopmentPlan() {
+  if (_isLoadingMyDevelopmentPlan) return;
+  _isLoadingMyDevelopmentPlan = true;
+  try {
+    app.innerHTML = topbar("My Development Plan") + `<div class="loading">Memuat...</div>`;
+    const res = await apiGet("getMyTrainingNeeds", { staffId: state.user.staffId });
+    const showMenuLink = availableScreens(state.user).length > 1;
+    const items = res.items || [];
+    const statusColor = { "Belum Dimulai": "underperform", "Sedang Berjalan": "pending", "Selesai": "performer" };
+
+    app.innerHTML = topbar("My Development Plan") + `
+      ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+      <div class="card">
+        <div class="hint" style="margin-bottom:10px;">Area pengembangan yang dicatat oleh atasan/HR untuk kamu — read only.</div>
+        ${items.map(t => `
+          <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline;">
+              <div class="name">${t.topic}</div>
+              <span class="badge ${statusColor[t.status] || "pending"}">${t.status}</span>
+            </div>
+            <div class="hint">Prioritas: ${t.priority} · ${fullDateLabelID(t.recordedDate)}</div>
+            ${t.notes ? `<div class="hint">Catatan: ${t.notes}</div>` : ""}
+          </div>`).join("")}
+        ${!items.length ? '<div class="hint">Belum ada development plan tercatat untuk kamu.</div>' : ""}
+      </div>
+    `;
+  } finally {
+    _isLoadingMyDevelopmentPlan = false;
+  }
 }
 
 async function renderStaffMapping() {

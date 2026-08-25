@@ -34,6 +34,11 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
   }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .topbar, .card { animation: fadeSlideIn 0.28s ease-out; }
   body {
     margin: 0;
     font-family: "Poppins", ui-rounded, -apple-system, "Segoe UI", Arial, sans-serif;
@@ -173,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-103 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-104 — LIVE</div>
 
 <script>
 // =================================================================
@@ -493,15 +498,19 @@ function openNotifications() {
   render();
 }
 
+let _isLoadingNotifications = false;
 async function renderNotifications() {
-  app.innerHTML = topbar("Notifikasi") + `<div class="loading">Memuat...</div>`;
-  const res = await apiGet("getNotifications", { staffId: state.user.staffId });
-  if (res.error) {
-    app.innerHTML = topbar("Notifikasi") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
-    return;
-  }
-  const list = res.notifications || [];
-  state.unreadCount = list.filter(n => !n.read).length;
+  if (_isLoadingNotifications) return; // ignore rapid repeat clicks while a fetch is already in flight
+  _isLoadingNotifications = true;
+  try {
+    app.innerHTML = topbar("Notifikasi") + `<div class="loading">Memuat...</div>`;
+    const res = await apiGet("getNotifications", { staffId: state.user.staffId });
+    if (res.error) {
+      app.innerHTML = topbar("Notifikasi") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+      return;
+    }
+    const list = res.notifications || [];
+    state.unreadCount = list.filter(n => !n.read).length;
 
   app.innerHTML = topbar("Notifikasi") + `
     <button class="ghost" onclick="goBackFromNotifications()">&larr; Kembali</button>
@@ -516,6 +525,9 @@ async function renderNotifications() {
       </div>`).join("")}
     ${!list.length ? '<div class="hint">Belum ada notifikasi.</div>' : ""}
   `;
+  } finally {
+    _isLoadingNotifications = false;
+  }
 }
 
 async function markRead(id) {
@@ -539,7 +551,7 @@ function renderLogin() {
       <label>NIK (Nomor Induk Karyawan)</label>
       <input type="text" id="nik-input" inputmode="numeric" placeholder="Contoh: 1096" maxlength="10" />
       <div class="error" id="login-error"></div>
-      <button class="primary" onclick="doLoginStep1()">Lanjut</button>
+      <button class="primary" id="login-step1-btn" onclick="doLoginStep1()">Lanjut</button>
     </div>`;
   document.getElementById("nik-input").focus();
   document.getElementById("nik-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep1(); });
@@ -549,7 +561,11 @@ async function doLoginStep1() {
   const nik = document.getElementById("nik-input").value.trim();
   if (!nik) return;
   const errEl = document.getElementById("login-error");
-  errEl.textContent = "Menghubungkan...";
+  const btn = document.getElementById("login-step1-btn");
+  errEl.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Menghubungkan...";
+  btn.style.opacity = "0.7";
   try {
     const res = await apiGetWithRetry("checkNikExists", { nik });
     if (!res.found) {
@@ -566,6 +582,10 @@ async function doLoginStep1() {
   } catch (err) {
     console.error(err);
     errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Lanjut";
+    btn.style.opacity = "1";
   }
 }
 
@@ -577,7 +597,7 @@ function showPinPrompt() {
       <label>PIN 4 digit kamu</label>
       <input type="password" id="pin-code-input" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:22px; letter-spacing:8px; text-align:center;" />
       <div class="error" id="login-error"></div>
-      <button class="primary" onclick="doLoginStep2()">Masuk</button>
+      <button class="primary" id="login-step2-btn" onclick="doLoginStep2()">Masuk</button>
       <button class="ghost" style="margin-top:8px;" onclick="renderLogin()">&larr; Ganti NIK</button>
       <button class="ghost" style="margin-top:4px;" onclick="doRequestPinReset()">Lupa PIN?</button>
     </div>`;
@@ -606,7 +626,9 @@ async function doLoginStep2() {
 
 async function completeLogin(nik, pin) {
   const errEl = document.getElementById("login-error");
-  if (errEl) errEl.textContent = "Menghubungkan...";
+  const btn = document.getElementById("login-step2-btn");
+  if (errEl) errEl.textContent = "";
+  if (btn) { btn.disabled = true; btn.textContent = "Menghubungkan..."; btn.style.opacity = "0.7"; }
   try {
     const res = await apiGetWithRetry("login", { nik, pin }, 2, (r) => r.error !== "invalid_pin" && (!!r.error || r.found === false));
     if (!res.found) {
@@ -619,6 +641,8 @@ async function completeLogin(nik, pin) {
   } catch (err) {
     console.error(err);
     if (errEl) errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Masuk"; btn.style.opacity = "1"; }
   }
 }
 
@@ -1014,7 +1038,11 @@ function changeCompanyMonth(value) {
   renderCompanySummary();
 }
 
+let _isLoadingSettings = false;
 async function renderSettings() {
+  if (_isLoadingSettings) return; // ignore rapid repeat clicks while a fetch is already in flight
+  _isLoadingSettings = true;
+  try {
   app.innerHTML = topbar("Pengaturan Akun") + `<div class="loading">Memuat...</div>`;
   const [profile, photoRes] = await Promise.all([
     apiGet("getMyProfile", { staffId: state.user.staffId }),
@@ -1086,6 +1114,9 @@ async function renderSettings() {
       </div>
     </div>
   `;
+  } finally {
+    _isLoadingSettings = false;
+  }
 }
 
 function toggleSettingsSection(key) {

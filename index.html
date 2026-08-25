@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-105 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-106 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1230,7 +1230,7 @@ async function renderTrainingNeeds() {
     app.innerHTML = topbar("Training Needs") + `<div class="loading">Memuat...</div>`;
     const [res, staffRes] = await Promise.all([
       apiGet("getTrainingNeeds", { requesterId: state.user.staffId }),
-      apiGet("getAllAppraisableEmployees", {}),
+      apiGet("getReviewableEmployees", { requesterId: state.user.staffId }),
     ]);
     const showMenuLink = availableScreens(state.user).length > 1;
 
@@ -1313,7 +1313,7 @@ async function doSaveTrainingNeed() {
 }
 
 async function doUpdateTrainingStatus(trainingId, staffId, status) {
-  const res = await apiPost("saveTrainingNeed", { requesterId: state.user.staffId, trainingId, staffId, topic: "-", status });
+  const res = await apiPost("saveTrainingNeed", { requesterId: state.user.staffId, trainingId, staffId, status });
   if (res.error || res.success === false) { showToast("Gagal update status: " + friendlyError(res.error), "error"); return; }
   showToast("Status diperbarui!");
   renderTrainingNeeds();

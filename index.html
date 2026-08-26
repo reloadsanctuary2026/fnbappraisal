@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-107 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-108 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1001,7 +1001,7 @@ function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
 // =================================================================
 async function renderCompanySummary() {
   app.innerHTML = topbar("Compare Departments") + `<div class="loading">Memuat ringkasan...</div>`;
-  const res = await apiGet("getCompanySummary", { month: state.month });
+  const res = await apiGet("getCompanySummary", { requesterId: state.user.staffId, month: state.month });
   if (res.error) {
     app.innerHTML = topbar("Compare Departments") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
@@ -1421,7 +1421,7 @@ async function renderHistoricalInput() {
 
 async function loadHistoricalStaffList(month) {
   state._historicalMonth = month;
-  const res = await apiGet("getHistoricalCompletionStatus", { month });
+  const res = await apiGet("getHistoricalCompletionStatus", { requesterId: state.user.staffId, month });
   const staffList = res.staff || [];
   state._historicalFullList = staffList;
   const doneCount = staffList.filter(s => s.hasData).length;
@@ -1821,7 +1821,7 @@ async function doSaveActionItem(actionId) {
 
 async function renderEvaluatorProgress() {
   app.innerHTML = topbar("Track Team Compliance") + `<div class="loading">Memuat progress...</div>`;
-  const res = await apiGet("getEvaluatorProgress", {});
+  const res = await apiGet("getEvaluatorProgress", { requesterId: state.user.staffId });
   if (res.error) {
     app.innerHTML = topbar("Track Team Compliance") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
@@ -2921,7 +2921,7 @@ async function submitDecision(staffId) {
 // =================================================================
 async function renderHrFollowUpTodos() {
   app.innerHTML = topbar("Track Pending Follow-Ups") + `<div class="loading">Memuat...</div>`;
-  const res = await apiGet("getHrFollowUpTodos", {});
+  const res = await apiGet("getHrFollowUpTodos", { requesterId: state.user.staffId });
   if (res.error) {
     app.innerHTML = topbar("Track Pending Follow-Ups") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
@@ -2959,7 +2959,7 @@ async function resolveFollowUp(month, staffId) {
 
 async function renderScInput() {
   app.innerHTML = topbar("Calculate Service Charge") + `<div class="loading">Memuat data...</div>`;
-  const pool = await apiGet("getScPool", { month: state.month });
+  const pool = await apiGet("getScPool", { requesterId: state.user.staffId, month: state.month });
   if (pool.error) {
     app.innerHTML = topbar("Calculate Service Charge") + `<div class="card"><div class="error">${friendlyError(pool.error)}</div></div>`;
     return;
@@ -3039,7 +3039,7 @@ function changeGmMonth(value) {
 async function doExportSc() {
   const noteEl = document.getElementById("sc-export-note");
   noteEl.textContent = "Membuat sheet export...";
-  const res = await apiPost("exportScBreakdown", { month: state.month });
+  const res = await apiPost("exportScBreakdown", { requesterId: state.user.staffId, month: state.month });
   if (res.error || res.success === false) {
     noteEl.textContent = "Gagal export: " + friendlyError(res.error);
     return;

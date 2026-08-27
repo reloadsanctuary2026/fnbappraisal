@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-114 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-115 — TEST</div>
 
 <script>
 // =================================================================
@@ -1297,6 +1297,29 @@ async function renderMyDevelopmentPlan() {
 }
 
 let _isLoadingKpiManagement = false;
+function kpiCoverageSummary(res) {
+  const withCriteria = [];
+  const withoutCriteria = [];
+  res.allPositionKeys.forEach(k => {
+    const isDept = (res.departmentKeys || []).indexOf(k) !== -1;
+    const label = k + (isDept ? " (Department)" : "");
+    if (res.kpiByPosition[k] && res.kpiByPosition[k].length) {
+      withCriteria.push(`${label} — ${res.kpiByPosition[k].length} kriteria`);
+    } else {
+      withoutCriteria.push(label);
+    }
+  });
+
+  return `
+    <div class="card">
+      <h2>📋 Ringkasan Cakupan KPI</h2>
+      <div class="section-title" style="background:linear-gradient(90deg, var(--green), #0f7a4f); margin-top:0;">✅ Sudah Ada Kriteria (${withCriteria.length})</div>
+      ${withCriteria.length ? `<ul style="margin:0 0 12px; padding-left:20px; font-size:13px; line-height:1.8;">${withCriteria.map(x => `<li>${x}</li>`).join("")}</ul>` : '<div class="hint">Belum ada satupun.</div>'}
+      <div class="section-title" style="background:linear-gradient(90deg, var(--red), #8a2318);">⭕ Belum Ada Kriteria (${withoutCriteria.length})</div>
+      ${withoutCriteria.length ? `<ul style="margin:0; padding-left:20px; font-size:13px; line-height:1.8; color:var(--red);">${withoutCriteria.map(x => `<li>${x}</li>`).join("")}</ul>` : '<div class="hint">Semua posisi udah punya kriteria!</div>'}
+    </div>`;
+}
+
 async function renderKpiManagement() {
   if (_isLoadingKpiManagement) return;
   _isLoadingKpiManagement = true;
@@ -1357,6 +1380,7 @@ function renderKpiManagementBody() {
         <button class="${section === "kpi" ? "primary" : "secondary"}" style="flex:1;" onclick="switchKpiManagementSection('kpi')">KPI</button>
       </div>
     </div>
+    ${section === "kpi" ? kpiCoverageSummary(res) : ""}
     <div class="card">
       <h2>Kriteria yang Ada</h2>
       ${listHtml}

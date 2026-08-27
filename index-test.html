@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-117 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-119 — TEST</div>
 
 <script>
 // =================================================================
@@ -1375,7 +1375,7 @@ function renderKpiManagementBody() {
     const items = res.kpiByPosition[position] || [];
     listHtml = `
       <label>Pilih Department / Job Title</label>
-      <div class="hint" style="margin-bottom:8px;">Kriteria untuk Job Title spesifik (misal "Steward") akan dipakai duluan buat orang dengan Job Title itu. Kalau belum ada, otomatis pakai kriteria level Department (misal "Kitchen") sebagai cadangan.</div>
+      <div class="hint" style="margin-bottom:8px;">Kriteria khusus untuk Job Title tertentu (misalnya "Steward") akan digunakan terlebih dahulu untuk orang dengan Job Title tersebut. Jika belum tersedia, sistem otomatis menggunakan kriteria level Department (misalnya "Kitchen") sebagai cadangan.</div>
       <select onchange="switchKpiManagementPosition(this.value)">
         ${res.allPositionKeys.map(k => {
           const isDept = (res.departmentKeys || []).indexOf(k) !== -1;
@@ -1442,8 +1442,28 @@ function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey, r
           <button class="ghost" onclick="doDeleteKpiCriterion('${section}', ${rowIndex})">🗑️</button>
         </div>
       </div>
-      ${rubric ? `<div class="hint" style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); white-space:pre-line;">📏 ${rubric}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">Belum ada rubrik skoring.</div>`}
+      ${rubric ? `<div class="hint" style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); white-space:pre-line;">📏 ${rubric}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">Rubrik skoring belum tersedia untuk kriteria ini.</div>`}
     </div>`;
+}
+
+/** Soft nudge, not a hard block — rubrik is optional, so this never prevents saving. Just
+ *  flags the most common low-effort patterns (too short, or clearly no real content) so
+ *  whoever's filling it in notices before they move on, without being forced into a rigid
+ *  format that might not fit every criterion. */
+function checkRubricQuality(el) {
+  const warningEl = document.getElementById("kpi-form-rubric-warning");
+  const text = el.value.trim();
+  if (!text) { warningEl.textContent = ""; return; }
+  if (text.length < 20) {
+    warningEl.textContent = "⚠️ Kelihatannya masih terlalu singkat buat jadi panduan yang jelas — coba jelasin kondisi konkret di tiap level skor.";
+    warningEl.style.color = "var(--coral)";
+  } else if (!/skor|score|level|nilai/i.test(text)) {
+    warningEl.textContent = "⚠️ Belum kelihatan ada pembagian per level skor (1, 3, 5) — pastikan jelas bedanya tiap level.";
+    warningEl.style.color = "var(--coral)";
+  } else {
+    warningEl.textContent = "✅ Kelihatan cukup jelas.";
+    warningEl.style.color = "var(--green)";
+  }
 }
 
 function kpiAddForm(section, label1, label2, label3, positionKey) {
@@ -1455,8 +1475,9 @@ function kpiAddForm(section, label1, label2, label3, positionKey) {
     <input type="text" id="kpi-form-name" placeholder="${label1}" />
     ${label2 ? `<label>${label2}</label><input type="text" id="kpi-form-field2" placeholder="${label2}" />` : ""}
     ${label3 ? `<label>${label3}</label><input type="text" id="kpi-form-field3" placeholder="${label3}" />` : ""}
-    <label>Rubrik Skoring (opsional, tapi disaranin)</label>
-    <textarea id="kpi-form-rubric" rows="4" placeholder="Contoh:&#10;Skor 1 = ...&#10;Skor 3 = ...&#10;Skor 5 = ..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px; margin-bottom:14px;"></textarea>
+    <label>Rubrik Skoring (opsional, tapi disarankan)</label>
+    <textarea id="kpi-form-rubric" rows="5" placeholder="Contoh nyata (kriteria Teamwork):&#10;Skor 1 = Sering menolak membantu rekan kerja, sikap tidak kooperatif.&#10;Skor 3 = Membantu rekan kerja jika diminta, kerja sama cukup baik.&#10;Skor 5 = Proaktif membantu tanpa diminta, sering jadi penengah saat ada konflik tim." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px; margin-bottom:6px;" oninput="checkRubricQuality(this)"></textarea>
+    <div class="hint" id="kpi-form-rubric-warning" style="margin-bottom:14px;"></div>
   `;
 }
 
@@ -1479,6 +1500,7 @@ function editKpiCriterion(section, rowIndex, name, field2, field3, rubric, posit
   const f3 = document.getElementById("kpi-form-field3");
   if (f3) f3.value = field3 || "";
   document.getElementById("kpi-form-rubric").value = rubric || "";
+  checkRubricQuality(document.getElementById("kpi-form-rubric"));
   const noteEl = document.getElementById("kpi-mgmt-note");
   noteEl.textContent = "Mode edit — ubah field di atas lalu tekan Simpan.";
   noteEl.style.color = "var(--coral)";

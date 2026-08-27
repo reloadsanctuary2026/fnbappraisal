@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-108 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-110 — TEST</div>
 
 <script>
 // =================================================================
@@ -318,14 +318,13 @@ function render() {
   if (state.screen === "self") return renderAppraisalForm({ evaluatorType: "self", target: state.user });
   if (state.screen === "myEvaluations") return renderMyEvaluations();
   if (state.screen === "review") return renderReview();
-  if (state.screen === "progress") return renderEvaluatorProgress();
   if (state.screen === "feedback") return renderStaffFeedback();
   if (state.screen === "historical") return renderHistoricalInput();
   if (state.screen === "settings") return renderSettings();
   if (state.screen === "staffMapping") return renderStaffMapping();
+  if (state.screen === "kpiManagement") return renderKpiManagement();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
   if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
-  if (state.screen === "company") return renderCompanySummary();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
   if (state.screen === "sc") return renderScInput();
@@ -659,9 +658,6 @@ function availableScreensGrouped(user) {
   if (user.isLeader || user.isManagement) {
     teamItems.push({ key: "review", label: "Review Your Team" });
   }
-  if (user.isManagement) {
-    teamItems.push({ key: "company", label: "Compare Departments" });
-  }
   if (user.isExecutive) {
     teamItems.push({ key: "gm", label: "Approve Final Decisions" });
   }
@@ -673,10 +669,9 @@ function availableScreensGrouped(user) {
   if (user.isExecutive) {
     groups.push({ name: "MyReport", items: [
       { key: "review", label: "Review Everyone's Records" },
-      { key: "progress", label: "Track Team Compliance" },
-      { key: "company", label: "Compare Departments" },
       { key: "feedback", label: "Read Staff Feedback" },
       { key: "trainingNeeds", label: "Training Needs" },
+      { key: "kpiManagement", label: "Manage KPI Criteria" },
     ]});
   }
 
@@ -688,6 +683,7 @@ function availableScreensGrouped(user) {
       { key: "hrTodos", label: "Track Pending Follow-Ups" },
       { key: "feedback", label: "Read Staff Feedback" },
       { key: "trainingNeeds", label: "Training Needs" },
+      { key: "kpiManagement", label: "Manage KPI Criteria" },
     ]});
   }
 
@@ -695,10 +691,9 @@ function availableScreensGrouped(user) {
     groups.push({ name: "MyOperational", items: [
       { key: "historical", label: "Input Data Historis" },
       { key: "review", label: "Review Everyone's Records" },
-      { key: "progress", label: "Track Team Compliance" },
-      { key: "company", label: "Compare Departments" },
       { key: "feedback", label: "Read Staff Feedback" },
       { key: "trainingNeeds", label: "Training Needs" },
+      { key: "kpiManagement", label: "Manage KPI Criteria" },
     ]});
   }
 
@@ -989,54 +984,6 @@ function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
 // area, HR & Executive see everyone). No approve buttons here; approval
 // stays on the Executive-only GM dashboard.
 // =================================================================
-async function renderCompanySummary() {
-  app.innerHTML = topbar("Compare Departments") + `<div class="loading">Memuat ringkasan...</div>`;
-  const res = await apiGet("getCompanySummary", { requesterId: state.user.staffId, month: state.month });
-  if (res.error) {
-    app.innerHTML = topbar("Compare Departments") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
-    return;
-  }
-  const showMenuLink = availableScreens(state.user).length > 1;
-  const statBox = (label, value, color) => `
-    <div style="flex:1; min-width:120px; background:var(--sand); border-radius:12px; padding:12px; text-align:center;">
-      <div style="font-size:22px; font-weight:800; color:${color || "var(--teal)"};">${value}</div>
-      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${label}</div>
-    </div>`;
-
-  app.innerHTML = topbar("Compare Departments") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
-    <div class="card">
-      <label>Bulan</label>
-      <input type="month" id="month-picker" value="${state.month}" onchange="changeCompanyMonth(this.value)" />
-    </div>
-    <div class="card">
-      <div class="row-flex" style="flex-wrap:wrap; gap:8px;">
-        ${statBox("Total Appraisal", res.total)}
-        ${statBox("Rata-rata Skor", res.avgScore.toFixed(1))}
-        ${statBox("Performer", res.performerCount, "var(--green)")}
-        ${statBox("Underperform", res.underperformCount, "var(--red)")}
-        ${statBox("Sudah Di-approve", `${res.approvedCount}/${res.total}`, "var(--gold)")}
-      </div>
-    </div>
-    <div class="card">
-      <h2>Rata-rata Skor per Department/Tier</h2>
-      ${res.departmentBreakdown.map(d => `
-        <div class="staff-row" style="cursor:default; display:block;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div class="name">${d.department} <span style="font-weight:400; color:var(--text-muted);">(${d.count} orang)</span></div>
-            <span class="badge ${d.avgScore >= 60 ? "performer" : "underperform"}">${d.avgScore.toFixed(1)}</span>
-          </div>
-          ${d.underperformCount > 0 ? `<div class="dept" style="margin-top:4px; color:var(--red);">${d.underperformCount} underperform</div>` : ""}
-        </div>`).join("")}
-      ${!res.departmentBreakdown.length ? '<div class="hint">Belum ada data untuk bulan ini.</div>' : ""}
-    </div>`;
-}
-
-function changeCompanyMonth(value) {
-  if (!value) return;
-  state.month = value;
-  renderCompanySummary();
-}
 
 let _isLoadingSettings = false;
 async function renderSettings() {
@@ -1340,6 +1287,163 @@ async function renderMyDevelopmentPlan() {
   } finally {
     _isLoadingMyDevelopmentPlan = false;
   }
+}
+
+let _isLoadingKpiManagement = false;
+async function renderKpiManagement() {
+  if (_isLoadingKpiManagement) return;
+  _isLoadingKpiManagement = true;
+  try {
+    app.innerHTML = topbar("Manage KPI Criteria") + `<div class="loading">Memuat...</div>`;
+    const res = await apiGet("getAllKpiCriteriaForManagement", { requesterId: state.user.staffId });
+    if (!res.found) {
+      app.innerHTML = topbar("Manage KPI Criteria") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+      return;
+    }
+    state._kpiMgmtData = res;
+    if (!state._kpiMgmtSection) state._kpiMgmtSection = "attitude";
+    renderKpiManagementBody();
+  } finally {
+    _isLoadingKpiManagement = false;
+  }
+}
+
+function renderKpiManagementBody() {
+  const res = state._kpiMgmtData;
+  const section = state._kpiMgmtSection;
+  const showMenuLink = availableScreens(state.user).length > 1;
+
+  let listHtml, addFormHtml;
+  if (section === "attitude") {
+    listHtml = res.attitude.map(c => kpiCriterionRow("attitude", c.rowIndex, c.name, c.description, null)).join("");
+    addFormHtml = kpiAddForm("attitude", "Nama Kriteria", "Deskripsi", null);
+  } else if (section === "discipline") {
+    listHtml = res.discipline.map(c => kpiCriterionRow("discipline", c.rowIndex, c.name, c.dataSource, c.target)).join("");
+    addFormHtml = kpiAddForm("discipline", "Nama Kriteria", "Sumber Data", "Target");
+  } else {
+    const position = state._kpiMgmtPosition || Object.keys(res.kpiByPosition)[0] || res.allPositionKeys[0];
+    state._kpiMgmtPosition = position;
+    const items = res.kpiByPosition[position] || [];
+    listHtml = `
+      <label>Pilih Department / Job Title</label>
+      <select onchange="switchKpiManagementPosition(this.value)">
+        ${res.allPositionKeys.map(k => `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k}${res.kpiByPosition[k] ? ` (${res.kpiByPosition[k].length} kriteria)` : " (belum ada kriteria)"}</option>`).join("")}
+      </select>
+      ${items.map(c => kpiCriterionRow("kpi", c.rowIndex, c.name, c.howToMeasure, c.target, position)).join("")}
+      ${!items.length ? '<div class="hint">Belum ada kriteria KPI buat posisi ini.</div>' : ""}
+    `;
+    addFormHtml = kpiAddForm("kpi", "Nama Kriteria", "Cara Ukur", "Target", position);
+  }
+
+  app.innerHTML = topbar("Manage KPI Criteria") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <div class="row-flex" style="margin-bottom:4px;">
+        <button class="${section === "attitude" ? "primary" : "secondary"}" style="flex:1;" onclick="switchKpiManagementSection('attitude')">Attitude</button>
+        <button class="${section === "discipline" ? "primary" : "secondary"}" style="flex:1;" onclick="switchKpiManagementSection('discipline')">Discipline</button>
+        <button class="${section === "kpi" ? "primary" : "secondary"}" style="flex:1;" onclick="switchKpiManagementSection('kpi')">KPI</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Kriteria yang Ada</h2>
+      ${listHtml}
+    </div>
+    <div class="card">
+      <h2>+ Tambah Kriteria Baru</h2>
+      ${addFormHtml}
+      <div class="hint" id="kpi-mgmt-note" style="margin-top:8px;"></div>
+      <button class="primary" onclick="doSaveKpiCriterion()" style="margin-top:10px;">Simpan Kriteria Baru</button>
+    </div>
+  `;
+}
+
+function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey) {
+  return `
+    <div style="border:1.5px solid var(--border); border-radius:12px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <div>
+        <div class="name">${name}</div>
+        <div class="hint">${field2 || ""}${field3 ? " — Target: " + field3 : ""}</div>
+      </div>
+      <div style="display:flex; gap:6px; flex:0 0 auto;">
+        <button class="ghost" onclick="editKpiCriterion('${section}', ${rowIndex}, '${escapeAttr(name)}', '${escapeAttr(field2 || "")}', '${escapeAttr(field3 || "")}'${positionKey ? `, '${escapeAttr(positionKey)}'` : ""})">✏️</button>
+        <button class="ghost" onclick="doDeleteKpiCriterion('${section}', ${rowIndex})">🗑️</button>
+      </div>
+    </div>`;
+}
+
+function kpiAddForm(section, label1, label2, label3, positionKey) {
+  return `
+    <input type="hidden" id="kpi-form-row-index" value="" />
+    <input type="hidden" id="kpi-form-section" value="${section}" />
+    ${positionKey ? `<input type="hidden" id="kpi-form-position" value="${escapeAttr(positionKey)}" />` : ""}
+    <label>${label1}</label>
+    <input type="text" id="kpi-form-name" placeholder="${label1}" />
+    ${label2 ? `<label>${label2}</label><input type="text" id="kpi-form-field2" placeholder="${label2}" />` : ""}
+    ${label3 ? `<label>${label3}</label><input type="text" id="kpi-form-field3" placeholder="${label3}" />` : ""}
+  `;
+}
+
+function switchKpiManagementSection(section) {
+  state._kpiMgmtSection = section;
+  state._kpiMgmtPosition = null;
+  renderKpiManagementBody();
+}
+
+function switchKpiManagementPosition(position) {
+  state._kpiMgmtPosition = position;
+  renderKpiManagementBody();
+}
+
+function editKpiCriterion(section, rowIndex, name, field2, field3, positionKey) {
+  document.getElementById("kpi-form-row-index").value = rowIndex;
+  document.getElementById("kpi-form-name").value = name;
+  const f2 = document.getElementById("kpi-form-field2");
+  if (f2) f2.value = field2 || "";
+  const f3 = document.getElementById("kpi-form-field3");
+  if (f3) f3.value = field3 || "";
+  const noteEl = document.getElementById("kpi-mgmt-note");
+  noteEl.textContent = "Mode edit — ubah field di atas lalu tekan Simpan.";
+  noteEl.style.color = "var(--coral)";
+  document.getElementById("kpi-form-name").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function doSaveKpiCriterion() {
+  const section = document.getElementById("kpi-form-section").value;
+  const rowIndex = document.getElementById("kpi-form-row-index").value;
+  const name = document.getElementById("kpi-form-name").value.trim();
+  const field2El = document.getElementById("kpi-form-field2");
+  const field3El = document.getElementById("kpi-form-field3");
+  const positionEl = document.getElementById("kpi-form-position");
+  const noteEl = document.getElementById("kpi-mgmt-note");
+
+  if (!name) { noteEl.textContent = "Nama kriteria wajib diisi."; noteEl.style.color = "var(--red)"; return; }
+
+  noteEl.textContent = "Menyimpan...";
+  noteEl.style.color = "var(--text-muted)";
+  const payload = {
+    requesterId: state.user.staffId, section, name,
+    field2: field2El ? field2El.value.trim() : "",
+    field3: field3El ? field3El.value.trim() : "",
+  };
+  if (rowIndex) payload.rowIndex = Number(rowIndex);
+  if (positionEl) payload.positionKey = positionEl.value;
+
+  const res = await apiPost("saveKpiCriterion", payload);
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal simpan: " + friendlyError(res.error);
+    noteEl.style.color = "var(--red)";
+    return;
+  }
+  showToast(rowIndex ? "Kriteria berhasil diperbarui!" : "Kriteria baru berhasil ditambahkan!");
+  renderKpiManagement();
+}
+
+async function doDeleteKpiCriterion(section, rowIndex) {
+  if (!confirm("Yakin hapus kriteria ini? Tindakan ini gak bisa dibatalkan.")) return;
+  const res = await apiPost("deleteKpiCriterion", { requesterId: state.user.staffId, section, rowIndex });
+  if (res.error || res.success === false) { showToast("Gagal hapus: " + friendlyError(res.error), "error"); return; }
+  showToast("Kriteria berhasil dihapus!");
+  renderKpiManagement();
 }
 
 async function renderStaffMapping() {
@@ -1809,43 +1913,10 @@ async function doSaveActionItem(actionId) {
   renderStaffFeedback();
 }
 
-async function renderEvaluatorProgress() {
-  app.innerHTML = topbar("Track Team Compliance") + `<div class="loading">Memuat progress...</div>`;
-  const res = await apiGet("getEvaluatorProgress", { requesterId: state.user.staffId });
-  if (res.error) {
-    app.innerHTML = topbar("Track Team Compliance") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
-    return;
-  }
-  const progress = (res.progress || []).sort((a, b) => a.percentage - b.percentage);
-  const showMenuLink = availableScreens(state.user).length > 1;
 
-  const groupOrder = ["Leader", "Management", "HR"];
-  const groupLabel = { Leader: "Leader", Management: "Management", HR: "HR" };
-
-  const rowHtml = (p) => {
-    const barColor = p.percentage >= 100 ? "var(--green)" : p.percentage >= 50 ? "var(--amber)" : "var(--red)";
-    return `
-      <div class="staff-row" style="cursor:default; display:block;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div class="name">${p.name}</div>
-          <span class="badge" style="background:${p.percentage >= 100 ? "var(--green-bg)" : p.percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${p.doneTargets}/${p.totalTargets} (${p.percentage}%)</span>
-        </div>
-        <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin-top:8px; overflow:hidden;">
-          <div style="width:${p.percentage}%; height:100%; background:${barColor};"></div>
-        </div>
-      </div>`;
-  };
-
-  app.innerHTML = topbar("Track Team Compliance") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
-    <div class="hint" style="margin-top:8px;">Progress evaluator bulan ini — belum termasuk skor, cuma status "sudah/belum isi appraisal".</div>
-    ${groupOrder.map(tier => {
-      const group = progress.filter(p => p.tier === tier);
-      if (!group.length) return "";
-      return `<div class="card"><h2>${groupLabel[tier]} (${group.length} orang)</h2>${group.map(rowHtml).join("")}</div>`;
-    }).join("")}
-    ${!progress.length ? '<div class="card"><div class="hint">Belum ada evaluator (Leader/Management/HR) yang terdaftar.</div></div>' : ""}
-  `;
+function switchReviewViewMode(mode) {
+  state._reviewViewMode = mode;
+  renderReview();
 }
 
 function changeReviewMonth(value) {
@@ -1855,57 +1926,143 @@ function changeReviewMonth(value) {
 }
 
 async function renderReview() {
-  app.innerHTML = topbar(state.user.isHR ? "Review Everyone's Records" : "Review Your Team") + `<div class="loading">Memuat data...</div>`;
-  const res = await apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month });
+  const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? "Review Everyone's Records" : "Review Your Team";
+  const canCompare = state.user.isManagement || state.user.isExecutive || state.user.isAdminOperational || state.user.isHR;
+  const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational;
+  const viewMode = state._reviewViewMode || "individual";
+
+  app.innerHTML = topbar(title) + `<div class="loading">Memuat data...</div>`;
+  const [res, companyRes, progressRes] = await Promise.all([
+    apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month }),
+    canCompare ? apiGet("getCompanySummary", { requesterId: state.user.staffId, month: state.month }) : Promise.resolve(null),
+    canSeeCompliance ? apiGet("getEvaluatorProgress", { requesterId: state.user.staffId }) : Promise.resolve(null),
+  ]);
   if (res.error) {
-    app.innerHTML = topbar(state.user.isHR ? "Review Everyone's Records" : "Review Your Team") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+    app.innerHTML = topbar(title) + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
   const rows = res.rows || [];
   const showMenuLink = availableScreens(state.user).length > 1;
   const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
 
-  app.innerHTML = topbar(state.user.isHR ? "Review Everyone's Records" : "Review Your Team") + `
+  const toggleHtml = (canCompare || canSeeCompliance) ? `
+    <div class="row-flex" style="margin-bottom:10px;">
+      <button class="${viewMode === "individual" ? "primary" : "secondary"}" style="flex:1;" onclick="switchReviewViewMode('individual')">Per Orang</button>
+      ${canCompare ? `<button class="${viewMode === "department" ? "primary" : "secondary"}" style="flex:1;" onclick="switchReviewViewMode('department')">Per Department</button>` : ""}
+      ${canSeeCompliance ? `<button class="${viewMode === "compliance" ? "primary" : "secondary"}" style="flex:1;" onclick="switchReviewViewMode('compliance')">Compliance</button>` : ""}
+    </div>` : "";
+
+  let bodyHtml;
+  if (viewMode === "compliance" && progressRes) {
+    if (progressRes.error) {
+      bodyHtml = `<div class="card"><div class="error">${friendlyError(progressRes.error)}</div></div>`;
+    } else {
+      const progress = (progressRes.progress || []).sort((a, b) => a.percentage - b.percentage);
+      const groupOrder = ["Leader", "Management", "HR"];
+      const groupLabel = { Leader: "Leader", Management: "Management", HR: "HR" };
+      const rowHtml = (p) => {
+        const barColor = p.percentage >= 100 ? "var(--green)" : p.percentage >= 50 ? "var(--amber)" : "var(--red)";
+        return `
+          <div class="staff-row" style="cursor:default; display:block;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div class="name">${p.name}</div>
+              <span class="badge" style="background:${p.percentage >= 100 ? "var(--green-bg)" : p.percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${p.doneTargets}/${p.totalTargets} (${p.percentage}%)</span>
+            </div>
+            <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin-top:8px; overflow:hidden;">
+              <div style="width:${p.percentage}%; height:100%; background:${barColor};"></div>
+            </div>
+          </div>`;
+      };
+      bodyHtml = `
+        <div class="card">
+          <div class="hint">Progress evaluator bulan ini — belum termasuk skor, cuma status "sudah/belum isi appraisal".</div>
+        </div>
+        ${groupOrder.map(tier => {
+          const group = progress.filter(p => p.tier === tier);
+          if (!group.length) return "";
+          return `<div class="card"><h2>${groupLabel[tier]} (${group.length} orang)</h2>${group.map(rowHtml).join("")}</div>`;
+        }).join("")}
+        ${!progress.length ? '<div class="card"><div class="hint">Belum ada evaluator (Leader/Management/HR) yang terdaftar.</div></div>' : ""}`;
+    }
+  } else if (viewMode === "department" && companyRes) {
+    if (companyRes.error) {
+      bodyHtml = `<div class="card"><div class="error">${friendlyError(companyRes.error)}</div></div>`;
+    } else {
+      const statBox = (label, value, color) => `
+        <div style="flex:1; min-width:120px; background:var(--sand); border-radius:12px; padding:12px; text-align:center;">
+          <div style="font-size:22px; font-weight:800; color:${color || "var(--teal)"};">${value}</div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${label}</div>
+        </div>`;
+      bodyHtml = `
+        <div class="card">
+          <div class="row-flex" style="flex-wrap:wrap; gap:8px;">
+            ${statBox("Total Appraisal", companyRes.total)}
+            ${statBox("Rata-rata Skor", companyRes.avgScore.toFixed(1))}
+            ${statBox("Performer", companyRes.performerCount, "var(--green)")}
+            ${statBox("Underperform", companyRes.underperformCount, "var(--red)")}
+            ${statBox("Sudah Di-approve", `${companyRes.approvedCount}/${companyRes.total}`, "var(--gold)")}
+          </div>
+        </div>
+        <div class="card">
+          <h2>Rata-rata Skor per Department/Tier</h2>
+          ${companyRes.departmentBreakdown.map(d => `
+            <div class="staff-row" style="cursor:default; display:block;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="name">${d.department} <span style="font-weight:400; color:var(--text-muted);">(${d.count} orang)</span></div>
+                <span class="badge ${d.avgScore >= 60 ? "performer" : "underperform"}">${d.avgScore.toFixed(1)}</span>
+              </div>
+              ${d.underperformCount > 0 ? `<div class="dept" style="margin-top:4px; color:var(--red);">${d.underperformCount} underperform</div>` : ""}
+            </div>`).join("")}
+          ${!companyRes.departmentBreakdown.length ? '<div class="hint">Belum ada data untuk bulan ini.</div>' : ""}
+        </div>`;
+    }
+  } else {
+    bodyHtml = `
+      <input type="text" placeholder="Cari nama..." oninput="updateReviewFilter('search', this.value)" style="margin-bottom:10px;" />
+      <div class="row-flex" style="margin-bottom:10px;">
+        <select onchange="sortReviewList(this.value)">
+          <option value="">Urutkan...</option>
+          <option value="name-asc">Nama (A-Z)</option>
+          <option value="name-desc">Nama (Z-A)</option>
+          <option value="score-desc">Skor Tertinggi</option>
+          <option value="score-asc">Skor Terendah</option>
+        </select>
+        <select onchange="updateReviewFilter('department', this.value)">
+          <option value="">Semua Department</option>
+          ${[...new Set(rows.map(r => r.department !== "-" ? r.department : r.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
+        </select>
+      </div>
+      <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">Underperform Saja</button>
+      <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
+        <div class="hint">${rows.length} appraisal record — read only</div>
+        <button class="secondary" onclick="doExportReview()">📊 Export ke Excel</button>
+      </div>
+      <div class="hint" id="review-export-note"></div>
+      <div id="review-list-container">
+      ${rows.map(r => `
+        <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-department="${escapeAttr(r.department !== "-" ? r.department : r.tier)}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:default;">
+          <div>
+            <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
+            <div class="dept">${monthLabelID(r.month)} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
+            <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? fullDateLabelID(r.contractEndDate) : "-"}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
+            <span class="badge ${r.approvalStatus === 'Approved' ? 'done' : 'pending'}">${statusLabelID(r.approvalStatus || 'Pending')}</span>
+          </div>
+        </div>`).join("")}
+      </div>
+      ${!rows.length ? '<div class="hint">Belum ada data appraisal di scope kamu.</div>' : ""}`;
+  }
+
+  app.innerHTML = topbar(title) + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <label>Bulan</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
     </div>
-    <input type="text" placeholder="Cari nama..." oninput="updateReviewFilter('search', this.value)" style="margin-bottom:10px;" />
-    <div class="row-flex" style="margin-bottom:10px;">
-      <select onchange="sortReviewList(this.value)">
-        <option value="">Urutkan...</option>
-        <option value="name-asc">Nama (A-Z)</option>
-        <option value="name-desc">Nama (Z-A)</option>
-        <option value="score-desc">Skor Tertinggi</option>
-        <option value="score-asc">Skor Terendah</option>
-      </select>
-      <select onchange="updateReviewFilter('department', this.value)">
-        <option value="">Semua Department</option>
-        ${[...new Set(rows.map(r => r.department !== "-" ? r.department : r.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
-      </select>
-    </div>
-    <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">Underperform Saja</button>
-    <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
-      <div class="hint">${rows.length} appraisal record — read only</div>
-      <button class="secondary" onclick="doExportReview()">📊 Export ke Excel</button>
-    </div>
-    <div class="hint" id="review-export-note"></div>
-    <div id="review-list-container">
-    ${rows.map(r => `
-      <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-department="${escapeAttr(r.department !== "-" ? r.department : r.tier)}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:default;">
-        <div>
-          <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
-          <div class="dept">${monthLabelID(r.month)} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
-          <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? fullDateLabelID(r.contractEndDate) : "-"}</div>
-        </div>
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-          <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
-          <span class="badge ${r.approvalStatus === 'Approved' ? 'done' : 'pending'}">${statusLabelID(r.approvalStatus || 'Pending')}</span>
-        </div>
-      </div>`).join("")}
-    </div>
-    ${!rows.length ? '<div class="hint">Belum ada data appraisal di scope kamu.</div>' : ""}
+    ${toggleHtml}
+    ${bodyHtml}
   `;
   state._reviewFilters = { search: "", department: "", underperformOnly: false };
 }

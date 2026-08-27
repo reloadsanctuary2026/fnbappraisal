@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-120 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-121 — LIVE</div>
 
 <script>
 // =================================================================
@@ -645,6 +645,7 @@ async function completeLogin(nik, pin) {
       return;
     }
     state.user = res;
+    localStorage.setItem("appraisalSession", JSON.stringify({ token: res.sessionToken, staffId: res.staffId }));
     await refreshUnreadCount();
     goToRoleMenu();
   } catch (err) {
@@ -889,6 +890,7 @@ function goToScreen(key) {
 }
 
 function logout() {
+  localStorage.removeItem("appraisalSession");
   state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {} };
   render();
 }
@@ -3472,7 +3474,36 @@ async function doNativeInstall() {
 // a few seconds after load, so it doesn't compete with the login screen rendering first.
 setTimeout(() => { if (!deferredInstallPrompt) showInstallBanner("manual"); }, 3000);
 
-render();
+/** Restores login after a page refresh — otherwise every refresh wipes the in-memory JS
+ *  state and dumps the person back to a blank login screen, even though their session is
+ *  still valid server-side for up to 8 hours. Validates against the SAME Sessions sheet
+ *  normal actions use, so a stale/expired token just falls through to a normal login
+ *  screen instead of silently failing later. */
+async function tryResumeSession() {
+  const saved = localStorage.getItem("appraisalSession");
+  if (!saved) { render(); return; }
+  let parsed;
+  try { parsed = JSON.parse(saved); } catch (e) { localStorage.removeItem("appraisalSession"); render(); return; }
+  if (!parsed.token || !parsed.staffId) { localStorage.removeItem("appraisalSession"); render(); return; }
+
+  app.innerHTML = `<div class="loading" style="padding:40px; text-align:center;">Menghubungkan kembali...</div>`;
+  try {
+    const res = await apiGet("resumeSession", { token: parsed.token, staffId: parsed.staffId });
+    if (res.found) {
+      state.user = res;
+      await refreshUnreadCount();
+      goToRoleMenu();
+    } else {
+      localStorage.removeItem("appraisalSession"); // expired or invalidated — fall back to login
+      render();
+    }
+  } catch (err) {
+    console.error(err);
+    render(); // network hiccup — just show login, don't get stuck on a loading screen forever
+  }
+}
+
+tryResumeSession();
 </script>
 </body>
 </html>

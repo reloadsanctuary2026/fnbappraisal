@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-111 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-112 — LIVE</div>
 
 <script>
 // =================================================================
@@ -2061,6 +2061,7 @@ async function renderReview() {
           <div>
             <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
             <div class="dept">${monthLabelID(r.month)} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
+            ${r.calibrationAdjustment ? `<div class="dept" style="color:var(--gold); font-weight:700;">⚖️ Calibration ${r.calibrationAdjustment > 0 ? "+" : ""}${r.calibrationAdjustment} — ${r.calibrationReason}</div>` : ""}
             <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? fullDateLabelID(r.contractEndDate) : "-"}</div>
           </div>
           <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
@@ -2767,6 +2768,17 @@ async function renderGm() {
         </select>
         <label>Catatan (wajib)</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
+        ${!isEdit ? `
+        <details style="margin:10px 0;">
+          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:var(--gold);">⚖️ Calibration Adjustment (opsional — cuma kalau ada bias evaluator jelas)</summary>
+          <div style="padding:10px 0 0;">
+            <div class="hint">Skor Self/Leader/HR asli TETAP UTUH, gak ke-ubah. Cuma Final Score & Status resmi yang disesuaikan, dan alasannya tercatat permanen.</div>
+            <label>Penyesuaian (poin, boleh minus)</label>
+            <input type="number" id="calibration-adj-${s.staffId}" placeholder="Contoh: +8 atau -5" />
+            <label>Alasan (wajib kalau ada penyesuaian)</label>
+            <input type="text" id="calibration-reason-${s.staffId}" placeholder="Contoh: Leader konsisten lebih ketat 8-10 poin dibanding rata-rata department" />
+          </div>
+        </details>` : ""}
         <button class="primary" style="margin-top:10px;" onclick="${isEdit ? `submitDecisionEdit('${s.staffId}')` : `submitDecision('${s.staffId}')`}">${isEdit ? "Simpan Perubahan" : "Konfirmasi Approval"}</button>
       </div>`;
   };
@@ -3073,6 +3085,17 @@ async function submitDecision(staffId) {
     const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
     if (!mutationToPosition) { showToast("Posisi tujuan mutasi wajib dipilih.", "error"); return; }
     payload.mutationToPosition = mutationToPosition;
+  }
+
+  const calibrationAdjEl = document.getElementById(`calibration-adj-${staffId}`);
+  const calibrationReasonEl = document.getElementById(`calibration-reason-${staffId}`);
+  const calibrationAdjustment = calibrationAdjEl ? Number(calibrationAdjEl.value) || 0 : 0;
+  if (calibrationAdjustment !== 0) {
+    const calibrationReason = calibrationReasonEl ? calibrationReasonEl.value.trim() : "";
+    if (!calibrationReason) { showToast("Alasan Calibration Adjustment wajib diisi kalau ada penyesuaian.", "error"); return; }
+    if (!confirm(`Yakin kasih Calibration Adjustment ${calibrationAdjustment > 0 ? "+" : ""}${calibrationAdjustment} poin?\n\nAlasan: ${calibrationReason}\n\nSkor asli Self/Leader/HR TETAP UTUH, cuma Final Score resmi yang berubah.`)) return;
+    payload.calibrationAdjustment = calibrationAdjustment;
+    payload.calibrationReason = calibrationReason;
   }
 
   const res = await apiPost("approveStaff", payload);

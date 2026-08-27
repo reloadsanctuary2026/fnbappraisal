@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-119 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-120 — TEST</div>
 
 <script>
 // =================================================================
@@ -1420,12 +1420,17 @@ function renderKpiManagementBody() {
       <h2>Kriteria yang Ada</h2>
       ${listHtml}
     </div>
+    ${state._kpiFormOpen ? `
     <div class="card">
-      <h2>+ Tambah Kriteria Baru</h2>
+      <h2>${state._kpiFormEditing ? "✏️ Edit Kriteria" : "+ Tambah Kriteria Baru"}</h2>
       ${addFormHtml}
       <div class="hint" id="kpi-mgmt-note" style="margin-top:8px;"></div>
-      <button class="primary" onclick="doSaveKpiCriterion()" style="margin-top:10px;">Simpan Kriteria Baru</button>
-    </div>
+      <div class="row-flex" style="margin-top:10px;">
+        <button class="primary" style="flex:1;" onclick="doSaveKpiCriterion()">${state._kpiFormEditing ? "Simpan Perubahan" : "Simpan Kriteria Baru"}</button>
+        <button class="secondary" style="flex:0 0 auto;" onclick="closeKpiForm()">Batal</button>
+      </div>
+    </div>` : `
+    <button class="primary" onclick="openKpiFormForAdd()" style="width:100%; margin-bottom:14px;">+ Tambah Kriteria Baru</button>`}
   `;
 }
 
@@ -1450,20 +1455,53 @@ function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey, r
  *  flags the most common low-effort patterns (too short, or clearly no real content) so
  *  whoever's filling it in notices before they move on, without being forced into a rigid
  *  format that might not fit every criterion. */
-function checkRubricQuality(el) {
+function checkRubricQuality() {
   const warningEl = document.getElementById("kpi-form-rubric-warning");
-  const text = el.value.trim();
-  if (!text) { warningEl.textContent = ""; return; }
-  if (text.length < 20) {
-    warningEl.textContent = "⚠️ Kelihatannya masih terlalu singkat buat jadi panduan yang jelas — coba jelasin kondisi konkret di tiap level skor.";
-    warningEl.style.color = "var(--coral)";
-  } else if (!/skor|score|level|nilai/i.test(text)) {
-    warningEl.textContent = "⚠️ Belum kelihatan ada pembagian per level skor (1, 3, 5) — pastikan jelas bedanya tiap level.";
+  if (!warningEl) return;
+  const s1 = (document.getElementById("kpi-form-rubric-1") || {}).value || "";
+  const s3 = (document.getElementById("kpi-form-rubric-3") || {}).value || "";
+  const s5 = (document.getElementById("kpi-form-rubric-5") || {}).value || "";
+  const filledCount = [s1, s3, s5].filter(v => v.trim()).length;
+
+  if (filledCount === 0) { warningEl.textContent = ""; return; }
+  if (filledCount === 1) {
+    warningEl.textContent = "⚠️ Baru 1 level yang keisi — idealnya minimal Skor 1 & Skor 5 (2 titik ekstrem) biar ada pembanding jelas.";
     warningEl.style.color = "var(--coral)";
   } else {
     warningEl.textContent = "✅ Kelihatan cukup jelas.";
     warningEl.style.color = "var(--green)";
   }
+}
+
+/** Combines the 3 structured score fields into the single text blob the Sheet actually
+ *  stores — keeps the storage format unchanged (one rubric string) while the editing
+ *  experience itself is now guided/structured, not free-text. */
+function buildRubricText() {
+  const s1 = (document.getElementById("kpi-form-rubric-1") || {}).value.trim();
+  const s3 = (document.getElementById("kpi-form-rubric-3") || {}).value.trim();
+  const s5 = (document.getElementById("kpi-form-rubric-5") || {}).value.trim();
+  const parts = [];
+  if (s1) parts.push(`Skor 1 = ${s1}`);
+  if (s3) parts.push(`Skor 3 = ${s3}`);
+  if (s5) parts.push(`Skor 5 = ${s5}`);
+  return parts.join("\n");
+}
+
+/** Reverse of buildRubricText — splits an existing rubric string back into the 3 fields
+ *  when opening it for editing. Falls back gracefully (puts the whole thing in the Skor 1
+ *  field) if the text doesn't match the expected "Skor N = ..." pattern, e.g. rubrik
+ *  written before this structured form existed. */
+function parseRubricText(text) {
+  const result = { 1: "", 3: "", 5: "" };
+  if (!text) return result;
+  const regex = /Skor\s*(\d)\s*=\s*(.+?)(?=\n?Skor\s*\d\s*=|$)/gis;
+  let match, matchedAny = false;
+  while ((match = regex.exec(text)) !== null) {
+    const level = match[1];
+    if (result[level] !== undefined) { result[level] = match[2].trim(); matchedAny = true; }
+  }
+  if (!matchedAny) result[1] = text; // old free-text rubric — preserve it, don't lose data
+  return result;
 }
 
 function kpiAddForm(section, label1, label2, label3, positionKey) {
@@ -1476,7 +1514,13 @@ function kpiAddForm(section, label1, label2, label3, positionKey) {
     ${label2 ? `<label>${label2}</label><input type="text" id="kpi-form-field2" placeholder="${label2}" />` : ""}
     ${label3 ? `<label>${label3}</label><input type="text" id="kpi-form-field3" placeholder="${label3}" />` : ""}
     <label>Rubrik Skoring (opsional, tapi disarankan)</label>
-    <textarea id="kpi-form-rubric" rows="5" placeholder="Contoh nyata (kriteria Teamwork):&#10;Skor 1 = Sering menolak membantu rekan kerja, sikap tidak kooperatif.&#10;Skor 3 = Membantu rekan kerja jika diminta, kerja sama cukup baik.&#10;Skor 5 = Proaktif membantu tanpa diminta, sering jadi penengah saat ada konflik tim." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px; margin-bottom:6px;" oninput="checkRubricQuality(this)"></textarea>
+    <div class="hint" style="margin-bottom:8px;">Cukup isi kondisi di tiap level — Skor 2 & 4 dianggap "di antara" otomatis, gak perlu diisi.</div>
+    <label style="font-size:12px; color:var(--red);">Skor 1 (paling lemah)</label>
+    <input type="text" id="kpi-form-rubric-1" placeholder="Contoh: Sering menolak membantu rekan kerja" oninput="checkRubricQuality()" />
+    <label style="font-size:12px; color:var(--gold);">Skor 3 (standar/cukup)</label>
+    <input type="text" id="kpi-form-rubric-3" placeholder="Contoh: Membantu rekan kerja kalau diminta" oninput="checkRubricQuality()" />
+    <label style="font-size:12px; color:var(--green);">Skor 5 (paling kuat)</label>
+    <input type="text" id="kpi-form-rubric-5" placeholder="Contoh: Proaktif membantu tanpa diminta" oninput="checkRubricQuality()" />
     <div class="hint" id="kpi-form-rubric-warning" style="margin-bottom:14px;"></div>
   `;
 }
@@ -1484,26 +1528,46 @@ function kpiAddForm(section, label1, label2, label3, positionKey) {
 function switchKpiManagementSection(section) {
   state._kpiMgmtSection = section;
   state._kpiMgmtPosition = null;
+  state._kpiFormOpen = false;
+  state._kpiFormEditing = false;
   renderKpiManagementBody();
 }
 
 function switchKpiManagementPosition(position) {
   state._kpiMgmtPosition = position;
+  state._kpiFormOpen = false;
+  state._kpiFormEditing = false;
+  renderKpiManagementBody();
+}
+
+function openKpiFormForAdd() {
+  state._kpiFormOpen = true;
+  state._kpiFormEditing = false;
+  renderKpiManagementBody();
+}
+
+function closeKpiForm() {
+  state._kpiFormOpen = false;
+  state._kpiFormEditing = false;
   renderKpiManagementBody();
 }
 
 function editKpiCriterion(section, rowIndex, name, field2, field3, rubric, positionKey) {
+  state._kpiFormOpen = true;
+  state._kpiFormEditing = true;
+  renderKpiManagementBody(); // renders the form fields into the DOM first — they don't exist until this runs
+
   document.getElementById("kpi-form-row-index").value = rowIndex;
   document.getElementById("kpi-form-name").value = name;
   const f2 = document.getElementById("kpi-form-field2");
   if (f2) f2.value = field2 || "";
   const f3 = document.getElementById("kpi-form-field3");
   if (f3) f3.value = field3 || "";
-  document.getElementById("kpi-form-rubric").value = rubric || "";
-  checkRubricQuality(document.getElementById("kpi-form-rubric"));
-  const noteEl = document.getElementById("kpi-mgmt-note");
-  noteEl.textContent = "Mode edit — ubah field di atas lalu tekan Simpan.";
-  noteEl.style.color = "var(--coral)";
+  const parsed = parseRubricText(rubric || "");
+  document.getElementById("kpi-form-rubric-1").value = parsed[1];
+  document.getElementById("kpi-form-rubric-3").value = parsed[3];
+  document.getElementById("kpi-form-rubric-5").value = parsed[5];
+  checkRubricQuality();
   document.getElementById("kpi-form-name").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -1524,7 +1588,7 @@ async function doSaveKpiCriterion() {
     requesterId: state.user.staffId, section, name,
     field2: field2El ? field2El.value.trim() : "",
     field3: field3El ? field3El.value.trim() : "",
-    rubric: document.getElementById("kpi-form-rubric").value.trim(),
+    rubric: buildRubricText(),
   };
   if (rowIndex) payload.rowIndex = Number(rowIndex);
   if (positionEl) payload.positionKey = positionEl.value;
@@ -1536,6 +1600,8 @@ async function doSaveKpiCriterion() {
     return;
   }
   showToast(rowIndex ? "Kriteria berhasil diperbarui!" : "Kriteria baru berhasil ditambahkan!");
+  state._kpiFormOpen = false;
+  state._kpiFormEditing = false;
   renderKpiManagement();
 }
 

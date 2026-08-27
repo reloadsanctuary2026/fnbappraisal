@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-114 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-116 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1307,6 +1307,43 @@ async function renderMyDevelopmentPlan() {
 }
 
 let _isLoadingKpiManagement = false;
+function kpiCoverageSummary(res) {
+  const withOwnCriteria = [];
+  const coveredByFallback = [];
+  const realGaps = [];
+
+  res.allPositionKeys.forEach(k => {
+    const isDept = (res.departmentKeys || []).indexOf(k) !== -1;
+    const hasOwn = res.kpiByPosition[k] && res.kpiByPosition[k].length;
+    const label = k + (isDept ? " (Department)" : "");
+
+    if (hasOwn) {
+      withOwnCriteria.push(`${label} — ${res.kpiByPosition[k].length} kriteria`);
+    } else if (isDept) {
+      realGaps.push(`${label} — SEMUA orang di department ini gak kepegang KPI apapun`);
+    } else {
+      const fallbackDept = (res.staffTitleToDepartment || {})[k];
+      const deptHasCriteria = fallbackDept && res.kpiByPosition[fallbackDept] && res.kpiByPosition[fallbackDept].length;
+      if (deptHasCriteria) {
+        coveredByFallback.push(`${label} — otomatis pakai kriteria ${fallbackDept} (${res.kpiByPosition[fallbackDept].length} kriteria)`);
+      } else {
+        realGaps.push(`${label}${fallbackDept ? ` — department ${fallbackDept} JUGA belum ada kriteria` : ""}`);
+      }
+    }
+  });
+
+  return `
+    <div class="card">
+      <h2>📋 Ringkasan Cakupan KPI</h2>
+      <div class="section-title" style="background:linear-gradient(90deg, var(--green), #0f7a4f); margin-top:0;">✅ Punya Kriteria Sendiri (${withOwnCriteria.length})</div>
+      ${withOwnCriteria.length ? `<ul style="margin:0 0 12px; padding-left:20px; font-size:13px; line-height:1.8;">${withOwnCriteria.map(x => `<li>${x}</li>`).join("")}</ul>` : '<div class="hint">Belum ada satupun.</div>'}
+      <div class="section-title" style="background:linear-gradient(90deg, var(--teal), var(--teal-dark));">🔄 Aman — Pakai Fallback Department (${coveredByFallback.length})</div>
+      ${coveredByFallback.length ? `<ul style="margin:0 0 12px; padding-left:20px; font-size:13px; line-height:1.8;">${coveredByFallback.map(x => `<li>${x}</li>`).join("")}</ul>` : '<div class="hint">Gak ada.</div>'}
+      <div class="section-title" style="background:linear-gradient(90deg, var(--red), #8a2318);">🚨 GAP BENERAN — Belum Kepegang Kriteria Apapun (${realGaps.length})</div>
+      ${realGaps.length ? `<ul style="margin:0; padding-left:20px; font-size:13px; line-height:1.8; color:var(--red); font-weight:700;">${realGaps.map(x => `<li>${x}</li>`).join("")}</ul>` : '<div class="hint">Gak ada gap — semua posisi udah kepegang kriteria (sendiri atau fallback)!</div>'}
+    </div>`;
+}
+
 async function renderKpiManagement() {
   if (_isLoadingKpiManagement) return;
   _isLoadingKpiManagement = true;
@@ -1347,8 +1384,24 @@ function renderKpiManagementBody() {
       <select onchange="switchKpiManagementPosition(this.value)">
         ${res.allPositionKeys.map(k => {
           const isDept = (res.departmentKeys || []).indexOf(k) !== -1;
-          const tag = isDept ? " — semua Job Title di department ini" : "";
-          const countLabel = res.kpiByPosition[k] ? `${res.kpiByPosition[k].length} kriteria` : "belum ada kriteria";
+          const hasOwn = res.kpiByPosition[k] && res.kpiByPosition[k].length;
+          let tag, countLabel;
+          if (isDept) {
+            tag = " — semua Job Title di department ini";
+            countLabel = hasOwn ? `${res.kpiByPosition[k].length} kriteria` : "belum ada kriteria — GAP BENERAN";
+          } else {
+            const fallbackDept = (res.staffTitleToDepartment || {})[k];
+            if (hasOwn) {
+              tag = "";
+              countLabel = `${res.kpiByPosition[k].length} kriteria khusus`;
+            } else if (fallbackDept) {
+              tag = ` — otomatis pakai kriteria ${fallbackDept}`;
+              countLabel = "gak ada kriteria khusus, TAPI AMAN (fallback)";
+            } else {
+              tag = "";
+              countLabel = "belum ada kriteria — GAP BENERAN";
+            }
+          }
           return `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k}${tag} (${countLabel})</option>`;
         }).join("")}
       </select>
@@ -1367,6 +1420,7 @@ function renderKpiManagementBody() {
         <button class="${section === "kpi" ? "primary" : "secondary"}" style="flex:1;" onclick="switchKpiManagementSection('kpi')">KPI</button>
       </div>
     </div>
+    ${section === "kpi" ? kpiCoverageSummary(res) : ""}
     <div class="card">
       <h2>Kriteria yang Ada</h2>
       ${listHtml}

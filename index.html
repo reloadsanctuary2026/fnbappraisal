@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-112 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-113 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1336,8 +1336,14 @@ function renderKpiManagementBody() {
     const items = res.kpiByPosition[position] || [];
     listHtml = `
       <label>Pilih Department / Job Title</label>
+      <div class="hint" style="margin-bottom:8px;">Kriteria untuk Job Title spesifik (misal "Steward") akan dipakai duluan buat orang dengan Job Title itu. Kalau belum ada, otomatis pakai kriteria level Department (misal "Kitchen") sebagai cadangan.</div>
       <select onchange="switchKpiManagementPosition(this.value)">
-        ${res.allPositionKeys.map(k => `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k}${res.kpiByPosition[k] ? ` (${res.kpiByPosition[k].length} kriteria)` : " (belum ada kriteria)"}</option>`).join("")}
+        ${res.allPositionKeys.map(k => {
+          const isDept = (res.departmentKeys || []).indexOf(k) !== -1;
+          const tag = isDept ? " — semua Job Title di department ini" : "";
+          const countLabel = res.kpiByPosition[k] ? `${res.kpiByPosition[k].length} kriteria` : "belum ada kriteria";
+          return `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k}${tag} (${countLabel})</option>`;
+        }).join("")}
       </select>
       ${items.map(c => kpiCriterionRow("kpi", c.rowIndex, c.name, c.howToMeasure, c.target, position, c.rubric)).join("")}
       ${!items.length ? '<div class="hint">Belum ada kriteria KPI buat posisi ini.</div>' : ""}

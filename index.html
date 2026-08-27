@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-110 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-111 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1325,10 +1325,10 @@ function renderKpiManagementBody() {
 
   let listHtml, addFormHtml;
   if (section === "attitude") {
-    listHtml = res.attitude.map(c => kpiCriterionRow("attitude", c.rowIndex, c.name, c.description, null)).join("");
+    listHtml = res.attitude.map(c => kpiCriterionRow("attitude", c.rowIndex, c.name, c.description, null, null, c.rubric)).join("");
     addFormHtml = kpiAddForm("attitude", "Nama Kriteria", "Deskripsi", null);
   } else if (section === "discipline") {
-    listHtml = res.discipline.map(c => kpiCriterionRow("discipline", c.rowIndex, c.name, c.dataSource, c.target)).join("");
+    listHtml = res.discipline.map(c => kpiCriterionRow("discipline", c.rowIndex, c.name, c.dataSource, c.target, null, c.rubric)).join("");
     addFormHtml = kpiAddForm("discipline", "Nama Kriteria", "Sumber Data", "Target");
   } else {
     const position = state._kpiMgmtPosition || Object.keys(res.kpiByPosition)[0] || res.allPositionKeys[0];
@@ -1339,7 +1339,7 @@ function renderKpiManagementBody() {
       <select onchange="switchKpiManagementPosition(this.value)">
         ${res.allPositionKeys.map(k => `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k}${res.kpiByPosition[k] ? ` (${res.kpiByPosition[k].length} kriteria)` : " (belum ada kriteria)"}</option>`).join("")}
       </select>
-      ${items.map(c => kpiCriterionRow("kpi", c.rowIndex, c.name, c.howToMeasure, c.target, position)).join("")}
+      ${items.map(c => kpiCriterionRow("kpi", c.rowIndex, c.name, c.howToMeasure, c.target, position, c.rubric)).join("")}
       ${!items.length ? '<div class="hint">Belum ada kriteria KPI buat posisi ini.</div>' : ""}
     `;
     addFormHtml = kpiAddForm("kpi", "Nama Kriteria", "Cara Ukur", "Target", position);
@@ -1367,17 +1367,20 @@ function renderKpiManagementBody() {
   `;
 }
 
-function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey) {
+function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey, rubric) {
   return `
-    <div style="border:1.5px solid var(--border); border-radius:12px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-      <div>
-        <div class="name">${name}</div>
-        <div class="hint">${field2 || ""}${field3 ? " — Target: " + field3 : ""}</div>
+    <div style="border:1.5px solid var(--border); border-radius:12px; padding:10px 14px; margin-bottom:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <div>
+          <div class="name">${name}</div>
+          <div class="hint">${field2 || ""}${field3 ? " — Target: " + field3 : ""}</div>
+        </div>
+        <div style="display:flex; gap:6px; flex:0 0 auto;">
+          <button class="ghost" onclick="editKpiCriterion('${section}', ${rowIndex}, '${escapeAttr(name)}', '${escapeAttr(field2 || "")}', '${escapeAttr(field3 || "")}', '${escapeAttr(rubric || "")}'${positionKey ? `, '${escapeAttr(positionKey)}'` : ""})">✏️</button>
+          <button class="ghost" onclick="doDeleteKpiCriterion('${section}', ${rowIndex})">🗑️</button>
+        </div>
       </div>
-      <div style="display:flex; gap:6px; flex:0 0 auto;">
-        <button class="ghost" onclick="editKpiCriterion('${section}', ${rowIndex}, '${escapeAttr(name)}', '${escapeAttr(field2 || "")}', '${escapeAttr(field3 || "")}'${positionKey ? `, '${escapeAttr(positionKey)}'` : ""})">✏️</button>
-        <button class="ghost" onclick="doDeleteKpiCriterion('${section}', ${rowIndex})">🗑️</button>
-      </div>
+      ${rubric ? `<div class="hint" style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); white-space:pre-line;">📏 ${rubric}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">Belum ada rubrik skoring.</div>`}
     </div>`;
 }
 
@@ -1390,6 +1393,8 @@ function kpiAddForm(section, label1, label2, label3, positionKey) {
     <input type="text" id="kpi-form-name" placeholder="${label1}" />
     ${label2 ? `<label>${label2}</label><input type="text" id="kpi-form-field2" placeholder="${label2}" />` : ""}
     ${label3 ? `<label>${label3}</label><input type="text" id="kpi-form-field3" placeholder="${label3}" />` : ""}
+    <label>Rubrik Skoring (opsional, tapi disaranin)</label>
+    <textarea id="kpi-form-rubric" rows="4" placeholder="Contoh:&#10;Skor 1 = ...&#10;Skor 3 = ...&#10;Skor 5 = ..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px; margin-bottom:14px;"></textarea>
   `;
 }
 
@@ -1404,13 +1409,14 @@ function switchKpiManagementPosition(position) {
   renderKpiManagementBody();
 }
 
-function editKpiCriterion(section, rowIndex, name, field2, field3, positionKey) {
+function editKpiCriterion(section, rowIndex, name, field2, field3, rubric, positionKey) {
   document.getElementById("kpi-form-row-index").value = rowIndex;
   document.getElementById("kpi-form-name").value = name;
   const f2 = document.getElementById("kpi-form-field2");
   if (f2) f2.value = field2 || "";
   const f3 = document.getElementById("kpi-form-field3");
   if (f3) f3.value = field3 || "";
+  document.getElementById("kpi-form-rubric").value = rubric || "";
   const noteEl = document.getElementById("kpi-mgmt-note");
   noteEl.textContent = "Mode edit — ubah field di atas lalu tekan Simpan.";
   noteEl.style.color = "var(--coral)";
@@ -1434,6 +1440,7 @@ async function doSaveKpiCriterion() {
     requesterId: state.user.staffId, section, name,
     field2: field2El ? field2El.value.trim() : "",
     field3: field3El ? field3El.value.trim() : "",
+    rubric: document.getElementById("kpi-form-rubric").value.trim(),
   };
   if (rowIndex) payload.rowIndex = Number(rowIndex);
   if (positionEl) payload.positionKey = positionEl.value;
@@ -2418,10 +2425,11 @@ async function renderAppraisalForm({ evaluatorType, target }) {
 function renderFormBody(evaluatorType, target, cfg) {
   state._totalCriteria = cfg.attitude.length + cfg.discipline.length + (cfg.placeholder ? 0 : cfg.kpi.length);
 
-  const scoreRow = (criterion, desc) => `
+  const scoreRow = (criterion, desc, rubric) => `
     <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
       <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}${state.leaderReference && state.leaderReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--teal);">· Leader/Mgmt: ${state.leaderReference[criterion]}</span>` : ""}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ""}
+      ${rubric ? `<details style="margin:4px 0 8px;"><summary style="cursor:pointer; font-size:11px; color:var(--teal); font-weight:700;">📏 Lihat panduan skor 1-5</summary><div class="hint" style="white-space:pre-line; margin-top:4px;">${rubric}</div></details>` : ""}
       <div class="score-select">
         ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
       </div>
@@ -2460,15 +2468,15 @@ function renderFormBody(evaluatorType, target, cfg) {
       <div class="hint" id="progress-counter" style="text-align:right; font-weight:700; color:var(--teal); margin-bottom:14px;"></div>
 
       <div class="section-title">Section A — Attitude</div>
-      ${cfg.attitude.map(c => scoreRow(c.name, c.description)).join("")}
+      ${cfg.attitude.map(c => scoreRow(c.name, c.description, c.rubric)).join("")}
 
       <div class="section-title">Section B — Discipline</div>
-      ${cfg.discipline.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
+      ${cfg.discipline.map(c => scoreRow(c.name, `Target: ${c.target}`, c.rubric)).join("")}
 
       <div class="section-title">Section C — Performance KPI</div>
       ${cfg.placeholder
         ? `<div class="hint" style="background:var(--sand); padding:12px; border-radius:8px;">${cfg.placeholderNote}</div>`
-        : cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`)).join("")}
+        : cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`, c.rubric)).join("")}
 
       ${isSelf ? "" : `
         <div class="section-title">Section D — Bonus &amp; Deduction</div>

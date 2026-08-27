@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-113 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-114 — LIVE</div>
 
 <script>
 // =================================================================
@@ -338,7 +338,6 @@ function render() {
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
   if (state.screen === "sc") return renderScInput();
-  if (state.screen === "hrTodos") return renderHrFollowUpTodos();
   if (state.screen === "notifications") return renderNotifications();
   if (state.screen === "faq") return renderFaq();
 }
@@ -406,7 +405,6 @@ function renderFaq() {
     settings: "Ganti PIN sendiri dan lihat profil kamu — Nama, NIK, Job Title, Department, Tier.",
     staffMapping: "Lihat siapa dinilai siapa untuk semua Staff/Leader/Management — dihitung otomatis dari Config_PositionMap, bukan diketik manual.",
     sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
-    hrTodos: "Daftar Decision 'Extend Probation/Kontrak' yang tanggal jatuh temponya udah lewat dan perlu ditindaklanjuti — supaya gak ada yang keslip.",
   };
 
   const tierFlow = {
@@ -517,9 +515,9 @@ async function renderNotifications() {
     <button class="ghost" onclick="goBackFromNotifications()">&larr; Kembali</button>
     <div class="hint" style="margin-top:8px;">${list.length} notifikasi</div>
     ${list.map(n => `
-      <div class="staff-row" style="cursor:default; ${n.read ? "" : "border-color:var(--coral);"}" ${n.read ? "" : `onclick="markRead('${n.id}')"`}>
+      <div class="staff-row" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"}" ${!n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
         <div>
-          <div class="name" style="font-weight:${n.read ? "500" : "700"};">${n.message}</div>
+          <div class="name" style="font-weight:${n.read ? "500" : "700"};">${n.message}${n.actionScreen ? ' <span style="color:var(--teal); font-size:11px;">→ buka</span>' : ""}</div>
           <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
         </div>
         ${n.read ? "" : `<span class="badge pending">Baru</span>`}
@@ -531,9 +529,19 @@ async function renderNotifications() {
   }
 }
 
-async function markRead(id) {
+function navigateToScreen(screen) {
+  state.screen = screen;
+  render();
+}
+
+async function markRead(id, actionScreen) {
   await apiPost("markNotificationRead", { notificationId: id });
-  renderNotifications();
+  if (actionScreen) {
+    state.screen = actionScreen;
+    render();
+  } else {
+    renderNotifications();
+  }
 }
 
 function goBackFromNotifications() {
@@ -681,7 +689,6 @@ function availableScreensGrouped(user) {
       { key: "review", label: "Review Everyone's Records" },
       { key: "feedback", label: "Read Staff Feedback" },
       { key: "trainingNeeds", label: "Training Needs" },
-      { key: "kpiManagement", label: "Manage KPI Criteria" },
     ]});
   }
 
@@ -690,10 +697,8 @@ function availableScreensGrouped(user) {
       { key: "myEvaluations", label: user.appraiseLabel || "Appraise All Staff" },
       { key: "review", label: "Review Everyone's Records" },
       { key: "sc", label: "Calculate Service Charge" },
-      { key: "hrTodos", label: "Track Pending Follow-Ups" },
       { key: "feedback", label: "Read Staff Feedback" },
       { key: "trainingNeeds", label: "Training Needs" },
-      { key: "kpiManagement", label: "Manage KPI Criteria" },
     ]});
   }
 
@@ -703,7 +708,6 @@ function availableScreensGrouped(user) {
       { key: "review", label: "Review Everyone's Records" },
       { key: "feedback", label: "Read Staff Feedback" },
       { key: "trainingNeeds", label: "Training Needs" },
-      { key: "kpiManagement", label: "Manage KPI Criteria" },
     ]});
   }
 
@@ -712,6 +716,9 @@ function availableScreensGrouped(user) {
   const settingsItems = [];
   if (user.hasStaffMappingAccess) {
     settingsItems.push({ key: "staffMapping", label: "Staff Mapping" });
+  }
+  if (user.isHR || user.isExecutive || user.isAdminOperational) {
+    settingsItems.push({ key: "kpiManagement", label: "Manage KPI Criteria" });
   }
   if (settingsItems.length) groups.push({ name: "MySettings", items: settingsItems });
 
@@ -749,7 +756,7 @@ function goToRoleMenu() {
 }
 
 function menuItemHtml(o) {
-  const ACTION_KEYS = ["self", "myEvaluations", "gm", "sc", "hrTodos", "historical", "trainingNeeds"];
+  const ACTION_KEYS = ["self", "myEvaluations", "gm", "sc", "historical", "trainingNeeds"];
   const isAction = ACTION_KEYS.indexOf(o.key) !== -1;
   const color = isAction ? "var(--coral)" : "var(--teal)";
   const tag = isAction ? "AKSI" : "LIHAT";
@@ -3113,43 +3120,6 @@ async function submitDecision(staffId) {
 // =================================================================
 // Total Service Charge input — HR only
 // =================================================================
-async function renderHrFollowUpTodos() {
-  app.innerHTML = topbar("Track Pending Follow-Ups") + `<div class="loading">Memuat...</div>`;
-  const res = await apiGet("getHrFollowUpTodos", { requesterId: state.user.staffId });
-  if (res.error) {
-    app.innerHTML = topbar("Track Pending Follow-Ups") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
-    return;
-  }
-  const todos = res.todos || [];
-  const showMenuLink = availableScreens(state.user).length > 1;
-
-  app.innerHTML = topbar("Track Pending Follow-Ups") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
-    <div class="hint" style="margin-top:8px;">${todos.length} follow-up sudah jatuh tempo dan perlu ditindaklanjuti.</div>
-    ${todos.map(t => `
-      <div class="staff-row" style="cursor:default; border-color:var(--amber); display:block;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-          <div>
-            <div class="name">${t.name} <span style="font-weight:400; color:var(--text-muted);">(${t.department})</span></div>
-            <div class="dept">Extend: ${t.extensionDuration} — jatuh tempo ${fullDateLabelID(t.extensionExpiryDate)}</div>
-            ${t.decisionNotes ? `<div class="dept" style="margin-top:2px;">Catatan waktu itu: "${t.decisionNotes}"</div>` : ""}
-            <div class="dept" style="margin-top:2px; font-size:11px;">Disetujui oleh ${t.approvedBy}</div>
-          </div>
-          <button class="secondary" style="white-space:nowrap;" onclick="resolveFollowUp('${t.month}', '${t.staffId}')">Sudah Ditindaklanjuti</button>
-        </div>
-      </div>`).join("")}
-    ${!todos.length ? '<div class="card"><div class="hint">Gak ada follow-up yang jatuh tempo saat ini. 👍</div></div>' : ""}
-  `;
-}
-
-async function resolveFollowUp(month, staffId) {
-  const ok = confirm("Tandai follow-up ini sudah ditindaklanjuti? Ini akan hilang dari list To-Do.");
-  if (!ok) return;
-  const res = await apiPost("markFollowUpResolved", { month, staffId });
-  if (res.error || res.success === false) { showToast("Gagal: " + friendlyError(res.error), "error"); return; }
-  showToast("Ditandai selesai!");
-  renderHrFollowUpTodos();
-}
 
 async function renderScInput() {
   app.innerHTML = topbar("Calculate Service Charge") + `<div class="loading">Memuat data...</div>`;

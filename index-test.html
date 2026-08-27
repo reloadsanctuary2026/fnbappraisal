@@ -168,7 +168,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-116 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-117 — TEST</div>
 
 <script>
 // =================================================================
@@ -1308,29 +1308,34 @@ function kpiCoverageSummary(res) {
     const label = k + (isDept ? " (Department)" : "");
 
     if (hasOwn) {
-      withOwnCriteria.push(`${label} — ${res.kpiByPosition[k].length} kriteria`);
+      withOwnCriteria.push(`${label} — ${res.kpiByPosition[k].length} criteria`);
     } else if (isDept) {
-      realGaps.push(`${label} — SEMUA orang di department ini gak kepegang KPI apapun`);
+      realGaps.push(`${label} — no one in this department has any KPI coverage`);
     } else {
       const fallbackDept = (res.staffTitleToDepartment || {})[k];
       const deptHasCriteria = fallbackDept && res.kpiByPosition[fallbackDept] && res.kpiByPosition[fallbackDept].length;
       if (deptHasCriteria) {
-        coveredByFallback.push(`${label} — otomatis pakai kriteria ${fallbackDept} (${res.kpiByPosition[fallbackDept].length} kriteria)`);
+        coveredByFallback.push(`${label} — automatically uses ${fallbackDept} criteria (${res.kpiByPosition[fallbackDept].length})`);
       } else {
-        realGaps.push(`${label}${fallbackDept ? ` — department ${fallbackDept} JUGA belum ada kriteria` : ""}`);
+        realGaps.push(`${label}${fallbackDept ? ` — ${fallbackDept} department also has no criteria` : ""}`);
       }
     }
   });
 
+  const detailsBlock = (title, color, items, emptyText) => `
+    <details style="margin-bottom:8px;">
+      <summary style="cursor:pointer; padding:10px 14px; border-radius:10px; background:${color}; color:#fff; font-weight:700; font-size:13px; list-style:none;">${title}</summary>
+      <div style="padding:10px 4px;">
+        ${items.length ? `<ul style="margin:0; padding-left:20px; font-size:13px; line-height:1.8;">${items.map(x => `<li>${x}</li>`).join("")}</ul>` : `<div class="hint">${emptyText}</div>`}
+      </div>
+    </details>`;
+
   return `
     <div class="card">
-      <h2>📋 Ringkasan Cakupan KPI</h2>
-      <div class="section-title" style="background:linear-gradient(90deg, var(--green), #0f7a4f); margin-top:0;">✅ Punya Kriteria Sendiri (${withOwnCriteria.length})</div>
-      ${withOwnCriteria.length ? `<ul style="margin:0 0 12px; padding-left:20px; font-size:13px; line-height:1.8;">${withOwnCriteria.map(x => `<li>${x}</li>`).join("")}</ul>` : '<div class="hint">Belum ada satupun.</div>'}
-      <div class="section-title" style="background:linear-gradient(90deg, var(--teal), var(--teal-dark));">🔄 Aman — Pakai Fallback Department (${coveredByFallback.length})</div>
-      ${coveredByFallback.length ? `<ul style="margin:0 0 12px; padding-left:20px; font-size:13px; line-height:1.8;">${coveredByFallback.map(x => `<li>${x}</li>`).join("")}</ul>` : '<div class="hint">Gak ada.</div>'}
-      <div class="section-title" style="background:linear-gradient(90deg, var(--red), #8a2318);">🚨 GAP BENERAN — Belum Kepegang Kriteria Apapun (${realGaps.length})</div>
-      ${realGaps.length ? `<ul style="margin:0; padding-left:20px; font-size:13px; line-height:1.8; color:var(--red); font-weight:700;">${realGaps.map(x => `<li>${x}</li>`).join("")}</ul>` : '<div class="hint">Gak ada gap — semua posisi udah kepegang kriteria (sendiri atau fallback)!</div>'}
+      <h2>📋 KPI Coverage Summary</h2>
+      ${detailsBlock(`✅ Has Dedicated Criteria (${withOwnCriteria.length})`, "linear-gradient(90deg, var(--green), #0f7a4f)", withOwnCriteria, "None yet.")}
+      ${detailsBlock(`🔄 Covered via Department Fallback (${coveredByFallback.length})`, "linear-gradient(90deg, var(--teal), var(--teal-dark))", coveredByFallback, "None.")}
+      ${detailsBlock(`🚨 Needs Attention (${realGaps.length})`, "linear-gradient(90deg, var(--red), #8a2318)", realGaps, "No gaps — every position that needs KPI already has coverage (dedicated or fallback).")}
     </div>`;
 }
 

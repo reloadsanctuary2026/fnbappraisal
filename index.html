@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-121 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-122 — LIVE</div>
 
 <script>
 // =================================================================
@@ -2167,6 +2167,17 @@ async function renderReview() {
     if (companyRes.error) {
       bodyHtml = `<div class="card"><div class="error">${friendlyError(companyRes.error)}</div></div>`;
     } else {
+      // Group the SAME individual rows used by "Per Orang" by department, so each department
+      // can expand to show who's actually in it. Clicking a person opens the SAME detail
+      // modal used during Approval (showComparisonModal) — if that popup's design ever
+      // changes, this view automatically stays in sync since it's the exact same function.
+      const rowsByDept = {};
+      rows.forEach(r => {
+        const dept = r.department !== "-" ? r.department : r.tier;
+        if (!rowsByDept[dept]) rowsByDept[dept] = [];
+        rowsByDept[dept].push(r);
+      });
+
       const statBox = (label, value, color) => `
         <div style="flex:1; min-width:120px; background:var(--sand); border-radius:12px; padding:12px; text-align:center;">
           <div style="font-size:22px; font-weight:800; color:${color || "var(--teal)"};">${value}</div>
@@ -2184,14 +2195,31 @@ async function renderReview() {
         </div>
         <div class="card">
           <h2>Rata-rata Skor per Department/Tier</h2>
-          ${companyRes.departmentBreakdown.map(d => `
-            <div class="staff-row" style="cursor:default; display:block;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div class="name">${d.department} <span style="font-weight:400; color:var(--text-muted);">(${d.count} orang)</span></div>
+          <div class="hint" style="margin-bottom:10px;">Klik nama department buat lihat siapa aja di dalamnya, klik nama orang buat lihat detail lengkap.</div>
+          ${companyRes.departmentBreakdown.map(d => {
+            const deptRows = rowsByDept[d.department] || [];
+            return `
+            <details style="margin-bottom:8px; border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+              <summary style="cursor:pointer; padding:13px 14px; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <span style="font-weight:700;">${d.department}</span>
+                  <span style="font-weight:400; color:var(--text-muted);"> (${d.count} orang)</span>
+                  ${d.underperformCount > 0 ? `<div style="font-size:12px; color:var(--red); margin-top:2px;">${d.underperformCount} underperform</div>` : ""}
+                </div>
                 <span class="badge ${d.avgScore >= 60 ? "performer" : "underperform"}">${d.avgScore.toFixed(1)}</span>
+              </summary>
+              <div style="padding:0 14px 14px;">
+                ${deptRows.map(r => `
+                  <div class="staff-row" style="cursor:pointer; border: 1.5px solid ${r.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'};" onclick="showComparisonModal('${r.staffId}', '${escapeAttr(r.name)}')">
+                    <div>
+                      <div class="name">${r.name}</div>
+                      <div class="dept">Final Score: ${Number(r.finalScore||0).toFixed(1)}</div>
+                    </div>
+                    <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
+                  </div>`).join("")}
               </div>
-              ${d.underperformCount > 0 ? `<div class="dept" style="margin-top:4px; color:var(--red);">${d.underperformCount} underperform</div>` : ""}
-            </div>`).join("")}
+            </details>`;
+          }).join("")}
           ${!companyRes.departmentBreakdown.length ? '<div class="hint">Belum ada data untuk bulan ini.</div>' : ""}
         </div>`;
     }

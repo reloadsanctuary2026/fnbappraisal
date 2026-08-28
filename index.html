@@ -168,6 +168,10 @@
   .mapping-row:hover { background: #FFFCF8; }
   .mapping-row.selected { background: #FFF3EC; }
   .mapping-row.head { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1.5px solid var(--border); padding: 0 12px 8px; }
+  .sortable-th { cursor: pointer; user-select: none; transition: color 0.15s ease; }
+  .sortable-th:hover { color: var(--coral); }
+  .sortable-th.active { color: var(--coral-dark); }
+  .sort-arrow { font-size: 9px; }
   .mapping-row .cell-name { font-weight: 500; font-size: 13.5px; line-height: 1.35; color: var(--text); }
   .mapping-row .cell-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; line-height: 1.3; }
   .mapping-checkbox { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; accent-color: var(--coral); cursor: pointer; }
@@ -205,7 +209,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-129 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-130 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1692,7 +1696,7 @@ async function renderStaffMapping() {
     const candidates = state._staffMappingCandidates[r.tier] || [];
     const isOverridden = !!r.evaluatorStaffId;
     return `
-      <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-department="${escapeAttr(r.department)}">
+      <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-jobtitle="${escapeAttr(r.jobTitle)}" data-department="${escapeAttr(r.department)}">
         <div class="col-name" style="display:flex; align-items:flex-start; gap:8px;">
           <input type="checkbox" class="mapping-checkbox" data-staffid="${r.staffId}" onchange="onStaffMappingCheckboxChange(this)">
           <div>
@@ -1720,11 +1724,6 @@ async function renderStaffMapping() {
       <div class="hint" style="margin-bottom:10px;">${rows.length} orang — pilih Superior manual buat siapapun yang butuh dikecualikan dari default. Centang beberapa orang buat ganti sekaligus (bulk).</div>
       <input type="text" placeholder="Cari nama..." oninput="updateStaffMappingFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:4px;">
-        <select onchange="sortStaffMappingList(this.value)">
-          <option value="">Urutkan...</option>
-          <option value="name-asc">Nama (A-Z)</option>
-          <option value="name-desc">Nama (Z-A)</option>
-        </select>
         <select onchange="updateStaffMappingFilter('tier', this.value)">
           <option value="">Semua Tier</option>
           ${tierKeys.map(t => `<option value="${t}">${t}</option>`).join("")}
@@ -1744,7 +1743,13 @@ async function renderStaffMapping() {
     </div>
     <div class="card">
       <div class="mapping-row head">
-        <div style="display:flex; align-items:center; gap:8px;"><input type="checkbox" class="mapping-checkbox" id="mapping-select-all" onchange="toggleStaffMappingSelectAll(this.checked)"> Nama</div><div>Tier</div><div>Job Title</div><div>Superior</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" class="mapping-checkbox" id="mapping-select-all" onchange="toggleStaffMappingSelectAll(this.checked)">
+          <span class="sortable-th" onclick="sortStaffMappingList('name')" id="sort-th-name">Nama<span class="sort-arrow" id="sort-arrow-name"></span></span>
+        </div>
+        <div class="sortable-th" onclick="sortStaffMappingList('tier')" id="sort-th-tier">Tier<span class="sort-arrow" id="sort-arrow-tier"></span></div>
+        <div class="sortable-th" onclick="sortStaffMappingList('jobTitle')" id="sort-th-jobTitle">Job Title<span class="sort-arrow" id="sort-arrow-jobTitle"></span></div>
+        <div>Superior</div>
       </div>
       <div id="staff-mapping-list-container">
         ${rows.map(rowHtml).join("")}
@@ -1847,16 +1852,32 @@ function updateStaffMappingFilter(key, value) {
   if (emptyNote) emptyNote.style.display = visibleCount === 0 ? "" : "none";
 }
 
-function sortStaffMappingList(criteria) {
-  if (!criteria) return;
+/** Click-to-sort on the table header itself — replaces the old "Urutkan..." dropdown.
+ *  Clicking the same column again flips asc/desc (tracked in state so the arrow indicator
+ *  stays in sync); clicking a different column starts fresh at ascending. */
+function sortStaffMappingList(column) {
   const container = document.getElementById("staff-mapping-list-container");
+  if (!container) return;
+  const current = state._staffMappingSort || { column: null, dir: "asc" };
+  const dir = (current.column === column && current.dir === "asc") ? "desc" : "asc";
+  state._staffMappingSort = { column, dir };
+
+  const key = column === "name" ? "name" : column === "tier" ? "tier" : "jobtitle";
   const rows = Array.from(container.children);
   rows.sort((a, b) => {
-    if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
-    if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
-    return 0;
+    const cmp = (a.dataset[key] || "").localeCompare(b.dataset[key] || "");
+    return dir === "asc" ? cmp : -cmp;
   });
   rows.forEach(r => container.appendChild(r));
+
+  ["name", "tier", "jobTitle"].forEach(c => {
+    const arrowEl = document.getElementById(`sort-arrow-${c}`);
+    const thEl = document.getElementById(`sort-th-${c}`);
+    if (!arrowEl || !thEl) return;
+    const isActive = c === column;
+    arrowEl.textContent = isActive ? (dir === "asc" ? " ▲" : " ▼") : "";
+    thEl.classList.toggle("active", isActive);
+  });
 }
 
 async function doSetStaffSuperior(staffId) {

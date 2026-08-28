@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reload Appraisal">
 <title>Reload F&amp;B Appraisal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +34,11 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
   }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .topbar, .card { animation: fadeSlideIn 0.28s ease-out; }
   body {
     margin: 0;
     font-family: "Poppins", ui-rounded, -apple-system, "Segoe UI", Arial, sans-serif;
@@ -45,8 +53,8 @@
     position: sticky; top: 0; z-index: 10;
     box-shadow: 0 6px 16px rgba(14, 71, 73, 0.18);
   }
-  .topbar h1 { font-size: 17px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
-  .topbar .sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; }
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .logo-mark {
     width: 34px; height: 34px; flex-shrink: 0;
     background: linear-gradient(135deg, var(--gold), var(--coral));
@@ -59,9 +67,12 @@
   .topbar button {
     background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3); color: #fff;
     border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background 0.15s ease; white-space: nowrap;
   }
   .topbar button:hover { background: rgba(255,255,255,0.24); }
+  @media (max-width: 420px) {
+    .topbar button { padding: 6px 9px; font-size: 11px; }
+  }
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 18px;
@@ -80,7 +91,7 @@
   .mode-banner.mode-hr { background: #E8E3F5; color: #6C4FB6; }
   label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px; }
   input[type=text], input[type=password], input[type=number], select {
-    width: 100%; padding: 11px 14px; font-size: 15px; border: 1.5px solid var(--border);
+    width: 100%; padding: 11px 14px; font-size: 16px; border: 1.5px solid var(--border);
     border-radius: 12px; background: #fff; color: var(--text); margin-bottom: 14px;
     transition: border-color 0.15s ease;
   }
@@ -147,9 +158,9 @@
   .hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
   .error { color: var(--red); font-size: 13px; margin-bottom: 10px; font-weight: 600; }
   .center { text-align: center; }
-  .row-flex { display: flex; gap: 8px; }
+  .row-flex { display: flex; gap: 8px; flex-wrap: wrap; }
   .row-flex > * { flex: 1; }
-  table.mini { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.mini { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.mini td { padding: 6px 0; border-bottom: 1px solid var(--border); }
   table.mini td:last-child { text-align: right; font-weight: 600; }
   .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
@@ -166,15 +177,14 @@
 </style>
 </head>
 <body>
-<div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-125 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-125 — LIVE</div>
 
 <script>
 // =================================================================
 // CONFIG — set this to your Apps Script Web App URL
 // =================================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwqUUo-avmoBoj9ZqmdGUTMQtswX4Rj6aYoHc21oDLD6LfUsEluTLA2ccn4g3pUYaXLUw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwbSrk4qrekr8P7p9jTA1SCGqZG-p2HK7fur4yyCvNsgzecI_hEHsbQrvOy_QhRrV82/exec";
 const LMS_URL = "https://script.google.com/macros/s/AKfycbx7ID6GZMXYoj8ymmwAcGuxHWb-hGli-FRDqcDgazgIL38JOT4jbARBht85PFosc34a_Q/exec";
 
 // =================================================================

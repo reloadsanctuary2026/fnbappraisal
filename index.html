@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-122 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-125 — LIVE</div>
 
 <script>
 // =================================================================
@@ -998,6 +998,26 @@ function sortMyEvalList(criteria) {
 
 function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
 
+/** Shared performer/underperform badge — was being hand-written with the same ternary in
+ *  5+ different screens (Review, Approval, Compliance, etc.). isPerformer decides the
+ *  color, label is whatever text should actually show (the word "Performer", or a raw
+ *  score number, or anything else — kept separate so this works for both cases). */
+function statusBadge(isPerformer, label) {
+  return `<span class="badge ${isPerformer ? "performer" : "underperform"}">${label}</span>`;
+}
+
+/** Shared "row of toggle buttons" — was being hand-built separately in Review's 3-way
+ *  view switcher and Manage KPI Criteria's section switcher, same pattern (active tab =
+ *  primary button, rest = secondary) just written out twice. tabs = [{key, label}], the
+ *  caller decides which tabs to include (e.g. hiding "Compliance" for roles without
+ *  access) before passing the array in — this function just renders whatever it's given. */
+function tabSwitcher(tabs, activeKey, onClickFnName) {
+  return `
+    <div class="row-flex" style="margin-bottom:4px;">
+      ${tabs.map(t => `<button class="${activeKey === t.key ? "primary" : "secondary"}" style="flex:1;" onclick="${onClickFnName}('${t.key}')">${t.label}</button>`).join("")}
+    </div>`;
+}
+
 // =================================================================
 // Review — read-only, scoped by Tier/Oversees (Management sees their
 // area, HR & Executive see everyone). No approve buttons here; approval
@@ -1421,11 +1441,11 @@ function renderKpiManagementBody() {
   app.innerHTML = topbar("Manage KPI Criteria") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
-      <div class="row-flex" style="margin-bottom:4px;">
-        <button class="${section === "attitude" ? "primary" : "secondary"}" style="flex:1;" onclick="switchKpiManagementSection('attitude')">Attitude</button>
-        <button class="${section === "discipline" ? "primary" : "secondary"}" style="flex:1;" onclick="switchKpiManagementSection('discipline')">Discipline</button>
-        <button class="${section === "kpi" ? "primary" : "secondary"}" style="flex:1;" onclick="switchKpiManagementSection('kpi')">KPI</button>
-      </div>
+      ${tabSwitcher([
+        { key: "attitude", label: "Attitude" },
+        { key: "discipline", label: "Discipline" },
+        { key: "kpi", label: "KPI" },
+      ], section, "switchKpiManagementSection")}
     </div>
     ${section === "kpi" ? kpiCoverageSummary(res) : ""}
     <div class="card">
@@ -2106,14 +2126,12 @@ function changeReviewMonth(value) {
 
 async function renderReview() {
   const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? "Review Everyone's Records" : "Review Your Team";
-  const canCompare = state.user.isManagement || state.user.isExecutive || state.user.isAdminOperational || state.user.isHR;
   const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational;
-  const viewMode = state._reviewViewMode || "individual";
+  const viewMode = state._reviewViewMode || "list";
 
   app.innerHTML = topbar(title) + `<div class="loading">Memuat data...</div>`;
-  const [res, companyRes, progressRes] = await Promise.all([
+  const [res, progressRes] = await Promise.all([
     apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month }),
-    canCompare ? apiGet("getCompanySummary", { requesterId: state.user.staffId, month: state.month }) : Promise.resolve(null),
     canSeeCompliance ? apiGet("getEvaluatorProgress", { requesterId: state.user.staffId }) : Promise.resolve(null),
   ]);
   if (res.error) {
@@ -2122,14 +2140,11 @@ async function renderReview() {
   }
   const rows = res.rows || [];
   const showMenuLink = availableScreens(state.user).length > 1;
-  const idr = n => "Rp " + Math.round(Number(n || 0)).toLocaleString("id-ID");
 
-  const toggleHtml = (canCompare || canSeeCompliance) ? `
-    <div class="row-flex" style="margin-bottom:10px;">
-      <button class="${viewMode === "individual" ? "primary" : "secondary"}" style="flex:1;" onclick="switchReviewViewMode('individual')">Per Orang</button>
-      ${canCompare ? `<button class="${viewMode === "department" ? "primary" : "secondary"}" style="flex:1;" onclick="switchReviewViewMode('department')">Per Department</button>` : ""}
-      ${canSeeCompliance ? `<button class="${viewMode === "compliance" ? "primary" : "secondary"}" style="flex:1;" onclick="switchReviewViewMode('compliance')">Compliance</button>` : ""}
-    </div>` : "";
+  const toggleHtml = canSeeCompliance ? tabSwitcher([
+    { key: "list", label: "Daftar Karyawan" },
+    { key: "compliance", label: "Compliance" },
+  ], viewMode, "switchReviewViewMode") : "";
 
   let bodyHtml;
   if (viewMode === "compliance" && progressRes) {
@@ -2163,102 +2178,99 @@ async function renderReview() {
         }).join("")}
         ${!progress.length ? '<div class="card"><div class="hint">Belum ada evaluator (Leader/Management/HR) yang terdaftar.</div></div>' : ""}`;
     }
-  } else if (viewMode === "department" && companyRes) {
-    if (companyRes.error) {
-      bodyHtml = `<div class="card"><div class="error">${friendlyError(companyRes.error)}</div></div>`;
-    } else {
-      // Group the SAME individual rows used by "Per Orang" by department, so each department
-      // can expand to show who's actually in it. Clicking a person opens the SAME detail
-      // modal used during Approval (showComparisonModal) — if that popup's design ever
-      // changes, this view automatically stays in sync since it's the exact same function.
-      const rowsByDept = {};
-      rows.forEach(r => {
-        const dept = r.department !== "-" ? r.department : r.tier;
-        if (!rowsByDept[dept]) rowsByDept[dept] = [];
-        rowsByDept[dept].push(r);
-      });
-
-      const statBox = (label, value, color) => `
-        <div style="flex:1; min-width:120px; background:var(--sand); border-radius:12px; padding:12px; text-align:center;">
-          <div style="font-size:22px; font-weight:800; color:${color || "var(--teal)"};">${value}</div>
-          <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${label}</div>
-        </div>`;
-      bodyHtml = `
-        <div class="card">
-          <div class="row-flex" style="flex-wrap:wrap; gap:8px;">
-            ${statBox("Total Appraisal", companyRes.total)}
-            ${statBox("Rata-rata Skor", companyRes.avgScore.toFixed(1))}
-            ${statBox("Performer", companyRes.performerCount, "var(--green)")}
-            ${statBox("Underperform", companyRes.underperformCount, "var(--red)")}
-            ${statBox("Sudah Di-approve", `${companyRes.approvedCount}/${companyRes.total}`, "var(--gold)")}
-          </div>
-        </div>
-        <div class="card">
-          <h2>Rata-rata Skor per Department/Tier</h2>
-          <div class="hint" style="margin-bottom:10px;">Klik nama department buat lihat siapa aja di dalamnya, klik nama orang buat lihat detail lengkap.</div>
-          ${companyRes.departmentBreakdown.map(d => {
-            const deptRows = rowsByDept[d.department] || [];
-            return `
-            <details style="margin-bottom:8px; border:1px solid var(--border); border-radius:14px; overflow:hidden;">
-              <summary style="cursor:pointer; padding:13px 14px; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <span style="font-weight:700;">${d.department}</span>
-                  <span style="font-weight:400; color:var(--text-muted);"> (${d.count} orang)</span>
-                  ${d.underperformCount > 0 ? `<div style="font-size:12px; color:var(--red); margin-top:2px;">${d.underperformCount} underperform</div>` : ""}
-                </div>
-                <span class="badge ${d.avgScore >= 60 ? "performer" : "underperform"}">${d.avgScore.toFixed(1)}</span>
-              </summary>
-              <div style="padding:0 14px 14px;">
-                ${deptRows.map(r => `
-                  <div class="staff-row" style="cursor:pointer; border: 1.5px solid ${r.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'};" onclick="showComparisonModal('${r.staffId}', '${escapeAttr(r.name)}')">
-                    <div>
-                      <div class="name">${r.name}</div>
-                      <div class="dept">Final Score: ${Number(r.finalScore||0).toFixed(1)}</div>
-                    </div>
-                    <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
-                  </div>`).join("")}
-              </div>
-            </details>`;
-          }).join("")}
-          ${!companyRes.departmentBreakdown.length ? '<div class="hint">Belum ada data untuk bulan ini.</div>' : ""}
-        </div>`;
-    }
   } else {
+    // Stats computed client-side straight from `rows` — no separate getCompanySummary call
+    // needed, which matters because that endpoint is gated to Management/Executive/HR/
+    // AdminOp and doesn't include Leader. Computing here means Leader (reviewing just their
+    // own team) gets the exact same grouped view as everyone else, not a stripped-down one.
+    const total = rows.length;
+    const avgScore = total ? rows.reduce((s, r) => s + Number(r.finalScore || 0), 0) / total : 0;
+    const performerCount = rows.filter(r => r.status === "Performer").length;
+    const underperformCount = total - performerCount;
+    const approvedCount = rows.filter(r => r.approvalStatus === "Approved").length;
+
+    const rowsByDept = {};
+    rows.forEach(r => {
+      const dept = r.department !== "-" ? r.department : r.tier;
+      if (!rowsByDept[dept]) rowsByDept[dept] = [];
+      rowsByDept[dept].push(r);
+    });
+    const deptKeys = Object.keys(rowsByDept).sort();
+
+    const statBox = (label, value, color) => `
+      <div style="flex:1; min-width:110px; background:var(--sand); border-radius:12px; padding:12px; text-align:center;">
+        <div style="font-size:22px; font-weight:800; color:${color || "var(--teal)"};">${value}</div>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${label}</div>
+      </div>`;
+
     bodyHtml = `
-      <input type="text" placeholder="Cari nama..." oninput="updateReviewFilter('search', this.value)" style="margin-bottom:10px;" />
-      <div class="row-flex" style="margin-bottom:10px;">
-        <select onchange="sortReviewList(this.value)">
-          <option value="">Urutkan...</option>
-          <option value="name-asc">Nama (A-Z)</option>
-          <option value="name-desc">Nama (Z-A)</option>
-          <option value="score-desc">Skor Tertinggi</option>
-          <option value="score-asc">Skor Terendah</option>
-        </select>
-        <select onchange="updateReviewFilter('department', this.value)">
-          <option value="">Semua Department</option>
-          ${[...new Set(rows.map(r => r.department !== "-" ? r.department : r.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
-        </select>
+      <div class="card">
+        <div class="row-flex" style="flex-wrap:wrap; gap:8px;">
+          ${statBox("Total Appraisal", total)}
+          ${statBox("Rata-rata Skor", avgScore.toFixed(1))}
+          ${statBox("Performer", performerCount, "var(--green)")}
+          ${statBox("Underperform", underperformCount, "var(--red)")}
+          ${statBox("Sudah Di-approve", `${approvedCount}/${total}`, "var(--gold)")}
+        </div>
       </div>
-      <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">Underperform Saja</button>
-      <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
-        <div class="hint">${rows.length} appraisal record — read only</div>
-        <button class="secondary" onclick="doExportReview()">📊 Export ke Excel</button>
+      <div class="card">
+        <input type="text" placeholder="Cari nama..." oninput="updateReviewFilter('search', this.value)" style="margin-bottom:10px;" />
+        <div class="row-flex" style="margin-bottom:10px;">
+          <select onchange="sortReviewList(this.value)">
+            <option value="">Urutkan...</option>
+            <option value="name-asc">Nama (A-Z)</option>
+            <option value="name-desc">Nama (Z-A)</option>
+            <option value="score-desc">Skor Tertinggi</option>
+            <option value="score-asc">Skor Terendah</option>
+          </select>
+          ${deptKeys.length > 1 ? `
+          <select onchange="updateReviewFilter('department', this.value)">
+            <option value="">Semua Department</option>
+            ${deptKeys.map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
+          </select>` : ""}
+        </div>
+        <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">Underperform Saja</button>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
+          <div class="hint">${total} appraisal record — read only</div>
+          <button class="secondary" onclick="doExportReview()">📊 Export ke Excel</button>
+        </div>
+        <div class="hint" id="review-export-note"></div>
       </div>
-      <div class="hint" id="review-export-note"></div>
       <div id="review-list-container">
-      ${rows.map(r => `
-        <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-department="${escapeAttr(r.department !== "-" ? r.department : r.tier)}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:default;">
-          <div>
-            <div class="name">${r.name} <span style="font-weight:400; color:var(--text-muted);">(${r.department !== "-" ? r.department : r.tier})</span></div>
-            <div class="dept">${monthLabelID(r.month)} · Self ${Number(r.selfTotal||0).toFixed(1)} · Leader ${Number(r.leaderTotal||0).toFixed(1)} · HR ${Number(r.hrTotal||0).toFixed(1)} · Final ${Number(r.finalScore||0).toFixed(1)}</div>
-            ${r.calibrationAdjustment ? `<div class="dept" style="color:var(--gold); font-weight:700;">⚖️ Calibration ${r.calibrationAdjustment > 0 ? "+" : ""}${r.calibrationAdjustment} — ${r.calibrationReason}</div>` : ""}
-            <div class="dept" style="margin-top:2px; font-size:11px;">Kontrak berakhir: ${r.contractEndDate ? fullDateLabelID(r.contractEndDate) : "-"}</div>
-          </div>
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-            <span class="badge ${r.status === 'Performer' ? 'performer' : 'underperform'}">${r.status}</span>
-            <span class="badge ${r.approvalStatus === 'Approved' ? 'done' : 'pending'}">${statusLabelID(r.approvalStatus || 'Pending')}</span>
-          </div>
-        </div>`).join("")}
+        ${deptKeys.map((dept, di) => {
+          const deptRows = rowsByDept[dept];
+          const deptAvg = deptRows.reduce((s, r) => s + Number(r.finalScore || 0), 0) / deptRows.length;
+          const deptUnderperform = deptRows.filter(r => r.status === "Underperform").length;
+          const summaryId = `dept-chevron-${di}`;
+          return `
+          <details class="review-dept-group" data-department="${escapeAttr(dept)}" open style="margin-bottom:10px; border:1px solid var(--border); border-radius:14px; overflow:hidden;" ontoggle="document.getElementById('${summaryId}').style.transform = this.open ? 'rotate(90deg)' : 'rotate(0deg)'">
+            <summary style="cursor:pointer; padding:13px 14px; list-style:none; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(90deg, var(--teal), var(--teal-dark)); color:#fff;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span id="${summaryId}" style="display:inline-block; transition:transform 0.15s ease; font-size:14px; transform:rotate(90deg);">▸</span>
+                <div>
+                  <span style="font-weight:700;">${dept}</span>
+                  <span style="font-weight:400; opacity:0.85;"> (${deptRows.length} orang)</span>
+                  ${deptUnderperform > 0 ? `<div style="font-size:12px; color:#FFD9CF; margin-top:2px;">${deptUnderperform} underperform</div>` : ""}
+                </div>
+              </div>
+              ${statusBadge(deptAvg >= 60, deptAvg.toFixed(1))}
+            </summary>
+            <div class="review-dept-body" style="padding:10px 14px 14px;">
+              ${deptRows.map(r => `
+                <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:pointer; border: 1.5px solid ${r.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'};" onclick="showComparisonModal('${r.staffId}', '${escapeAttr(r.name)}')">
+                  <div>
+                    <div class="name">${r.name}</div>
+                    <div class="dept">Final Score: ${Number(r.finalScore||0).toFixed(1)}</div>
+                    ${r.calibrationAdjustment ? `<div class="dept" style="color:var(--gold); font-weight:700;">⚖️ Calibration ${r.calibrationAdjustment > 0 ? "+" : ""}${r.calibrationAdjustment}</div>` : ""}
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    ${statusBadge(r.status === 'Performer', r.status)}
+                    <span style="color:var(--text-muted); font-size:16px;">›</span>
+                  </div>
+                </div>`).join("")}
+            </div>
+          </details>`;
+        }).join("")}
       </div>
       ${!rows.length ? '<div class="hint">Belum ada data appraisal di scope kamu.</div>' : ""}`;
   }
@@ -2289,12 +2301,25 @@ function updateReviewFilter(key, value) {
   state._reviewFilters = state._reviewFilters || {};
   state._reviewFilters[key] = value;
   const f = state._reviewFilters;
-  document.querySelectorAll("#review-list-container [data-search]").forEach(el => {
-    let show = true;
-    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
-    if (f.department && el.dataset.department !== f.department) show = false;
-    if (f.underperformOnly && el.dataset.status !== "Underperform") show = false;
-    el.style.display = show ? "" : "none";
+  const anyFilterActive = !!(f.search || f.department || f.underperformOnly);
+
+  document.querySelectorAll(".review-dept-group").forEach(group => {
+    let groupHasVisibleRow = false;
+    group.querySelectorAll("[data-search]").forEach(el => {
+      let show = true;
+      if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
+      if (f.underperformOnly && el.dataset.status !== "Underperform") show = false;
+      el.style.display = show ? "" : "none";
+      if (show) groupHasVisibleRow = true;
+    });
+
+    const deptMatches = !f.department || group.dataset.department === f.department;
+    const showGroup = deptMatches && groupHasVisibleRow;
+    group.style.display = showGroup ? "" : "none";
+    // Auto-expand matches when a filter is active, so a result never sits hidden inside a
+    // collapsed group — searching for someone shouldn't require also manually opening
+    // their department first.
+    if (showGroup && anyFilterActive) group.open = true;
   });
 }
 
@@ -2322,18 +2347,19 @@ async function doExportReview() {
 
 function sortReviewList(criteria) {
   if (!criteria) return;
-  const container = document.getElementById("review-list-container");
-  if (!container) return;
-  const cards = Array.from(container.children);
-  cards.sort((a, b) => {
-    if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
-    if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
-    if (criteria === "score-desc") return Number(b.dataset.score) - Number(a.dataset.score);
-    if (criteria === "score-asc") return Number(a.dataset.score) - Number(b.dataset.score);
-    return 0;
+  // Sorts WITHIN each department group independently, not globally — a global sort would
+  // interleave people from different departments, defeating the point of grouping them.
+  document.querySelectorAll(".review-dept-body").forEach(container => {
+    const cards = Array.from(container.children);
+    cards.sort((a, b) => {
+      if (criteria === "name-asc") return a.dataset.name.localeCompare(b.dataset.name);
+      if (criteria === "name-desc") return b.dataset.name.localeCompare(a.dataset.name);
+      if (criteria === "score-desc") return Number(b.dataset.score) - Number(a.dataset.score);
+      if (criteria === "score-asc") return Number(a.dataset.score) - Number(b.dataset.score);
+      return 0;
+    });
+    cards.forEach(c => container.appendChild(c));
   });
-  cards.forEach(c => container.appendChild(c));
-
 }
 
 function openForm(evaluatorType, staffId, name, department, tier) {
@@ -2470,7 +2496,7 @@ async function renderMyAppraisalHistory(staffId) {
           ${h.selfTotal === "" && h.hrTotal === "" ? "" : `<div class="dept" style="margin-top:2px; font-size:11px;">Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}</div>`}
           ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findLabel(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
         </div>
-        <span class="badge ${h.status === 'Performer' ? 'performer' : 'underperform'}">${h.status}</span>
+        ${statusBadge(h.status === 'Performer', h.status)}
       </div>`).join("")}
     ${!history.length ? '<div class="hint">Belum ada riwayat appraisal.</div>' : ""}
   `;
@@ -3024,7 +3050,7 @@ async function renderGm() {
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <span class="badge ${s.status === 'Performer' ? 'performer' : 'underperform'}">${s.status}</span>
+              ${statusBadge(s.status === 'Performer', s.status)}
               ${s.approvalStatus === 'Approved'
                 ? `<span class="badge done">Disetujui</span><button class="ghost" style="font-size:12px;" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Edit</button>`
                 : `<button class="secondary" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Approve</button>`}

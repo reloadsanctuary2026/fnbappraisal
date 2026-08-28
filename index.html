@@ -178,7 +178,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-10-125 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-126 — LIVE</div>
 
 <script>
 // =================================================================
@@ -2139,6 +2139,11 @@ async function renderReview() {
     return;
   }
   const rows = res.rows || [];
+  // Feed the same lookup cache showComparisonModal() reads from — previously only
+  // renderGm() populated this, so opening the detail popup from Review Everyone's
+  // Records/Review Your Team always found an empty object regardless of who was
+  // clicked, showing "undefined" department and "-" contract for EVERY person here.
+  state._currentGmList = rows;
   const showMenuLink = availableScreens(state.user).length > 1;
 
   const toggleHtml = canSeeCompliance ? tabSwitcher([

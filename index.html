@@ -166,9 +166,11 @@
   .mapping-row { display: grid; grid-template-columns: 1.6fr 0.8fr 1.2fr 1.6fr; gap: 10px; align-items: center; padding: 12px; border-radius: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
   .mapping-row:last-child { border-bottom: none; }
   .mapping-row:hover { background: #FFFCF8; }
+  .mapping-row.selected { background: #FFF3EC; }
   .mapping-row.head { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1.5px solid var(--border); padding: 0 12px 8px; }
   .mapping-row .cell-name { font-weight: 500; font-size: 13.5px; line-height: 1.35; color: var(--text); }
   .mapping-row .cell-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; line-height: 1.3; }
+  .mapping-checkbox { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; accent-color: var(--coral); cursor: pointer; }
   .tier-pill { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: var(--sand); color: var(--text-muted); line-height: 1.4; }
   .mapping-row .col-jobtitle { font-size: 12.5px; color: var(--text-muted); line-height: 1.35; }
   .mapping-row select.superior-select { width: 100%; font-size: 12.5px; padding: 7px 8px; border-radius: 8px; border: 1.5px solid var(--border); background: #fff; cursor: pointer; transition: border-color 0.15s ease; color: var(--text-muted); text-overflow: ellipsis; }
@@ -176,6 +178,12 @@
   .mapping-row select.superior-select:focus { outline: none; border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255,107,74,0.12); }
   .mapping-row select.superior-select.is-overridden { border-color: var(--gold); background: #FFF8ED; color: var(--text); font-weight: 500; }
   .mapping-save-flash { font-size: 10.5px; margin-top:3px; font-weight:600; min-height: 13px; }
+  .bulk-bar { position: sticky; top: 66px; z-index: 5; background: var(--teal-dark); color: #fff; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; box-shadow: 0 6px 16px rgba(14,71,73,0.25); }
+  .bulk-bar .bulk-count { font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .bulk-bar select { flex: 1; min-width: 160px; font-size: 12.5px; padding: 7px 8px; border-radius: 8px; border: none; }
+  .bulk-bar button.bulk-apply { background: var(--coral); color: #fff; border: none; border-radius: 8px; padding: 7px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .bulk-bar button.bulk-cancel { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .bulk-bar .bulk-warn { flex-basis: 100%; font-size: 11.5px; color: #FFD9CF; }
   @media (max-width: 480px) {
     .mapping-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
     .mapping-row.head { display: none; }
@@ -197,7 +205,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-128 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-129 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1685,9 +1693,12 @@ async function renderStaffMapping() {
     const isOverridden = !!r.evaluatorStaffId;
     return `
       <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-department="${escapeAttr(r.department)}">
-        <div class="col-name">
-          <div class="cell-name">${r.name}</div>
-          ${r.department !== "-" ? `<div class="cell-sub">${r.department}</div>` : ""}
+        <div class="col-name" style="display:flex; align-items:flex-start; gap:8px;">
+          <input type="checkbox" class="mapping-checkbox" data-staffid="${r.staffId}" onchange="onStaffMappingCheckboxChange(this)">
+          <div>
+            <div class="cell-name">${r.name}</div>
+            ${r.department !== "-" ? `<div class="cell-sub">${r.department}</div>` : ""}
+          </div>
         </div>
         <div class="col-tier"><span class="tier-pill">${r.tier}</span></div>
         <div class="col-jobtitle">${r.jobTitle}</div>
@@ -1706,7 +1717,7 @@ async function renderStaffMapping() {
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <h2>Staff Mapping</h2>
-      <div class="hint" style="margin-bottom:10px;">${rows.length} orang — pilih Superior manual buat siapapun yang butuh dikecualikan dari default.</div>
+      <div class="hint" style="margin-bottom:10px;">${rows.length} orang — pilih Superior manual buat siapapun yang butuh dikecualikan dari default. Centang beberapa orang buat ganti sekaligus (bulk).</div>
       <input type="text" placeholder="Cari nama..." oninput="updateStaffMappingFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:4px;">
         <select onchange="sortStaffMappingList(this.value)">
@@ -1724,9 +1735,16 @@ async function renderStaffMapping() {
         </select>
       </div>
     </div>
+    <div class="bulk-bar" id="staff-mapping-bulk-bar">
+      <span class="bulk-count" id="staff-mapping-bulk-count">0 dipilih</span>
+      <select id="bulk-superior-select"></select>
+      <button class="bulk-apply" onclick="applyBulkStaffSuperior()">Terapkan</button>
+      <button class="bulk-cancel" onclick="clearStaffMappingSelection()">Batal</button>
+      <div class="bulk-warn" id="staff-mapping-bulk-warn" style="display:none;"></div>
+    </div>
     <div class="card">
       <div class="mapping-row head">
-        <div>Nama</div><div>Tier</div><div>Job Title</div><div>Superior</div>
+        <div style="display:flex; align-items:center; gap:8px;"><input type="checkbox" class="mapping-checkbox" id="mapping-select-all" onchange="toggleStaffMappingSelectAll(this.checked)"> Nama</div><div>Tier</div><div>Job Title</div><div>Superior</div>
       </div>
       <div id="staff-mapping-list-container">
         ${rows.map(rowHtml).join("")}
@@ -1734,6 +1752,82 @@ async function renderStaffMapping() {
       <div class="hint" id="staff-mapping-empty-note" style="display:none; text-align:center; padding:16px 0;">Gak ada yang cocok sama filter/pencarian.</div>
     </div>
   `;
+}
+
+function toggleStaffMappingSelectAll(checked) {
+  document.querySelectorAll("#staff-mapping-list-container .mapping-row").forEach(row => {
+    if (row.style.display !== "none") {
+      const cb = row.querySelector(".mapping-checkbox");
+      if (cb) { cb.checked = checked; row.classList.toggle("selected", checked); }
+    }
+  });
+  updateStaffMappingBulkBar();
+}
+
+function onStaffMappingCheckboxChange(checkbox) {
+  checkbox.closest(".mapping-row").classList.toggle("selected", checkbox.checked);
+  updateStaffMappingBulkBar();
+}
+
+/** Candidate list depends on the TARGET's tier (Staff needs Leader/Management, Leader
+ *  needs Management/Executive, Management needs Executive) — so a bulk pick across mixed
+ *  tiers only offers whoever qualifies as a valid Superior for EVERY selected tier at
+ *  once (the intersection). Selecting only same-tier people always has the full list;
+ *  mixed selections usually narrow down to Management, since Management can supervise
+ *  both Staff and Leader. */
+function updateStaffMappingBulkBar() {
+  const checked = Array.from(document.querySelectorAll(".mapping-checkbox[data-staffid]:checked"));
+  const bar = document.getElementById("staff-mapping-bulk-bar");
+  const warnEl = document.getElementById("staff-mapping-bulk-warn");
+  if (!checked.length) { bar.style.display = "none"; return; }
+
+  const tiers = [...new Set(checked.map(cb => cb.closest(".mapping-row").dataset.tier))];
+  let intersection = null;
+  tiers.forEach(t => {
+    const list = state._staffMappingCandidates[t] || [];
+    if (intersection === null) { intersection = list; return; }
+    const ids = new Set(list.map(c => c.staffId));
+    intersection = intersection.filter(c => ids.has(c.staffId));
+  });
+  intersection = intersection || [];
+
+  const select = document.getElementById("bulk-superior-select");
+  select.innerHTML = `<option value="">(Kembali ke Otomatis)</option>` +
+    intersection.map(c => `<option value="${c.staffId}">${c.name}</option>`).join("");
+
+  if (tiers.length > 1 && !intersection.length) {
+    warnEl.style.display = "";
+    warnEl.textContent = `Tier campuran (${tiers.join(", ")}) gak punya calon Superior yang sama-sama valid — pisahkan seleksi per tier, atau tetap bisa pilih "(Kembali ke Otomatis)".`;
+  } else {
+    warnEl.style.display = "none";
+  }
+
+  document.getElementById("staff-mapping-bulk-count").textContent = `${checked.length} dipilih`;
+  bar.style.display = "flex";
+}
+
+function clearStaffMappingSelection() {
+  document.querySelectorAll(".mapping-checkbox").forEach(cb => { cb.checked = false; });
+  document.querySelectorAll(".mapping-row.selected").forEach(row => row.classList.remove("selected"));
+  updateStaffMappingBulkBar();
+}
+
+async function applyBulkStaffSuperior() {
+  const checked = Array.from(document.querySelectorAll(".mapping-checkbox[data-staffid]:checked"));
+  if (!checked.length) return;
+  const evaluatorStaffId = document.getElementById("bulk-superior-select").value;
+  const applyBtn = document.querySelector(".bulk-bar .bulk-apply");
+  applyBtn.disabled = true;
+  applyBtn.textContent = `Menyimpan 0/${checked.length}...`;
+  let done = 0;
+  for (const cb of checked) {
+    const staffId = cb.dataset.staffid;
+    await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffId });
+    done++;
+    applyBtn.textContent = `Menyimpan ${done}/${checked.length}...`;
+  }
+  showToast(`✅ ${checked.length} orang diupdate.`);
+  renderStaffMapping();
 }
 
 function updateStaffMappingFilter(key, value) {

@@ -237,7 +237,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-136 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-137 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1729,6 +1729,17 @@ async function doDeleteKpiCriterion(section, rowIndex) {
   renderKpiManagement();
 }
 
+async function doExportStaffMapping() {
+  const noteEl = document.getElementById("staff-mapping-export-note");
+  noteEl.textContent = "Membuat sheet export...";
+  const res = await apiPost("exportStaffMapping", { requesterId: state.user.staffId });
+  if (res.error || res.success === false) {
+    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    return;
+  }
+  noteEl.innerHTML = `Sheet siap (${res.rowCount} orang)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel (.xlsx) buat share ke siapa aja.`;
+}
+
 async function renderStaffMapping() {
   app.innerHTML = topbar("Staff Mapping") + `<div class="loading">Memuat...</div>`;
   const res = await apiGet("getStaffMapping", { requesterId: state.user.staffId });
@@ -1805,6 +1816,8 @@ async function renderStaffMapping() {
     <div class="card">
       <h2>Staff Mapping</h2>
       <div class="hint" style="margin-bottom:10px;">${rows.length} orang — centang Leader/Management/Executive manapun buat jadiin Superior tambahan/pengganti default. Bisa pilih lebih dari satu. Centang beberapa orang buat ganti sekaligus (bulk).</div>
+      <button class="secondary" onclick="doExportStaffMapping()" style="margin-bottom:6px;">📊 Export ke Excel</button>
+      <div class="hint" id="staff-mapping-export-note" style="margin-bottom:10px;"></div>
       <input type="text" placeholder="Cari nama..." oninput="updateStaffMappingFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:4px;">
         <select onchange="updateStaffMappingFilter('tier', this.value)">

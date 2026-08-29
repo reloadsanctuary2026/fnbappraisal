@@ -199,7 +199,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-131 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-132 — TEST</div>
 
 <script>
 // =================================================================
@@ -212,10 +212,25 @@ const LMS_URL = "https://script.google.com/macros/s/AKfycbx7ID6GZMXYoj8ymmwAcGux
 // API helpers
 // =================================================================
 async function apiGet(action, params = {}) {
-  const qs = new URLSearchParams({ action, ...params }).toString();
+  // Every doGet action now requires a valid session (except the pre-login handful:
+  // checkNikExists/login/resumeSession/version) — see doGet() in the backend for why.
+  // Attaching these here, in one place, means every existing apiGet(...) call across the
+  // whole app automatically starts sending proof of identity without needing to touch each
+  // call site individually.
+  const fullParams = { ...params };
+  if (state.user) {
+    fullParams.sessionToken = state.user.sessionToken;
+    fullParams.sessionStaffId = state.user.staffId;
+  }
+  const qs = new URLSearchParams({ action, ...fullParams }).toString();
   try {
     const res = await fetch(`${API_URL}?${qs}`);
-    return await res.json();
+    const json = await res.json();
+    if (json.error === "session_expired") {
+      showToast("Sesi kamu udah habis, login ulang ya.", "error");
+      setTimeout(() => { state.user = null; renderLogin(); }, 1500);
+    }
+    return json;
   } catch (err) {
     console.error("apiGet failed:", action, err);
     return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
@@ -302,6 +317,8 @@ function friendlyError(code) {
     access_denied: "Akses ditolak.",
     max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
     session_expired: "Sesi kamu udah habis, login ulang ya.",
+    identity_mismatch: "Permintaan gak valid — coba refresh halaman dan login ulang.",
+    pin_not_set: "PIN belum di-set. Hubungi HR.",
   };
   if (map[code]) return map[code];
   if (code && /lock/i.test(code)) return "Server lagi sibuk (banyak orang submit bersamaan) — tunggu beberapa detik lalu coba lagi.";

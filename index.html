@@ -199,7 +199,7 @@
   .superior-ms-trigger.is-overridden { border-color: var(--gold); background: #FFF8ED; color: var(--text); font-weight: 500; }
   .superior-ms-trigger .ms-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
   .superior-ms-trigger .ms-chevron { flex-shrink: 0; font-size: 9px; }
-  .superior-ms-panel { position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; max-width: 300px; max-height: 260px; overflow-y: auto; background: #fff; border: 1.5px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.14); z-index: 20; padding: 6px; }
+  .superior-ms-panel { position: fixed; max-height: 260px; overflow-y: auto; background: #fff; border: 1.5px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.14); z-index: 200; padding: 6px; }
   .superior-ms-panel.hidden { display: none; }
   .ms-option { display: flex; align-items: flex-start; gap: 8px; padding: 7px 8px; border-radius: 7px; cursor: pointer; font-size: 12.5px; line-height: 1.4; white-space: normal; word-break: break-word; }
   .ms-option:hover { background: var(--sand); }
@@ -230,7 +230,7 @@
     }
     .mapping-row .col-management::before { content: "Management"; }
     .mapping-row .col-executive::before { content: "Executive"; }
-    .superior-ms-panel { width: 100%; max-width: 100%; }
+    .superior-ms-panel { max-width: none; }
   }
   .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
   .toast {
@@ -247,7 +247,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-139 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-140 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1885,12 +1885,35 @@ function staffMappingOutsideClickHandler(e) {
   document.querySelectorAll(".superior-ms-panel").forEach(p => p.classList.add("hidden"));
 }
 
+/** Panels used to be position:absolute relative to their trigger, which looked fine until
+ *  a row near the bottom of a .card opened one — .card has overflow:hidden (for its
+ *  rounded corners), which silently clipped the panel instead of letting it show fully.
+ *  Fixed positioning computed from the trigger's actual on-screen rect escapes that
+ *  clipping entirely (fixed elements aren't contained by an ancestor's overflow), and lets
+ *  the panel flip to open UPWARD instead of down when there isn't enough room below. */
 function toggleSuperiorPanel(domId) {
   const panel = document.getElementById(`panel-${domId}`);
-  if (!panel) return;
+  const trigger = document.getElementById(`trigger-${domId}`);
+  if (!panel || !trigger) return;
   const willOpen = panel.classList.contains("hidden");
   document.querySelectorAll(".superior-ms-panel").forEach(p => p.classList.add("hidden"));
-  if (willOpen) panel.classList.remove("hidden");
+  if (!willOpen) return;
+
+  const rect = trigger.getBoundingClientRect();
+  const panelWidth = Math.min(Math.max(rect.width, 220), 320);
+  let left = rect.left;
+  const maxLeft = window.innerWidth - panelWidth - 8;
+  if (left > maxLeft) left = Math.max(8, maxLeft);
+
+  const assumedPanelHeight = 260; // matches the CSS max-height cap
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const openUpward = spaceBelow < assumedPanelHeight + 12 && rect.top > assumedPanelHeight;
+
+  panel.style.left = `${left}px`;
+  panel.style.width = `${panelWidth}px`;
+  panel.style.top = openUpward ? "" : `${rect.bottom + 4}px`;
+  panel.style.bottom = openUpward ? `${window.innerHeight - rect.top + 4}px` : "";
+  panel.classList.remove("hidden");
 }
 
 /** Fires on ANY checkbox change within one of a row's (up to 2) applicable checklist

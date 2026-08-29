@@ -209,7 +209,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-130 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-131 — LIVE</div>
 
 <script>
 // =================================================================
@@ -613,8 +613,12 @@ async function doLoginStep1() {
       return;
     }
     if (!res.hasPin) {
-      // No PIN set yet for this person — proceed straight through, same as before PIN existed.
-      await completeLogin(nik, "");
+      // Used to skip straight into completeLogin(nik, "") here — meant anyone who knew a
+      // NIK without a PIN yet set could get in with zero verification. Now blocked: no PIN
+      // on file means no login, full stop, until HR sets one (same message + one-tap
+      // request as the "Lupa PIN?" flow, so nothing new to remember).
+      state._pendingNik = nik;
+      errEl.innerHTML = 'PIN belum di-set untuk NIK ini. <button class="ghost" style="display:inline-block; padding:4px 10px; font-size:12px; margin-left:4px;" onclick="doRequestPinReset()">Minta PIN ke HR</button>';
       return;
     }
     state._pendingNik = nik;
@@ -672,7 +676,11 @@ async function completeLogin(nik, pin) {
   try {
     const res = await apiGetWithRetry("login", { nik, pin }, 2, (r) => r.error !== "invalid_pin" && (!!r.error || r.found === false));
     if (!res.found) {
-      if (errEl) errEl.textContent = res.error === "invalid_pin" ? "PIN salah. Coba lagi." : "NIK tidak ditemukan.";
+      if (errEl) {
+        errEl.textContent = res.error === "invalid_pin" ? "PIN salah. Coba lagi."
+          : res.error === "pin_not_set" ? "PIN belum di-set. Hubungi HR."
+          : "NIK tidak ditemukan.";
+      }
       return;
     }
     state.user = res;

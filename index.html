@@ -163,7 +163,8 @@
   table.mini { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.mini td { padding: 6px 0; border-bottom: 1px solid var(--border); }
   table.mini td:last-child { text-align: right; font-weight: 600; }
-  .mapping-row { display: grid; grid-template-columns: 1.5fr 0.65fr 0.95fr 1fr 1fr 1fr; gap: 8px; align-items: start; padding: 12px; border-radius: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
+  #staff-mapping-list-container { counter-reset: staffmapping-row; }
+  .mapping-row { counter-increment: staffmapping-row; display: grid; grid-template-columns: 0.35fr 1.4fr 0.95fr 0.6fr 1fr 1fr 1fr; gap: 8px; align-items: start; padding: 12px; border-radius: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
   .mapping-row:last-child { border-bottom: none; }
   .mapping-row:hover { background: #FFFCF8; }
   .mapping-row.selected { background: #FFF3EC; }
@@ -176,6 +177,9 @@
   .mapping-row .cell-name { font-weight: 500; font-size: 13.5px; line-height: 1.35; color: var(--text); }
   .mapping-row .cell-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; line-height: 1.3; }
   .mapping-checkbox { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; accent-color: var(--coral); cursor: pointer; }
+  .col-no { display: flex; align-items: flex-start; gap: 6px; }
+  .col-no .row-number { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .col-no .row-number::before { content: counter(staffmapping-row); }
   .tier-pill { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: var(--sand); color: var(--text-muted); line-height: 1.4; }
   .mapping-row .col-jobtitle { font-size: 12.5px; color: var(--text-muted); line-height: 1.35; padding-top: 2px; }
   .col-na { font-size: 12px; color: var(--border); text-align: center; padding-top: 8px; }
@@ -204,9 +208,10 @@
   .bulk-bar button.bulk-cancel { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
   .bulk-bar .bulk-warn { font-size: 11.5px; color: #FFD9CF; }
   @media (max-width: 480px) {
-    .mapping-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
+    .mapping-row { grid-template-columns: auto 1fr 1fr; row-gap: 6px; }
     .mapping-row.head { display: none; }
-    .mapping-row .col-jobtitle { grid-column: 2; text-align: right; }
+    .mapping-row .col-jobtitle { grid-column: 3; text-align: right; }
+    .mapping-row .col-tier { grid-column: 2 / 4; }
     .mapping-row .col-leader, .mapping-row .col-management, .mapping-row .col-executive { grid-column: 1 / -1; }
   }
   .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
@@ -224,7 +229,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-133 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-134 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1768,15 +1773,16 @@ async function renderStaffMapping() {
 
     return `
       <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-jobtitle="${escapeAttr(r.jobTitle)}" data-department="${escapeAttr(r.department)}">
-        <div class="col-name" style="display:flex; align-items:flex-start; gap:8px;">
+        <div class="col-no">
           <input type="checkbox" class="mapping-checkbox" data-staffid="${r.staffId}" onchange="onStaffMappingCheckboxChange(this)">
-          <div>
-            <div class="cell-name">${r.name}</div>
-            ${r.department !== "-" ? `<div class="cell-sub">${r.department}</div>` : ""}
-          </div>
+          <span class="row-number"></span>
         </div>
-        <div class="col-tier"><span class="tier-pill">${r.tier}</span></div>
+        <div class="col-name">
+          <div class="cell-name">${r.name}</div>
+          ${r.department !== "-" ? `<div class="cell-sub">${r.department}</div>` : ""}
+        </div>
         <div class="col-jobtitle">${r.jobTitle}</div>
+        <div class="col-tier"><span class="tier-pill">${r.tier}</span></div>
         ${colCell("leader", state._staffMappingCandidates.leaders, r.autoLeaderLabel)}
         ${colCell("management", state._staffMappingCandidates.managements, r.autoManagementLabel)}
         ${colCell("executive", state._staffMappingCandidates.executives, r.autoExecutiveLabel)}
@@ -1812,12 +1818,13 @@ async function renderStaffMapping() {
     </div>
     <div class="card">
       <div class="mapping-row head">
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:6px;">
           <input type="checkbox" class="mapping-checkbox" id="mapping-select-all" onchange="toggleStaffMappingSelectAll(this.checked)">
-          <span class="sortable-th" onclick="sortStaffMappingList('name')" id="sort-th-name">Nama<span class="sort-arrow" id="sort-arrow-name"></span></span>
+          <span>No</span>
         </div>
-        <div class="sortable-th" onclick="sortStaffMappingList('tier')" id="sort-th-tier">Tier<span class="sort-arrow" id="sort-arrow-tier"></span></div>
+        <span class="sortable-th" onclick="sortStaffMappingList('name')" id="sort-th-name">Name<span class="sort-arrow" id="sort-arrow-name"></span></span>
         <div class="sortable-th" onclick="sortStaffMappingList('jobTitle')" id="sort-th-jobTitle">Job Title<span class="sort-arrow" id="sort-arrow-jobTitle"></span></div>
+        <div class="sortable-th" onclick="sortStaffMappingList('tier')" id="sort-th-tier">Tier<span class="sort-arrow" id="sort-arrow-tier"></span></div>
         <div>Leader</div>
         <div>Management</div>
         <div>Executive</div>

@@ -190,6 +190,7 @@
   .col-tier { text-align: center; }
   .mapping-row .col-jobtitle { font-size: 12.5px; color: var(--text-muted); line-height: 1.35; overflow-wrap: break-word; word-break: break-word; }
   .col-na { font-size: 12px; color: var(--border); text-align: center; }
+  .col-executive-static { font-size: 12.5px; color: var(--text); font-weight: 500; }
   /* Checklist popover — replaces the old single-line <select> so multiple people can be
      picked per column, and so every candidate name is fully readable instead of getting
      cut off with an ellipsis inside a narrow closed dropdown. */
@@ -247,7 +248,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-140 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-141 — LIVE</div>
 
 <script>
 // =================================================================
@@ -1767,13 +1768,19 @@ async function renderStaffMapping() {
   const deptKeys = [...new Set(rows.filter(r => r.department !== "-").map(r => r.department))].sort();
   const tierKeys = ["Staff", "Leader", "Management"];
 
-  // Which columns actually apply, based on the TARGET's own tier — a Staff can be given
-  // Leader and/or Management as their Superior (never Executive); a Leader can be given
-  // Management and/or Executive (never another Leader); a Management can only be given
-  // Executive. Whichever checklist(s) get checked here really do control who's allowed to
-  // submit that person's appraisal (see getEvaluatorSlotsForEmployees on the backend) — this
-  // isn't just a display, it's the actual access control.
-  const applicableColumns = { Staff: ["leader", "management"], Leader: ["management", "executive"], Management: ["executive"] };
+  // Which of the Leader/Management columns actually apply, based on the TARGET's own tier
+  // — a Staff can be given Leader and/or Management as their Superior; a Leader can be
+  // given Management only (never another Leader). A Management gets neither (only
+  // Executive, which isn't part of this checklist system at all — see EXECUTIVE_LABEL
+  // below). Whichever checklist(s) get checked here really do control who's allowed to
+  // submit that person's appraisal (see getEvaluatorSlotsForEmployees on the backend) —
+  // this isn't just a display, it's the actual access control.
+  const applicableColumns = { Staff: ["leader", "management"], Leader: ["management"], Management: [] };
+  // Executive is always just informational, for EVERY tier — whoever currently holds
+  // Executive tier (there may be more than one), joined by name. Not a checklist, not
+  // editable from here: computed fresh from the live roster every time this screen loads,
+  // so it never needs a code change if who holds that tier changes later.
+  const EXECUTIVE_LABEL = state._staffMappingCandidates.executives.map(c => c.name).join(", ") || "(belum ada Executive)";
 
   // Builds one checklist popover (trigger button + hidden panel). `scope` keeps row vs.
   // bulk IDs from colliding; `rowStaffId` is '' for the bulk bar (no single target yet).
@@ -1823,7 +1830,7 @@ async function renderStaffMapping() {
         <div class="col-tier"><span class="tier-pill">${r.tier}</span></div>
         ${colCell("leader", state._staffMappingCandidates.leaders, r.autoLeaderLabel)}
         ${colCell("management", state._staffMappingCandidates.managements, r.autoManagementLabel)}
-        ${colCell("executive", state._staffMappingCandidates.executives, r.autoExecutiveLabel)}
+        <div class="col-executive col-executive-static">${EXECUTIVE_LABEL}</div>
         <div class="mapping-save-flash" id="superior-save-note-${r.staffId}" style="grid-column: 1 / -1; margin-left: 26px;"></div>
       </div>`;
   };
@@ -1962,12 +1969,11 @@ function onStaffMappingCheckboxChange(checkbox) {
   updateStaffMappingBulkBar();
 }
 
-/** Bulk bar shows the SAME 3 checklist columns as each row (Leader/Management/Executive) —
- *  always all 3 regardless of which tiers are selected, since nothing stops assigning e.g.
- *  an Executive override to a Staff row if that's genuinely wanted; there's no need to
- *  restrict/intersect candidates by the selected tiers the way a single shared dropdown
- *  would have required. Checking boxes here doesn't save immediately (unlike per-row) —
- *  it waits for "Terapkan" since it's about to overwrite MULTIPLE people at once. */
+/** Bulk bar shows the same Leader/Management checklists as each row. Executive isn't
+ *  offered here since it's now purely informational everywhere (see EXECUTIVE_LABEL in
+ *  renderStaffMapping) — not something to assign via checkbox, for any tier. Checking
+ *  boxes here doesn't save immediately (unlike per-row) — it waits for "Terapkan" since
+ *  it's about to overwrite MULTIPLE people at once. */
 function updateStaffMappingBulkBar() {
   const checked = Array.from(document.querySelectorAll(".mapping-checkbox[data-staffid]:checked"));
   const bar = document.getElementById("staff-mapping-bulk-bar");
@@ -1992,8 +1998,7 @@ function updateStaffMappingBulkBar() {
       </div>`;
     container.innerHTML =
       buildBulkColumn("leader", "+ Leader", state._staffMappingCandidates.leaders) +
-      buildBulkColumn("management", "+ Management", state._staffMappingCandidates.managements) +
-      buildBulkColumn("executive", "+ Executive", state._staffMappingCandidates.executives);
+      buildBulkColumn("management", "+ Management", state._staffMappingCandidates.managements);
     container.dataset.built = "true";
   }
 

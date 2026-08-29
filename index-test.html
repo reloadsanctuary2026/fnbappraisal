@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Reload Appraisal">
 <title>Reload F&amp;B Appraisal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +34,11 @@
   @media (prefers-reduced-motion: reduce) {
     * { animation: none !important; transition: none !important; }
   }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .topbar, .card { animation: fadeSlideIn 0.28s ease-out; }
   body {
     margin: 0;
     font-family: "Poppins", ui-rounded, -apple-system, "Segoe UI", Arial, sans-serif;
@@ -45,8 +53,8 @@
     position: sticky; top: 0; z-index: 10;
     box-shadow: 0 6px 16px rgba(14, 71, 73, 0.18);
   }
-  .topbar h1 { font-size: 17px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
-  .topbar .sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; }
+  .topbar h1 { font-size: 17px; margin: 0; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar .sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .logo-mark {
     width: 34px; height: 34px; flex-shrink: 0;
     background: linear-gradient(135deg, var(--gold), var(--coral));
@@ -59,9 +67,12 @@
   .topbar button {
     background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3); color: #fff;
     border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background 0.15s ease; white-space: nowrap;
   }
   .topbar button:hover { background: rgba(255,255,255,0.24); }
+  @media (max-width: 420px) {
+    .topbar button { padding: 6px 9px; font-size: 11px; }
+  }
 
   .card {
     background: var(--card); border: 1px solid var(--border); border-radius: 18px;
@@ -80,7 +91,7 @@
   .mode-banner.mode-hr { background: #E8E3F5; color: #6C4FB6; }
   label { font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 6px; }
   input[type=text], input[type=password], input[type=number], select {
-    width: 100%; padding: 11px 14px; font-size: 15px; border: 1.5px solid var(--border);
+    width: 100%; padding: 11px 14px; font-size: 16px; border: 1.5px solid var(--border);
     border-radius: 12px; background: #fff; color: var(--text); margin-bottom: 14px;
     transition: border-color 0.15s ease;
   }
@@ -147,11 +158,62 @@
   .hint { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
   .error { color: var(--red); font-size: 13px; margin-bottom: 10px; font-weight: 600; }
   .center { text-align: center; }
-  .row-flex { display: flex; gap: 8px; }
+  .row-flex { display: flex; gap: 8px; flex-wrap: wrap; }
   .row-flex > * { flex: 1; }
-  table.mini { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  table.mini { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.mini td { padding: 6px 0; border-bottom: 1px solid var(--border); }
   table.mini td:last-child { text-align: right; font-weight: 600; }
+  #staff-mapping-list-container { counter-reset: staffmapping-row; }
+  .mapping-row { counter-increment: staffmapping-row; display: grid; grid-template-columns: 0.35fr 1.4fr 0.95fr 0.6fr 1fr 1fr 1fr; gap: 8px; align-items: start; padding: 12px; border-radius: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
+  .mapping-row:last-child { border-bottom: none; }
+  .mapping-row:hover { background: #FFFCF8; }
+  .mapping-row.selected { background: #FFF3EC; }
+  .mapping-row.head { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1.5px solid var(--border); padding: 0 12px 8px; align-items: center; }
+  .sortable-th { cursor: pointer; user-select: none; transition: color 0.15s ease; }
+  .sortable-th:hover { color: var(--coral); }
+  .sortable-th.active { color: var(--coral-dark); }
+  .sort-arrow { font-size: 9px; }
+  .sort-arrow sup { font-size: 8px; }
+  .mapping-row .cell-name { font-weight: 500; font-size: 13.5px; line-height: 1.35; color: var(--text); }
+  .mapping-row .cell-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; line-height: 1.3; }
+  .mapping-checkbox { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; accent-color: var(--coral); cursor: pointer; }
+  .col-no { display: flex; align-items: flex-start; gap: 6px; }
+  .col-no .row-number { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .col-no .row-number::before { content: counter(staffmapping-row); }
+  .tier-pill { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: var(--sand); color: var(--text-muted); line-height: 1.4; }
+  .mapping-row .col-jobtitle { font-size: 12.5px; color: var(--text-muted); line-height: 1.35; padding-top: 2px; }
+  .col-na { font-size: 12px; color: var(--border); text-align: center; padding-top: 8px; }
+  /* Checklist popover — replaces the old single-line <select> so multiple people can be
+     picked per column, and so every candidate name is fully readable instead of getting
+     cut off with an ellipsis inside a narrow closed dropdown. */
+  .superior-ms { position: relative; }
+  .superior-ms-trigger { width: 100%; font-size: 12px; padding: 7px 8px; border-radius: 8px; border: 1.5px solid var(--border); background: #fff; cursor: pointer; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 4px; color: var(--text-muted); transition: border-color 0.15s ease; }
+  .superior-ms-trigger:hover { border-color: var(--coral); }
+  .superior-ms-trigger.is-overridden { border-color: var(--gold); background: #FFF8ED; color: var(--text); font-weight: 500; }
+  .superior-ms-trigger .ms-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .superior-ms-trigger .ms-chevron { flex-shrink: 0; font-size: 9px; }
+  .superior-ms-panel { position: absolute; top: calc(100% + 4px); left: 0; min-width: 220px; max-width: 300px; max-height: 260px; overflow-y: auto; background: #fff; border: 1.5px solid var(--border); border-radius: 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.14); z-index: 20; padding: 6px; }
+  .superior-ms-panel.hidden { display: none; }
+  .ms-option { display: flex; align-items: flex-start; gap: 8px; padding: 7px 8px; border-radius: 7px; cursor: pointer; font-size: 12.5px; line-height: 1.4; white-space: normal; word-break: break-word; }
+  .ms-option:hover { background: var(--sand); }
+  .ms-option input { margin-top: 2px; accent-color: var(--coral); cursor: pointer; flex-shrink: 0; }
+  .mapping-save-flash { font-size: 10.5px; margin-top:3px; font-weight:600; min-height: 13px; }
+  .bulk-bar { position: sticky; top: 66px; z-index: 15; background: var(--teal-dark); color: #fff; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; display: none; flex-direction: column; gap: 8px; box-shadow: 0 6px 16px rgba(14,71,73,0.25); }
+  .bulk-bar .bulk-top-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .bulk-bar .bulk-count { font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .bulk-bar .bulk-checklists { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+  .bulk-bar .bulk-checklists .superior-ms { flex: 1; min-width: 130px; }
+  .bulk-bar .superior-ms-trigger { color: var(--text); }
+  .bulk-bar button.bulk-apply { background: var(--coral); color: #fff; border: none; border-radius: 8px; padding: 7px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .bulk-bar button.bulk-cancel { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .bulk-bar .bulk-warn { font-size: 11.5px; color: #FFD9CF; }
+  @media (max-width: 480px) {
+    .mapping-row { grid-template-columns: auto 1fr 1fr; row-gap: 6px; }
+    .mapping-row.head { display: none; }
+    .mapping-row .col-jobtitle { grid-column: 3; text-align: right; }
+    .mapping-row .col-tier { grid-column: 2 / 4; }
+    .mapping-row .col-leader, .mapping-row .col-management, .mapping-row .col-executive { grid-column: 1 / -1; }
+  }
   .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
@@ -163,43 +225,12 @@
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.success { background: var(--green); }
   .toast.error { background: var(--red); }
-  .mapping-row { display: grid; grid-template-columns: 1.6fr 0.8fr 1.2fr 1.6fr; gap: 10px; align-items: center; padding: 12px; border-radius: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
-  .mapping-row:last-child { border-bottom: none; }
-  .mapping-row:hover { background: #FFFCF8; }
-  .mapping-row.selected { background: #FFF3EC; }
-  .mapping-row.head { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 600; border-bottom: 1.5px solid var(--border); padding: 0 12px 8px; }
-  .sortable-th { cursor: pointer; user-select: none; transition: color 0.15s ease; }
-  .sortable-th:hover { color: var(--coral); }
-  .sortable-th.active { color: var(--coral-dark); }
-  .sort-arrow { font-size: 9px; }
-  .mapping-row .cell-name { font-weight: 500; font-size: 13.5px; line-height: 1.35; color: var(--text); }
-  .mapping-row .cell-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; line-height: 1.3; }
-  .mapping-checkbox { width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; accent-color: var(--coral); cursor: pointer; }
-  .tier-pill { display: inline-block; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; background: var(--sand); color: var(--text-muted); line-height: 1.4; }
-  .mapping-row .col-jobtitle { font-size: 12.5px; color: var(--text-muted); line-height: 1.35; }
-  .mapping-row select.superior-select { width: 100%; font-size: 12.5px; padding: 7px 8px; border-radius: 8px; border: 1.5px solid var(--border); background: #fff; cursor: pointer; transition: border-color 0.15s ease; color: var(--text-muted); text-overflow: ellipsis; }
-  .mapping-row select.superior-select:hover { border-color: var(--coral); }
-  .mapping-row select.superior-select:focus { outline: none; border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255,107,74,0.12); }
-  .mapping-row select.superior-select.is-overridden { border-color: var(--gold); background: #FFF8ED; color: var(--text); font-weight: 500; }
-  .mapping-save-flash { font-size: 10.5px; margin-top:3px; font-weight:600; min-height: 13px; }
-  .bulk-bar { position: sticky; top: 66px; z-index: 5; background: var(--teal-dark); color: #fff; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; box-shadow: 0 6px 16px rgba(14,71,73,0.25); }
-  .bulk-bar .bulk-count { font-weight: 700; font-size: 13px; white-space: nowrap; }
-  .bulk-bar select { flex: 1; min-width: 160px; font-size: 12.5px; padding: 7px 8px; border-radius: 8px; border: none; }
-  .bulk-bar button.bulk-apply { background: var(--coral); color: #fff; border: none; border-radius: 8px; padding: 7px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-  .bulk-bar button.bulk-cancel { background: transparent; color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 7px 12px; font-size: 12px; cursor: pointer; white-space: nowrap; }
-  .bulk-bar .bulk-warn { flex-basis: 100%; font-size: 11.5px; color: #FFD9CF; }
-  @media (max-width: 480px) {
-    .mapping-row { grid-template-columns: 1fr 1fr; row-gap: 6px; }
-    .mapping-row.head { display: none; }
-    .mapping-row .col-jobtitle { grid-column: 2; text-align: right; }
-    .mapping-row .col-superior { grid-column: 1 / -1; margin-top: 2px; }
-  }
 </style>
 </head>
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-132 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-134 — TEST</div>
 
 <script>
 // =================================================================
@@ -1702,33 +1733,61 @@ async function renderStaffMapping() {
   }
 
   const rows = res.rows || [];
-  state._staffMappingCandidates = res.candidatesByTier || {};
+  state._staffMappingCandidates = res.candidates || { leaders: [], managements: [], executives: [] };
+  state._staffMappingSortCriteria = [];
 
-  const rowHtml = (r) => {
-    const candidates = state._staffMappingCandidates[r.tier] || [];
-    const isOverridden = !!r.evaluatorStaffId;
-    return `
-      <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-jobtitle="${escapeAttr(r.jobTitle)}" data-department="${escapeAttr(r.department)}">
-        <div class="col-name" style="display:flex; align-items:flex-start; gap:8px;">
-          <input type="checkbox" class="mapping-checkbox" data-staffid="${r.staffId}" onchange="onStaffMappingCheckboxChange(this)">
-          <div>
-            <div class="cell-name">${r.name}</div>
-            ${r.department !== "-" ? `<div class="cell-sub">${r.department}</div>` : ""}
-          </div>
-        </div>
-        <div class="col-tier"><span class="tier-pill">${r.tier}</span></div>
   const deptKeys = [...new Set(rows.filter(r => r.department !== "-").map(r => r.department))].sort();
   const tierKeys = ["Staff", "Leader", "Management"];
 
-        <div class="col-jobtitle">${r.jobTitle}</div>
-        <div class="col-superior">
-          <select class="superior-select ${isOverridden ? "is-overridden" : ""}" id="superior-select-${r.staffId}" onchange="doSetStaffSuperior('${r.staffId}')">
-            <option value="">${r.autoEvaluatorLabel}</option>
-            ${candidates.map(c => `<option value="${c.staffId}" ${String(c.staffId) === String(r.evaluatorStaffId) ? "selected" : ""}>${c.name}</option>`).join("")}
-          </select>
-          <div class="cell-sub">+ HR</div>
-          <div class="mapping-save-flash" id="superior-save-note-${r.staffId}"></div>
+  // Which of the 3 columns actually apply to a given TARGET tier — a Staff's superior must
+  // be Leader/Management, a Leader's must be Management/Executive, a Management's must be
+  // Executive only. The other column(s) render as a plain "-" instead of an empty widget.
+  const applicableColumns = { Staff: ["leader", "management"], Leader: ["management", "executive"], Management: ["executive"] };
+
+  // Builds one checklist popover (trigger button + hidden panel). `scope` keeps row vs.
+  // bulk IDs from colliding; `rowStaffId` is '' for the bulk bar (no single target yet).
+  const buildChecklistColumn = (scope, rowStaffId, columnKey, candidates, selectedIds, autoLabel) => {
+    const domId = `superior-${scope}-${rowStaffId || "bulk"}-${columnKey}`;
+    const selectedNames = candidates.filter(c => selectedIds.includes(String(c.staffId))).map(c => c.name);
+    const isOverridden = selectedNames.length > 0;
+    const triggerLabel = isOverridden ? selectedNames.join(", ") : (autoLabel || "(Otomatis)");
+    return `
+      <div class="superior-ms" data-row-staffid="${rowStaffId}" data-column="${columnKey}">
+        <button type="button" class="superior-ms-trigger ${isOverridden ? "is-overridden" : ""}" id="trigger-${domId}" data-auto-label="${escapeAttr(autoLabel || "(Otomatis)")}" onclick="toggleSuperiorPanel('${domId}')">
+          <span class="ms-label">${triggerLabel}</span><span class="ms-chevron">▾</span>
+        </button>
+        <div class="superior-ms-panel hidden" id="panel-${domId}">
+          ${candidates.length ? candidates.map(c => `
+            <label class="ms-option">
+              <input type="checkbox" value="${c.staffId}" data-name="${escapeAttr(c.name)}" ${selectedIds.includes(String(c.staffId)) ? "checked" : ""} onchange="onSuperiorCheckboxChange('${scope}', '${rowStaffId}')">
+              <span>${c.name}</span>
+            </label>`).join("") : `<div class="hint" style="padding:8px;">Belum ada kandidat.</div>`}
         </div>
+      </div>`;
+  };
+
+  const rowHtml = (r) => {
+    const cols = applicableColumns[r.tier] || [];
+    const colCell = (columnKey, candidates, autoLabel) => cols.includes(columnKey)
+      ? `<div class="col-${columnKey}">${buildChecklistColumn("row", r.staffId, columnKey, candidates, (r.evaluatorStaffIds || []).map(String), autoLabel)}</div>`
+      : `<div class="col-${columnKey} col-na">—</div>`;
+
+    return `
+      <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-jobtitle="${escapeAttr(r.jobTitle)}" data-department="${escapeAttr(r.department)}">
+        <div class="col-no">
+          <input type="checkbox" class="mapping-checkbox" data-staffid="${r.staffId}" onchange="onStaffMappingCheckboxChange(this)">
+          <span class="row-number"></span>
+        </div>
+        <div class="col-name">
+          <div class="cell-name">${r.name}</div>
+          ${r.department !== "-" ? `<div class="cell-sub">${r.department}</div>` : ""}
+        </div>
+        <div class="col-jobtitle">${r.jobTitle}</div>
+        <div class="col-tier"><span class="tier-pill">${r.tier}</span></div>
+        ${colCell("leader", state._staffMappingCandidates.leaders, r.autoLeaderLabel)}
+        ${colCell("management", state._staffMappingCandidates.managements, r.autoManagementLabel)}
+        ${colCell("executive", state._staffMappingCandidates.executives, r.autoExecutiveLabel)}
+        <div class="mapping-save-flash" id="superior-save-note-${r.staffId}" style="grid-column: 1 / -1; margin-left: 26px;"></div>
       </div>`;
   };
 
@@ -1736,7 +1795,7 @@ async function renderStaffMapping() {
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <h2>Staff Mapping</h2>
-      <div class="hint" style="margin-bottom:10px;">${rows.length} orang — pilih Superior manual buat siapapun yang butuh dikecualikan dari default. Centang beberapa orang buat ganti sekaligus (bulk).</div>
+      <div class="hint" style="margin-bottom:10px;">${rows.length} orang — centang Leader/Management/Executive manapun buat jadiin Superior tambahan/pengganti default. Bisa pilih lebih dari satu. Centang beberapa orang buat ganti sekaligus (bulk).</div>
       <input type="text" placeholder="Cari nama..." oninput="updateStaffMappingFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:4px;">
         <select onchange="updateStaffMappingFilter('tier', this.value)">
@@ -1750,21 +1809,26 @@ async function renderStaffMapping() {
       </div>
     </div>
     <div class="bulk-bar" id="staff-mapping-bulk-bar">
-      <span class="bulk-count" id="staff-mapping-bulk-count">0 dipilih</span>
-      <select id="bulk-superior-select"></select>
-      <button class="bulk-apply" onclick="applyBulkStaffSuperior()">Terapkan</button>
-      <button class="bulk-cancel" onclick="clearStaffMappingSelection()">Batal</button>
+      <div class="bulk-top-row">
+        <span class="bulk-count" id="staff-mapping-bulk-count">0 dipilih</span>
+        <div class="bulk-checklists" id="staff-mapping-bulk-checklists"></div>
+        <button class="bulk-apply" onclick="applyBulkStaffSuperior()">Terapkan</button>
+        <button class="bulk-cancel" onclick="clearStaffMappingSelection()">Batal</button>
+      </div>
       <div class="bulk-warn" id="staff-mapping-bulk-warn" style="display:none;"></div>
     </div>
     <div class="card">
       <div class="mapping-row head">
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:6px;">
           <input type="checkbox" class="mapping-checkbox" id="mapping-select-all" onchange="toggleStaffMappingSelectAll(this.checked)">
-          <span class="sortable-th" onclick="sortStaffMappingList('name')" id="sort-th-name">Nama<span class="sort-arrow" id="sort-arrow-name"></span></span>
+          <span>No</span>
         </div>
-        <div class="sortable-th" onclick="sortStaffMappingList('tier')" id="sort-th-tier">Tier<span class="sort-arrow" id="sort-arrow-tier"></span></div>
+        <span class="sortable-th" onclick="sortStaffMappingList('name')" id="sort-th-name">Name<span class="sort-arrow" id="sort-arrow-name"></span></span>
         <div class="sortable-th" onclick="sortStaffMappingList('jobTitle')" id="sort-th-jobTitle">Job Title<span class="sort-arrow" id="sort-arrow-jobTitle"></span></div>
-        <div>Superior</div>
+        <div class="sortable-th" onclick="sortStaffMappingList('tier')" id="sort-th-tier">Tier<span class="sort-arrow" id="sort-arrow-tier"></span></div>
+        <div>Leader</div>
+        <div>Management</div>
+        <div>Executive</div>
       </div>
       <div id="staff-mapping-list-container">
         ${rows.map(rowHtml).join("")}
@@ -1772,6 +1836,54 @@ async function renderStaffMapping() {
       <div class="hint" id="staff-mapping-empty-note" style="display:none; text-align:center; padding:16px 0;">Gak ada yang cocok sama filter/pencarian.</div>
     </div>
   `;
+
+  // Close any open checklist popover on an outside click — attached once per render since
+  // the whole screen HTML gets replaced each time renderStaffMapping runs.
+  document.addEventListener("click", staffMappingOutsideClickHandler);
+}
+
+function staffMappingOutsideClickHandler(e) {
+  if (e.target.closest(".superior-ms")) return;
+  document.querySelectorAll(".superior-ms-panel").forEach(p => p.classList.add("hidden"));
+}
+
+function toggleSuperiorPanel(domId) {
+  const panel = document.getElementById(`panel-${domId}`);
+  if (!panel) return;
+  const willOpen = panel.classList.contains("hidden");
+  document.querySelectorAll(".superior-ms-panel").forEach(p => p.classList.add("hidden"));
+  if (willOpen) panel.classList.remove("hidden");
+}
+
+/** Fires on ANY checkbox change within one of a row's (up to 2) applicable checklist
+ *  columns — reads every currently-checked box across all of that row's columns (they're
+ *  grouped by data-row-staffid) and saves the union as that person's full override set in
+ *  one call, so ticking a Leader box and a Management box for the same person both persist
+ *  together instead of overwriting each other. */
+async function onSuperiorCheckboxChange(scope, rowStaffId) {
+  if (scope === "bulk") return; // bulk saves explicitly via the "Terapkan" button instead
+  const checked = Array.from(document.querySelectorAll(`.superior-ms[data-row-staffid="${rowStaffId}"] input[type=checkbox]:checked`)).map(cb => cb.value);
+  const noteEl = document.getElementById(`superior-save-note-${rowStaffId}`);
+  if (noteEl) { noteEl.textContent = "Menyimpan..."; noteEl.style.color = "var(--text-muted)"; }
+  const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId: rowStaffId, evaluatorStaffIds: checked });
+  if (res.error || res.success === false) {
+    if (noteEl) { noteEl.textContent = "Gagal simpan: " + friendlyError(res.error); noteEl.style.color = "var(--red)"; }
+    return;
+  }
+  document.querySelectorAll(`.superior-ms[data-row-staffid="${rowStaffId}"]`).forEach(msEl => {
+    const panel = msEl.querySelector(".superior-ms-panel");
+    const trigger = msEl.querySelector(".superior-ms-trigger");
+    const label = trigger.querySelector(".ms-label");
+    const checkedNames = Array.from(panel.querySelectorAll("input[type=checkbox]:checked")).map(cb => cb.dataset.name);
+    if (checkedNames.length) {
+      label.textContent = checkedNames.join(", ");
+      trigger.classList.add("is-overridden");
+    } else {
+      label.textContent = trigger.dataset.autoLabel;
+      trigger.classList.remove("is-overridden");
+    }
+  });
+  if (noteEl) { noteEl.textContent = "✅ Tersimpan."; noteEl.style.color = "var(--green)"; setTimeout(() => { if (noteEl) noteEl.textContent = ""; }, 2000); }
 }
 
 function toggleStaffMappingSelectAll(checked) {
@@ -1789,37 +1901,39 @@ function onStaffMappingCheckboxChange(checkbox) {
   updateStaffMappingBulkBar();
 }
 
-/** Candidate list depends on the TARGET's tier (Staff needs Leader/Management, Leader
- *  needs Management/Executive, Management needs Executive) — so a bulk pick across mixed
- *  tiers only offers whoever qualifies as a valid Superior for EVERY selected tier at
- *  once (the intersection). Selecting only same-tier people always has the full list;
- *  mixed selections usually narrow down to Management, since Management can supervise
- *  both Staff and Leader. */
+/** Bulk bar shows the SAME 3 checklist columns as each row (Leader/Management/Executive),
+ *  always all 3 regardless of which tiers are selected — nothing stops assigning e.g. an
+ *  Executive override to a Staff row if that's genuinely what's wanted, so there's no need
+ *  to restrict/intersect candidates by the selected tiers the way a single shared dropdown
+ *  would have required. Checking boxes here doesn't save immediately (unlike per-row) —
+ *  it waits for "Terapkan" since it's about to overwrite MULTIPLE people at once. */
 function updateStaffMappingBulkBar() {
   const checked = Array.from(document.querySelectorAll(".mapping-checkbox[data-staffid]:checked"));
   const bar = document.getElementById("staff-mapping-bulk-bar");
-  const warnEl = document.getElementById("staff-mapping-bulk-warn");
   if (!checked.length) { bar.style.display = "none"; return; }
 
-  const tiers = [...new Set(checked.map(cb => cb.closest(".mapping-row").dataset.tier))];
-  let intersection = null;
-  tiers.forEach(t => {
-    const list = state._staffMappingCandidates[t] || [];
-    if (intersection === null) { intersection = list; return; }
-    const ids = new Set(list.map(c => c.staffId));
-    intersection = intersection.filter(c => ids.has(c.staffId));
-  });
-  intersection = intersection || [];
-
-  const select = document.getElementById("bulk-superior-select");
-  select.innerHTML = `<option value="">(Kembali ke Otomatis)</option>` +
-    intersection.map(c => `<option value="${c.staffId}">${c.name}</option>`).join("");
-
-  if (tiers.length > 1 && !intersection.length) {
-    warnEl.style.display = "";
-    warnEl.textContent = `Tier campuran (${tiers.join(", ")}) gak punya calon Superior yang sama-sama valid — pisahkan seleksi per tier, atau tetap bisa pilih "(Kembali ke Otomatis)".`;
-  } else {
-    warnEl.style.display = "none";
+  const container = document.getElementById("staff-mapping-bulk-checklists");
+  // Only (re)build the checklist markup the first time the bar opens from empty — rebuilding
+  // on every checkbox click would wipe out selections the person already made in the panel.
+  if (!container.dataset.built) {
+    const buildBulkColumn = (columnKey, label, candidates) => `
+      <div class="superior-ms" data-row-staffid="" data-column="${columnKey}">
+        <button type="button" class="superior-ms-trigger" id="trigger-superior-bulk-bulk-${columnKey}" onclick="toggleSuperiorPanel('superior-bulk-bulk-${columnKey}')">
+          <span class="ms-label">${label}</span><span class="ms-chevron">▾</span>
+        </button>
+        <div class="superior-ms-panel hidden" id="panel-superior-bulk-bulk-${columnKey}">
+          ${candidates.map(c => `
+            <label class="ms-option">
+              <input type="checkbox" value="${c.staffId}" data-name="${escapeAttr(c.name)}" onchange="onSuperiorCheckboxChange('bulk','')">
+              <span>${c.name}</span>
+            </label>`).join("")}
+        </div>
+      </div>`;
+    container.innerHTML =
+      buildBulkColumn("leader", "+ Leader", state._staffMappingCandidates.leaders) +
+      buildBulkColumn("management", "+ Management", state._staffMappingCandidates.managements) +
+      buildBulkColumn("executive", "+ Executive", state._staffMappingCandidates.executives);
+    container.dataset.built = "true";
   }
 
   document.getElementById("staff-mapping-bulk-count").textContent = `${checked.length} dipilih`;
@@ -1829,20 +1943,22 @@ function updateStaffMappingBulkBar() {
 function clearStaffMappingSelection() {
   document.querySelectorAll(".mapping-checkbox").forEach(cb => { cb.checked = false; });
   document.querySelectorAll(".mapping-row.selected").forEach(row => row.classList.remove("selected"));
+  const container = document.getElementById("staff-mapping-bulk-checklists");
+  if (container) { container.innerHTML = ""; delete container.dataset.built; }
   updateStaffMappingBulkBar();
 }
 
 async function applyBulkStaffSuperior() {
   const checked = Array.from(document.querySelectorAll(".mapping-checkbox[data-staffid]:checked"));
   if (!checked.length) return;
-  const evaluatorStaffId = document.getElementById("bulk-superior-select").value;
+  const evaluatorStaffIds = Array.from(document.querySelectorAll("#staff-mapping-bulk-checklists input[type=checkbox]:checked")).map(cb => cb.value);
   const applyBtn = document.querySelector(".bulk-bar .bulk-apply");
   applyBtn.disabled = true;
   applyBtn.textContent = `Menyimpan 0/${checked.length}...`;
   let done = 0;
   for (const cb of checked) {
     const staffId = cb.dataset.staffid;
-    await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffId });
+    await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
     done++;
     applyBtn.textContent = `Menyimpan ${done}/${checked.length}...`;
   }
@@ -1867,21 +1983,32 @@ function updateStaffMappingFilter(key, value) {
   if (emptyNote) emptyNote.style.display = visibleCount === 0 ? "" : "none";
 }
 
-/** Click-to-sort on the table header itself — replaces the old "Urutkan..." dropdown.
- *  Clicking the same column again flips asc/desc (tracked in state so the arrow indicator
- *  stays in sync); clicking a different column starts fresh at ascending. */
+/** Click-to-sort on the table headers, STACKING criteria instead of replacing them —
+ *  clicking Tier then Job Title sorts by Tier first, and within each Tier group by Job
+ *  Title, both active together. Clicking a column already in the stack just flips its
+ *  asc/desc direction without changing its priority; clicking a brand-new column appends
+ *  it as the next (lower-priority) tiebreaker. */
 function sortStaffMappingList(column) {
   const container = document.getElementById("staff-mapping-list-container");
   if (!container) return;
-  const current = state._staffMappingSort || { column: null, dir: "asc" };
-  const dir = (current.column === column && current.dir === "asc") ? "desc" : "asc";
-  state._staffMappingSort = { column, dir };
+  state._staffMappingSortCriteria = state._staffMappingSortCriteria || [];
+  const criteria = state._staffMappingSortCriteria;
+  const existing = criteria.find(c => c.column === column);
+  if (existing) {
+    existing.dir = existing.dir === "asc" ? "desc" : "asc";
+  } else {
+    criteria.push({ column, dir: "asc" });
+  }
 
-  const key = column === "name" ? "name" : column === "tier" ? "tier" : "jobtitle";
-  const rows = Array.from(container.children);
+  const keyMap = { name: "name", tier: "tier", jobTitle: "jobtitle" };
+  const rows = Array.from(container.querySelectorAll(":scope > .mapping-row"));
   rows.sort((a, b) => {
-    const cmp = (a.dataset[key] || "").localeCompare(b.dataset[key] || "");
-    return dir === "asc" ? cmp : -cmp;
+    for (const c of criteria) {
+      const key = keyMap[c.column];
+      const cmp = (a.dataset[key] || "").localeCompare(b.dataset[key] || "");
+      if (cmp !== 0) return c.dir === "asc" ? cmp : -cmp;
+    }
+    return 0;
   });
   rows.forEach(r => container.appendChild(r));
 
@@ -1889,28 +2016,23 @@ function sortStaffMappingList(column) {
     const arrowEl = document.getElementById(`sort-arrow-${c}`);
     const thEl = document.getElementById(`sort-th-${c}`);
     if (!arrowEl || !thEl) return;
-    const isActive = c === column;
-    arrowEl.textContent = isActive ? (dir === "asc" ? " ▲" : " ▼") : "";
-    thEl.classList.toggle("active", isActive);
+    const idx = criteria.findIndex(x => x.column === c);
+    if (idx === -1) {
+      arrowEl.innerHTML = "";
+      thEl.classList.remove("active");
+    } else {
+      const dirArrow = criteria[idx].dir === "asc" ? "▲" : "▼";
+      const priorityBadge = criteria.length > 1 ? `<sup>${idx + 1}</sup>` : "";
+      arrowEl.innerHTML = ` ${dirArrow}${priorityBadge}`;
+      thEl.classList.add("active");
+    }
   });
 }
 
 async function doSetStaffSuperior(staffId) {
-  const select = document.getElementById(`superior-select-${staffId}`);
-  const noteEl = document.getElementById(`superior-save-note-${staffId}`);
-  const evaluatorStaffId = select.value;
-  noteEl.textContent = "Menyimpan...";
-  noteEl.style.color = "var(--text-muted)";
-  const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffId });
-  if (res.error || res.success === false) {
-    noteEl.textContent = "Gagal simpan: " + friendlyError(res.error);
-    noteEl.style.color = "var(--red)";
-    return;
-  }
-  select.classList.toggle("is-overridden", !!evaluatorStaffId);
-  noteEl.textContent = evaluatorStaffId ? "✅ Tersimpan." : "✅ Kembali ke otomatis.";
-  noteEl.style.color = "var(--green)";
-  setTimeout(() => { if (noteEl) noteEl.textContent = ""; }, 2500);
+  // Superseded by onSuperiorCheckboxChange (the single <select> this used to drive was
+  // replaced by the 3-column checklist). Kept as a no-op stub only in case anything stale
+  // still references it.
 }
 
 async function renderHistoricalInput() {

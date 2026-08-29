@@ -249,7 +249,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-141 — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-142 — TEST</div>
 
 <script>
 // =================================================================
@@ -1776,11 +1776,12 @@ async function renderStaffMapping() {
   // submit that person's appraisal (see getEvaluatorSlotsForEmployees on the backend) —
   // this isn't just a display, it's the actual access control.
   const applicableColumns = { Staff: ["leader", "management"], Leader: ["management"], Management: [] };
-  // Executive is always just informational, for EVERY tier — whoever currently holds
-  // Executive tier (there may be more than one), joined by name. Not a checklist, not
-  // editable from here: computed fresh from the live roster every time this screen loads,
-  // so it never needs a code change if who holds that tier changes later.
-  const EXECUTIVE_LABEL = state._staffMappingCandidates.executives.map(c => c.name).join(", ") || "(belum ada Executive)";
+  // Executive is always just informational, for EVERY tier — a fixed name, not computed
+  // from whoever happens to be tagged tier='Executive' in Config_PositionMap (that list
+  // turned out to include several other job titles too — General Manager, etc. — not just
+  // this one person), and not a checklist/editable from here either. If who holds this
+  // needs to change later, this line is the one place to update.
+  const EXECUTIVE_LABEL = "Rohendi Frinsen";
 
 
   // Builds one checklist popover (trigger button + hidden panel). `scope` keeps row vs.

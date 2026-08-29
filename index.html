@@ -247,14 +247,15 @@
 </style>
 </head>
 <body>
+<div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-141 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-141 — TEST</div>
 
 <script>
 // =================================================================
 // CONFIG — set this to your Apps Script Web App URL
 // =================================================================
-const API_URL = "https://script.google.com/macros/s/AKfycbwbSrk4qrekr8P7p9jTA1SCGqZG-p2HK7fur4yyCvNsgzecI_hEHsbQrvOy_QhRrV82/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwqUUo-avmoBoj9ZqmdGUTMQtswX4Rj6aYoHc21oDLD6LfUsEluTLA2ccn4g3pUYaXLUw/exec";
 const LMS_URL = "https://script.google.com/macros/s/AKfycbx7ID6GZMXYoj8ymmwAcGuxHWb-hGli-FRDqcDgazgIL38JOT4jbARBht85PFosc34a_Q/exec";
 
 // =================================================================
@@ -1739,7 +1740,6 @@ async function doDeleteKpiCriterion(section, rowIndex) {
   showToast("Kriteria berhasil dihapus!");
   renderKpiManagement();
 }
-
 async function doExportStaffMapping() {
   const noteEl = document.getElementById("staff-mapping-export-note");
   noteEl.textContent = "Membuat sheet export...";
@@ -1750,6 +1750,7 @@ async function doExportStaffMapping() {
   }
   noteEl.innerHTML = `Sheet siap (${res.rowCount} orang)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel (.xlsx) buat share ke siapa aja.`;
 }
+
 
 async function renderStaffMapping() {
   app.innerHTML = topbar("Staff Mapping") + `<div class="loading">Memuat...</div>`;
@@ -1767,7 +1768,6 @@ async function renderStaffMapping() {
 
   const deptKeys = [...new Set(rows.filter(r => r.department !== "-").map(r => r.department))].sort();
   const tierKeys = ["Staff", "Leader", "Management"];
-
   // Which of the Leader/Management columns actually apply, based on the TARGET's own tier
   // — a Staff can be given Leader and/or Management as their Superior; a Leader can be
   // given Management only (never another Leader). A Management gets neither (only
@@ -1781,6 +1781,7 @@ async function renderStaffMapping() {
   // editable from here: computed fresh from the live roster every time this screen loads,
   // so it never needs a code change if who holds that tier changes later.
   const EXECUTIVE_LABEL = state._staffMappingCandidates.executives.map(c => c.name).join(", ") || "(belum ada Executive)";
+
 
   // Builds one checklist popover (trigger button + hidden panel). `scope` keeps row vs.
   // bulk IDs from colliding; `rowStaffId` is '' for the bulk bar (no single target yet).
@@ -1811,12 +1812,12 @@ async function renderStaffMapping() {
       </div>`;
   };
 
-  const rowHtml = (r) => {
     const cols = applicableColumns[r.tier] || [];
     const colCell = (columnKey, candidates, autoLabel) => cols.includes(columnKey)
       ? `<div class="col-${columnKey}">${buildChecklistColumn("row", r.staffId, columnKey, candidates, (r.evaluatorStaffIds || []).map(String), autoLabel)}</div>`
       : `<div class="col-${columnKey} col-na">—</div>`;
 
+  const rowHtml = (r) => {
     return `
       <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-jobtitle="${escapeAttr(r.jobTitle)}" data-department="${escapeAttr(r.department)}">
         <div class="col-name">
@@ -1839,9 +1840,9 @@ async function renderStaffMapping() {
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <h2>Staff Mapping</h2>
-      <div class="hint" style="margin-bottom:10px;">${rows.length} orang — centang Leader/Management/Executive manapun buat jadiin Superior tambahan/pengganti default. Bisa pilih lebih dari satu. Centang beberapa orang buat ganti sekaligus (bulk).</div>
       <button class="secondary" onclick="doExportStaffMapping()" style="margin-bottom:6px;">📊 Export ke Excel</button>
       <div class="hint" id="staff-mapping-export-note" style="margin-bottom:10px;"></div>
+      <div class="hint" style="margin-bottom:10px;">${rows.length} orang — centang Leader/Management/Executive manapun buat jadiin Superior tambahan/pengganti default. Bisa pilih lebih dari satu. Centang beberapa orang buat ganti sekaligus (bulk).</div>
       <input type="text" placeholder="Cari nama..." oninput="updateStaffMappingFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:4px;">
         <select onchange="updateStaffMappingFilter('tier', this.value)">
@@ -1891,13 +1892,13 @@ function staffMappingOutsideClickHandler(e) {
   if (e.target.closest(".superior-ms")) return;
   document.querySelectorAll(".superior-ms-panel").forEach(p => p.classList.add("hidden"));
 }
-
 /** Panels used to be position:absolute relative to their trigger, which looked fine until
  *  a row near the bottom of a .card opened one — .card has overflow:hidden (for its
  *  rounded corners), which silently clipped the panel instead of letting it show fully.
  *  Fixed positioning computed from the trigger's actual on-screen rect escapes that
  *  clipping entirely (fixed elements aren't contained by an ancestor's overflow), and lets
  *  the panel flip to open UPWARD instead of down when there isn't enough room below. */
+
 function toggleSuperiorPanel(domId) {
   const panel = document.getElementById(`panel-${domId}`);
   const trigger = document.getElementById(`trigger-${domId}`);

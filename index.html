@@ -251,7 +251,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-145-new-hire-skip-first-month — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-148-server-side-logout — LIVE</div>
 
 <script>
 // =================================================================
@@ -1217,6 +1217,12 @@ function goToScreen(key) {
 }
 
 function logout() {
+  // Best-effort — invalidate the session server-side too, not just this device's local
+  // copy, so the token can't be replayed elsewhere for the rest of its 8-hour window. Not
+  // awaited: logging out should feel instant, and if this fails (e.g. offline), the token
+  // just expires naturally on its own later — nothing breaks either way. Must fire BEFORE
+  // state.user is cleared below, since apiPost reads the session token from state.user.
+  apiPost("logout", {}).catch(() => {});
   localStorage.removeItem("appraisalSession");
   state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {} };
   render();

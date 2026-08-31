@@ -252,13 +252,20 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-145-new-hire-skip-first-month — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-146-test-sunset-screen — TEST</div>
 
 <script>
 // =================================================================
 // CONFIG — set this to your Apps Script Web App URL
 // =================================================================
 const API_URL = "https://script.google.com/macros/s/AKfycbwqUUo-avmoBoj9ZqmdGUTMQtswX4Rj6aYoHc21oDLD6LfUsEluTLA2ccn4g3pUYaXLUw/exec";
+
+// When ready to retire this TEST link, flip this to `true` and fill in LIVE_APP_URL below,
+// then re-upload just this one file — no other changes needed. Staff who still have this
+// TEST link bookmarked/saved will see a friendly "we've moved" screen with a button
+// straight to the real (LIVE) app, instead of the normal login screen.
+const TEST_ENV_CLOSED = false;
+const LIVE_APP_URL = "https://reloadsanctuary2026.github.io/fnbappraisal/";
 const LMS_URL = "https://script.google.com/macros/s/AKfycbx7ID6GZMXYoj8ymmwAcGuxHWb-hGli-FRDqcDgazgIL38JOT4jbARBht85PFosc34a_Q/exec";
 
 // =================================================================
@@ -4188,6 +4195,39 @@ setTimeout(() => { if (!deferredInstallPrompt) showInstallBanner("manual"); }, 3
  *  still valid server-side for up to 8 hours. Validates against the SAME Sessions sheet
  *  normal actions use, so a stale/expired token just falls through to a normal login
  *  screen instead of silently failing later. */
+/** Shown instead of the normal app when TEST_ENV_CLOSED is true — for anyone who still has
+ *  this TEST link saved/bookmarked after the real system has moved to LIVE. Bilingual
+ *  (follows the same language toggle as the rest of the app) since staff arriving here
+ *  haven't logged in yet, same as the pre-login screens. */
+function renderTestEnvClosedScreen() {
+  const copy = {
+    id: {
+      eyebrow: "🎉 Selamat Datang di Sistem Baru",
+      title: "Link TEST ini sudah tidak dipakai lagi",
+      body: "Sistem appraisal Reload F&B sekarang sudah pindah sepenuhnya ke versi LIVE. Semua data dan fitur terbaru ada di sana — silakan lanjut ke link di bawah ini buat login seperti biasa.",
+      button: "Buka Sistem Appraisal (LIVE) →",
+      footer: "Simpan link ini buat akses selanjutnya, ya. Kalau ada pertanyaan, hubungi HR.",
+    },
+    en: {
+      eyebrow: "🎉 Welcome to the New System",
+      title: "This TEST link is no longer in use",
+      body: "The Reload F&B appraisal system has fully moved to the LIVE version. All the latest data and features live there now — please continue to the link below to sign in as usual.",
+      button: "Open the Appraisal System (LIVE) →",
+      footer: "Save this link for next time. Contact HR if you have any questions.",
+    },
+  };
+  const c = copy[state.lang] || copy.id;
+  app.innerHTML = `
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
+    <div class="card" style="text-align:center; padding:32px 24px;">
+      <div style="font-size:13px; font-weight:800; color:var(--coral); letter-spacing:0.02em; margin-bottom:10px;">${c.eyebrow}</div>
+      <h2 style="font-size:19px; margin-bottom:10px;">${c.title}</h2>
+      <p style="color:var(--text-muted); font-size:14px; line-height:1.6; margin-bottom:22px;">${c.body}</p>
+      <a href="${LIVE_APP_URL}" class="primary" style="display:inline-block; text-decoration:none; padding:14px 28px; width:auto;">${c.button}</a>
+      <p style="color:var(--text-muted); font-size:12px; margin-top:20px;">${c.footer}</p>
+    </div>`;
+}
+
 async function tryResumeSession() {
   const saved = localStorage.getItem("appraisalSession");
   if (!saved) { render(); return; }
@@ -4212,7 +4252,11 @@ async function tryResumeSession() {
   }
 }
 
-tryResumeSession();
+if (TEST_ENV_CLOSED) {
+  renderTestEnvClosedScreen();
+} else {
+  tryResumeSession();
+}
 </script>
 </body>
 </html>

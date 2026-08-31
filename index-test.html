@@ -252,7 +252,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-144-i18n-pre-login-toggle — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-145-new-hire-skip-first-month — TEST</div>
 
 <script>
 // =================================================================
@@ -478,6 +478,7 @@ const translations = {
     form_max_attempts_suffix: "× (maksimal",
     form_max_attempts_suffix2: "×). Tidak bisa diisi ulang lagi. Hubungi HR kalau butuh koreksi.",
     form_deferred: "Kontrak staff ini berakhir terlalu awal bulan ini untuk siklus appraisal baru — keputusan appraisal bulan lalu yang berlaku untuk periode ini.",
+    form_new_hire: "Staff ini baru bergabung bulan ini, jadi belum ikut siklus appraisal bulan ini. Appraisal pertamanya akan mulai tanggal 1 bulan depan.",
     form_no_contract: "Data kontrak untuk staff ini tidak ditemukan. Hubungi HR.",
     form_self_too_late: "Waktu buat Appraise Yourself bulan ini sudah lewat, dan kamu belum sempat mengisinya. Bagian Self kamu akan dihitung 0 untuk bulan ini. Hubungi HR kalau ada alasan khusus.",
     form_score_legend: "Skor: <strong>1</strong> Sangat Kurang · <strong>2</strong> Kurang · <strong>3</strong> Cukup · <strong>4</strong> Baik · <strong>5</strong> Sangat Baik",
@@ -570,6 +571,7 @@ const translations = {
     form_max_attempts_suffix: "× (max",
     form_max_attempts_suffix2: "×). It can't be resubmitted. Contact HR if you need a correction.",
     form_deferred: "This staff member's contract ends too early this month for a new appraisal cycle — last month's appraisal decision applies for this period instead.",
+    form_new_hire: "This staff member just joined this month, so they aren't part of this month's appraisal cycle yet. Their first appraisal will start on the 1st of next month.",
     form_no_contract: "No contract data found for this staff member. Please contact HR.",
     form_self_too_late: "The window to Appraise Yourself this month has closed, and you didn't get to submit it in time. Your Self section will be counted as 0 for this month. Contact HR if there's a specific reason.",
     form_score_legend: "Score: <strong>1</strong> Very Poor · <strong>2</strong> Poor · <strong>3</strong> Fair · <strong>4</strong> Good · <strong>5</strong> Excellent",
@@ -3249,6 +3251,8 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       msg = `${t("form_max_attempts")} ${access.submissionCount}${t("form_max_attempts_suffix")} ${access.submissionCount}${t("form_max_attempts_suffix2")}`;
     } else if (access.reason === "deferred_to_previous_cycle") {
       msg = t("form_deferred");
+    } else if (access.reason === "new_hire_this_month") {
+      msg = t("form_new_hire");
     } else {
       msg = t("form_no_contract");
     }

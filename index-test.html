@@ -252,7 +252,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-146-test-sunset-screen — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-147-fix-lang-toggle-closed-screen — TEST</div>
 
 <script>
 // =================================================================
@@ -608,11 +608,15 @@ function t(key) {
 function setLanguage(lang) {
   state.lang = (lang === "en") ? "en" : "id";
   try { localStorage.setItem("appLang", state.lang); } catch (e) { /* localStorage unavailable — language just won't persist across reloads */ }
-  // The PIN entry step isn't its own state.screen value — it's drawn directly by
-  // showPinPrompt(), not routed through render() — so toggling language while sitting on
-  // it needs to redraw THAT screen specifically, or it'd wrongly bounce back to the NIK
-  // entry screen and lose the fact that a NIK was already confirmed.
-  if (!state.user && document.getElementById("pin-code-input")) {
+  // Neither the PIN entry step nor the "TEST is closed" notice are their own state.screen
+  // value — they're drawn directly (showPinPrompt()/renderTestEnvClosedScreen()), not
+  // routed through render() — so toggling language while sitting on either needs to redraw
+  // THAT screen specifically. Missing this for the closed-notice screen would have kicked
+  // anyone who touched the language toggle there straight into the old TEST login flow,
+  // defeating the entire point of shutting it down.
+  if (TEST_ENV_CLOSED) {
+    renderTestEnvClosedScreen();
+  } else if (!state.user && document.getElementById("pin-code-input")) {
     showPinPrompt();
   } else {
     render();

@@ -55,6 +55,9 @@
   }
   .topbar h1 { font-size: 17px; margin: 0; font-weight: 800; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .topbar .sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lang-toggle-pre-login { display: flex; gap: 2px; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px; flex-shrink: 0; }
+  .lang-toggle-pre-login button { border: none; background: transparent; color: rgba(255,255,255,0.8); font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 16px; cursor: pointer; }
+  .lang-toggle-pre-login button.active { background: #fff; color: var(--teal-dark); }
   .logo-mark {
     width: 34px; height: 34px; flex-shrink: 0;
     background: linear-gradient(135deg, var(--gold), var(--coral));
@@ -248,7 +251,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-28-142 — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-144-i18n-pre-login-toggle — LIVE</div>
 
 <script>
 // =================================================================
@@ -390,6 +393,223 @@ function showToast(message, type = "success") {
 }
 
 // =================================================================
+// i18n — translation dictionary + helper
+// =================================================================
+// IMPORTANT: this only swaps user-FACING text. Every function name, variable name,
+// backend action name, data key, etc. stays exactly as-is regardless of language — the
+// dictionary below is the ONLY thing that changes when the language toggle is flipped.
+// Coverage so far: Login/PIN screens, topbar, main menu, Settings, and the appraisal form
+// (self-appraisal path). More screens get added incrementally in later passes — anything
+// not yet in this dictionary just stays in its original Indonesian text either way, so an
+// incomplete rollout never breaks anything, it just means some screens haven't been
+// converted yet.
+const translations = {
+  id: {
+    logout: "Keluar",
+    login_title: "Masuk dengan NIK",
+    login_nik_label: "NIK (Nomor Induk Karyawan)",
+    login_nik_placeholder: "Contoh: 1096",
+    login_continue: "Lanjut",
+    login_connecting: "Menghubungkan...",
+    login_nik_not_found: "NIK tidak ditemukan.",
+    login_pin_not_set: "PIN belum di-set untuk NIK ini.",
+    login_request_pin_btn: "Minta PIN ke HR",
+    login_server_error: "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).",
+    pin_title: "Masukkan PIN",
+    pin_label: "PIN 4 digit kamu",
+    pin_submit: "Masuk",
+    pin_change_nik: "&larr; Ganti NIK",
+    pin_forgot: "Lupa PIN?",
+    pin_sending_reset: "Mengirim permintaan ke HR...",
+    pin_reset_failed: "Gagal kirim permintaan. Hubungi HR langsung ya.",
+    pin_reset_sent: "Permintaan terkirim ke HR — tunggu PIN baru kamu, ya.",
+    pin_required: "PIN wajib diisi.",
+    pin_wrong: "PIN salah. Coba lagi.",
+    pin_not_set_short: "PIN belum di-set. Hubungi HR.",
+    menu_pick_title: "Pilih menu",
+    menu_no_access_title: "Akses belum diatur",
+    menu_no_access_body: "berhasil login, tapi belum ada akses apapun yang diaktifkan. Cek Job Title untuk NIK ini di HR Sheet — pastikan ada di Config_PositionMap dengan Tier yang sesuai.",
+    menu_back_to_login: "Kembali ke login",
+    menu_tag_action: "AKSI",
+    menu_tag_view: "LIHAT",
+    menu_self: "Appraise Yourself",
+    menu_history: "Track Your Progress",
+    menu_dev_plan: "My Development Plan",
+    menu_team_appraisal: "Team Appraisal",
+    menu_review_team: "Review Your Team",
+    menu_approve_final: "Approve Final Decisions",
+    menu_training_needs: "Training Needs",
+    menu_review_all: "Review Everyone's Records",
+    menu_read_feedback: "Read Staff Feedback",
+    menu_appraise_all: "Appraise All Staff",
+    menu_calc_sc: "Calculate Service Charge",
+    menu_input_historical: "Input Data Historis",
+    menu_staff_mapping: "Staff Mapping",
+    menu_manage_kpi: "Manage KPI Criteria",
+    settings_title: "Pengaturan Akun",
+    settings_back: "&larr; Kembali",
+    settings_click_photo: "Klik foto buat lihat/ganti",
+    settings_profile: "👤 Profil Saya",
+    settings_nik: "NIK",
+    settings_job_title: "Job Title",
+    settings_department: "Department",
+    settings_tier: "Tier",
+    settings_contract: "📄 Kontrak Saya",
+    settings_join_date: "Tanggal Bergabung",
+    settings_employee_status: "Status Kepegawaian",
+    settings_contract_end: "Kontrak Berakhir",
+    settings_no_contract_data: "Belum ada data kontrak tercatat — hubungi HR kalau ini gak sesuai.",
+    settings_change_pin: "🔒 Ganti PIN",
+    settings_pin_hint: "Pakai PIN yang gampang kamu inget tapi gak gampang ditebak orang lain.",
+    settings_pin_current: "PIN Sekarang",
+    settings_pin_new: "PIN Baru (4 digit)",
+    settings_pin_confirm: "Ulangi PIN Baru",
+    settings_pin_save: "Simpan PIN Baru",
+    settings_language: "🌐 Bahasa / Language",
+    settings_language_id: "Bahasa Indonesia",
+    settings_language_en: "English",
+    form_back: "Kembali",
+    form_checking_access: "Memeriksa akses...",
+    form_loading: "Memuat form...",
+    form_too_early: "Belum waktunya. Coba lagi mulai",
+    form_too_late_full: "Waktu untuk mengisi appraisal ini sudah lewat.",
+    form_max_attempts: "Appraisal ini sudah diisi",
+    form_max_attempts_suffix: "× (maksimal",
+    form_max_attempts_suffix2: "×). Tidak bisa diisi ulang lagi. Hubungi HR kalau butuh koreksi.",
+    form_deferred: "Kontrak staff ini berakhir terlalu awal bulan ini untuk siklus appraisal baru — keputusan appraisal bulan lalu yang berlaku untuk periode ini.",
+    form_no_contract: "Data kontrak untuk staff ini tidak ditemukan. Hubungi HR.",
+    form_self_too_late: "Waktu buat Appraise Yourself bulan ini sudah lewat, dan kamu belum sempat mengisinya. Bagian Self kamu akan dihitung 0 untuk bulan ini. Hubungi HR kalau ada alasan khusus.",
+    form_score_legend: "Skor: <strong>1</strong> Sangat Kurang · <strong>2</strong> Kurang · <strong>3</strong> Cukup · <strong>4</strong> Baik · <strong>5</strong> Sangat Baik",
+    form_section_a: "Section A — Attitude",
+    form_section_b: "Section B — Discipline",
+    form_section_c: "Section C — Performance KPI",
+    form_section_d: "Section D — Bonus &amp; Deduction",
+    form_bonus_hint: "Isi jumlah kejadian bulan ini. Biarkan 0 kalau tidak ada.",
+    form_bonus_occurred: "Terjadi",
+    form_bonus_notes_placeholder: "Evidence / notes (opsional)",
+    form_feedback_section: "Feedback to Management",
+    form_feedback_privacy: "🔒 Kotak ini dibaca terbatas oleh level manajemen &amp; HR yang berwenang — gak akan bocor ke Leader/Manager langsungmu. Ngomong aja apa yang perlu disampaikan.",
+    form_feedback_placeholder: "Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung...",
+    form_submit: "Submit Appraisal",
+    form_cancel: "Batal",
+    form_progress: "dari",
+    form_progress_suffix: "kriteria terisi",
+    form_view_rubric: "📏 Lihat panduan skor 1-5",
+  },
+  en: {
+    logout: "Log Out",
+    login_title: "Sign in with Employee ID",
+    login_nik_label: "Employee ID Number",
+    login_nik_placeholder: "e.g. 1096",
+    login_continue: "Continue",
+    login_connecting: "Connecting...",
+    login_nik_not_found: "Employee ID not found.",
+    login_pin_not_set: "No PIN has been set for this Employee ID yet.",
+    login_request_pin_btn: "Request PIN from HR",
+    login_server_error: "Couldn't reach the server. Check your connection, or the Apps Script deployment setting (Who has access = Anyone).",
+    pin_title: "Enter PIN",
+    pin_label: "Your 4-digit PIN",
+    pin_submit: "Sign In",
+    pin_change_nik: "&larr; Change Employee ID",
+    pin_forgot: "Forgot PIN?",
+    pin_sending_reset: "Sending request to HR...",
+    pin_reset_failed: "Couldn't send the request. Please contact HR directly.",
+    pin_reset_sent: "Request sent to HR — wait for your new PIN.",
+    pin_required: "PIN is required.",
+    pin_wrong: "Wrong PIN. Try again.",
+    pin_not_set_short: "No PIN set yet. Contact HR.",
+    menu_pick_title: "Choose a menu",
+    menu_no_access_title: "No access configured",
+    menu_no_access_body: "signed in successfully, but no access has been enabled yet. Check this Employee ID's Job Title in the HR Sheet — make sure it's listed in Config_PositionMap with the right Tier.",
+    menu_back_to_login: "Back to login",
+    menu_tag_action: "ACTION",
+    menu_tag_view: "VIEW",
+    menu_self: "Appraise Yourself",
+    menu_history: "Track Your Progress",
+    menu_dev_plan: "My Development Plan",
+    menu_team_appraisal: "Team Appraisal",
+    menu_review_team: "Review Your Team",
+    menu_approve_final: "Approve Final Decisions",
+    menu_training_needs: "Training Needs",
+    menu_review_all: "Review Everyone's Records",
+    menu_read_feedback: "Read Staff Feedback",
+    menu_appraise_all: "Appraise All Staff",
+    menu_calc_sc: "Calculate Service Charge",
+    menu_input_historical: "Enter Historical Data",
+    menu_staff_mapping: "Staff Mapping",
+    menu_manage_kpi: "Manage KPI Criteria",
+    settings_title: "Account Settings",
+    settings_back: "&larr; Back",
+    settings_click_photo: "Click the photo to view/change it",
+    settings_profile: "👤 My Profile",
+    settings_nik: "Employee ID",
+    settings_job_title: "Job Title",
+    settings_department: "Department",
+    settings_tier: "Tier",
+    settings_contract: "📄 My Contract",
+    settings_join_date: "Joining Date",
+    settings_employee_status: "Employment Status",
+    settings_contract_end: "Contract End Date",
+    settings_no_contract_data: "No contract data on file yet — contact HR if this doesn't look right.",
+    settings_change_pin: "🔒 Change PIN",
+    settings_pin_hint: "Use a PIN that's easy for you to remember but hard for others to guess.",
+    settings_pin_current: "Current PIN",
+    settings_pin_new: "New PIN (4 digits)",
+    settings_pin_confirm: "Confirm New PIN",
+    settings_pin_save: "Save New PIN",
+    settings_language: "🌐 Bahasa / Language",
+    settings_language_id: "Bahasa Indonesia",
+    settings_language_en: "English",
+    form_back: "Back",
+    form_checking_access: "Checking access...",
+    form_loading: "Loading form...",
+    form_too_early: "Not open yet. Try again starting",
+    form_too_late_full: "The window to fill out this appraisal has closed.",
+    form_max_attempts: "This appraisal has already been submitted",
+    form_max_attempts_suffix: "× (max",
+    form_max_attempts_suffix2: "×). It can't be resubmitted. Contact HR if you need a correction.",
+    form_deferred: "This staff member's contract ends too early this month for a new appraisal cycle — last month's appraisal decision applies for this period instead.",
+    form_no_contract: "No contract data found for this staff member. Please contact HR.",
+    form_self_too_late: "The window to Appraise Yourself this month has closed, and you didn't get to submit it in time. Your Self section will be counted as 0 for this month. Contact HR if there's a specific reason.",
+    form_score_legend: "Score: <strong>1</strong> Very Poor · <strong>2</strong> Poor · <strong>3</strong> Fair · <strong>4</strong> Good · <strong>5</strong> Excellent",
+    form_section_a: "Section A — Attitude",
+    form_section_b: "Section B — Discipline",
+    form_section_c: "Section C — Performance KPI",
+    form_section_d: "Section D — Bonus &amp; Deduction",
+    form_bonus_hint: "Enter how many times this happened this month. Leave at 0 if none.",
+    form_bonus_occurred: "Occurred",
+    form_bonus_notes_placeholder: "Evidence / notes (optional)",
+    form_feedback_section: "Feedback to Management",
+    form_feedback_privacy: "🔒 This box is only read by authorized management &amp; HR — it will never reach your direct Leader/Manager. Feel free to share what's on your mind.",
+    form_feedback_placeholder: "Optional — write anything you'd like to share directly with an Executive...",
+    form_submit: "Submit Appraisal",
+    form_cancel: "Cancel",
+    form_progress: "of",
+    form_progress_suffix: "criteria filled in",
+    form_view_rubric: "📏 View 1-5 scoring guide",
+  },
+};
+
+function t(key) {
+  const dict = translations[state.lang] || translations.id;
+  return dict[key] !== undefined ? dict[key] : (translations.id[key] !== undefined ? translations.id[key] : key);
+}
+
+function setLanguage(lang) {
+  state.lang = (lang === "en") ? "en" : "id";
+  try { localStorage.setItem("appLang", state.lang); } catch (e) { /* localStorage unavailable — language just won't persist across reloads */ }
+  // The PIN entry step isn't its own state.screen value — it's drawn directly by
+  // showPinPrompt(), not routed through render() — so toggling language while sitting on
+  // it needs to redraw THAT screen specifically, or it'd wrongly bounce back to the NIK
+  // entry screen and lose the fact that a NIK was already confirmed.
+  if (!state.user && document.getElementById("pin-code-input")) {
+    showPinPrompt();
+  } else {
+    render();
+  }
+}
+
+// =================================================================
 // App state
 // =================================================================
 let state = {
@@ -403,6 +623,7 @@ let state = {
   prevScreen: null,
   _preserveScores: false,
   _pendingBonusEntries: null,
+  lang: (function () { try { return localStorage.getItem("appLang") || "id"; } catch (e) { return "id"; } })(),
 };
 
 const app = document.getElementById("app");
@@ -444,7 +665,7 @@ function topbar(title) {
         ${state.user ? `<button onclick="openFaq()">❓</button>` : ""}
         ${state.user ? `<button onclick="openSettings()">⚙️</button>` : ""}
         ${state.user ? `<button onclick="openNotifications()" style="position:relative;">🔔${unread > 0 ? `<span style="position:absolute; top:-6px; right:-6px; background:var(--coral); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:800;">${unread}</span>` : ""}</button>` : ""}
-        ${state.user ? '<button onclick="logout()">Keluar</button>' : ""}
+        ${state.user ? `<button onclick="logout()">${t("logout")}</button>` : ""}
       </div>
     </div>`;
 }
@@ -639,15 +860,26 @@ function goBackFromNotifications() {
 // =================================================================
 // Login
 // =================================================================
+// Compact language toggle for the pre-login screens (Login/PIN) — these don't go through
+// the regular topbar() function since there's no user yet to show icons/name for, so this
+// gets inlined into their own simplified topbar markup instead.
+function langTogglePreLoginHtml() {
+  return `
+    <div class="lang-toggle-pre-login">
+      <button class="${state.lang === "id" ? "active" : ""}" onclick="setLanguage('id')">ID</button>
+      <button class="${state.lang === "en" ? "active" : ""}" onclick="setLanguage('en')">EN</button>
+    </div>`;
+}
+
 function renderLogin() {
   app.innerHTML = `
-    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div></div>
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
     <div class="card">
-      <h2>Masuk dengan NIK</h2>
-      <label>NIK (Nomor Induk Karyawan)</label>
-      <input type="text" id="nik-input" inputmode="numeric" placeholder="Contoh: 1096" maxlength="10" />
+      <h2>${t("login_title")}</h2>
+      <label>${t("login_nik_label")}</label>
+      <input type="text" id="nik-input" inputmode="numeric" placeholder="${t("login_nik_placeholder")}" maxlength="10" />
       <div class="error" id="login-error"></div>
-      <button class="primary" id="login-step1-btn" onclick="doLoginStep1()">Lanjut</button>
+      <button class="primary" id="login-step1-btn" onclick="doLoginStep1()">${t("login_continue")}</button>
     </div>`;
   document.getElementById("nik-input").focus();
   document.getElementById("nik-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep1(); });
@@ -660,12 +892,12 @@ async function doLoginStep1() {
   const btn = document.getElementById("login-step1-btn");
   errEl.textContent = "";
   btn.disabled = true;
-  btn.textContent = "Menghubungkan...";
+  btn.textContent = t("login_connecting");
   btn.style.opacity = "0.7";
   try {
     const res = await apiGetWithRetry("checkNikExists", { nik });
     if (!res.found) {
-      errEl.textContent = "NIK tidak ditemukan.";
+      errEl.textContent = t("login_nik_not_found");
       return;
     }
     if (!res.hasPin) {
@@ -674,32 +906,32 @@ async function doLoginStep1() {
       // on file means no login, full stop, until HR sets one (same message + one-tap
       // request as the "Lupa PIN?" flow, so nothing new to remember).
       state._pendingNik = nik;
-      errEl.innerHTML = 'PIN belum di-set untuk NIK ini. <button class="ghost" style="display:inline-block; padding:4px 10px; font-size:12px; margin-left:4px;" onclick="doRequestPinReset()">Minta PIN ke HR</button>';
+      errEl.innerHTML = `${t("login_pin_not_set")} <button class="ghost" style="display:inline-block; padding:4px 10px; font-size:12px; margin-left:4px;" onclick="doRequestPinReset()">${t("login_request_pin_btn")}</button>`;
       return;
     }
     state._pendingNik = nik;
     showPinPrompt();
   } catch (err) {
     console.error(err);
-    errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
+    errEl.textContent = t("login_server_error");
   } finally {
     btn.disabled = false;
-    btn.textContent = "Lanjut";
+    btn.textContent = t("login_continue");
     btn.style.opacity = "1";
   }
 }
 
 function showPinPrompt() {
   app.innerHTML = `
-    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div></div>
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
     <div class="card">
-      <h2>Masukkan PIN</h2>
-      <label>PIN 4 digit kamu</label>
+      <h2>${t("pin_title")}</h2>
+      <label>${t("pin_label")}</label>
       <input type="password" id="pin-code-input" inputmode="numeric" maxlength="4" placeholder="••••" style="font-size:22px; letter-spacing:8px; text-align:center;" />
       <div class="error" id="login-error"></div>
-      <button class="primary" id="login-step2-btn" onclick="doLoginStep2()">Masuk</button>
-      <button class="ghost" style="margin-top:8px;" onclick="renderLogin()">&larr; Ganti NIK</button>
-      <button class="ghost" style="margin-top:4px;" onclick="doRequestPinReset()">Lupa PIN?</button>
+      <button class="primary" id="login-step2-btn" onclick="doLoginStep2()">${t("pin_submit")}</button>
+      <button class="ghost" style="margin-top:8px;" onclick="renderLogin()">${t("pin_change_nik")}</button>
+      <button class="ghost" style="margin-top:4px;" onclick="doRequestPinReset()">${t("pin_forgot")}</button>
     </div>`;
   document.getElementById("pin-code-input").focus();
   document.getElementById("pin-code-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep2(); });
@@ -707,20 +939,20 @@ function showPinPrompt() {
 
 async function doRequestPinReset() {
   const errEl = document.getElementById("login-error");
-  errEl.textContent = "Mengirim permintaan ke HR...";
+  errEl.textContent = t("pin_sending_reset");
   const res = await apiPost("requestPinReset", { nik: state._pendingNik });
   if (res.error || res.success === false) {
-    errEl.textContent = "Gagal kirim permintaan. Hubungi HR langsung ya.";
+    errEl.textContent = t("pin_reset_failed");
     return;
   }
   errEl.style.color = "var(--green)";
-  errEl.textContent = "Permintaan terkirim ke HR — tunggu PIN baru kamu, ya.";
+  errEl.textContent = t("pin_reset_sent");
 }
 
 async function doLoginStep2() {
   const pin = document.getElementById("pin-code-input").value.trim();
   const errEl = document.getElementById("login-error");
-  if (!pin) { errEl.textContent = "PIN wajib diisi."; return; }
+  if (!pin) { errEl.textContent = t("pin_required"); return; }
   await completeLogin(state._pendingNik, pin);
 }
 
@@ -728,14 +960,14 @@ async function completeLogin(nik, pin) {
   const errEl = document.getElementById("login-error");
   const btn = document.getElementById("login-step2-btn");
   if (errEl) errEl.textContent = "";
-  if (btn) { btn.disabled = true; btn.textContent = "Menghubungkan..."; btn.style.opacity = "0.7"; }
+  if (btn) { btn.disabled = true; btn.textContent = t("login_connecting"); btn.style.opacity = "0.7"; }
   try {
     const res = await apiGetWithRetry("login", { nik, pin }, 2, (r) => r.error !== "invalid_pin" && (!!r.error || r.found === false));
     if (!res.found) {
       if (errEl) {
-        errEl.textContent = res.error === "invalid_pin" ? "PIN salah. Coba lagi."
-          : res.error === "pin_not_set" ? "PIN belum di-set. Hubungi HR."
-          : "NIK tidak ditemukan.";
+        errEl.textContent = res.error === "invalid_pin" ? t("pin_wrong")
+          : res.error === "pin_not_set" ? t("pin_not_set_short")
+          : t("login_nik_not_found");
       }
       return;
     }
@@ -745,9 +977,9 @@ async function completeLogin(nik, pin) {
     goToRoleMenu();
   } catch (err) {
     console.error(err);
-    if (errEl) errEl.textContent = "Gagal terhubung ke server. Cek koneksi, atau setting deployment Apps Script (Who has access = Anyone).";
+    if (errEl) errEl.textContent = t("login_server_error");
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Masuk"; btn.style.opacity = "1"; }
+    if (btn) { btn.disabled = false; btn.textContent = t("pin_submit"); btn.style.opacity = "1"; }
   }
 }
 
@@ -759,51 +991,51 @@ function availableScreensGrouped(user) {
 
   if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1) {
     groups.push({ name: "MyAppraisal", items: [
-      { key: "self", label: "Appraise Yourself" },
-      { key: "history", label: "Track Your Progress" },
-      { key: "myDevelopmentPlan", label: "My Development Plan" },
+      { key: "self", label: t("menu_self") },
+      { key: "history", label: t("menu_history") },
+      { key: "myDevelopmentPlan", label: t("menu_dev_plan") },
     ]});
   }
 
   const teamItems = [];
   if (user.isLeader || user.isManagement || user.isExecutive) {
-    teamItems.push({ key: "myEvaluations", label: user.appraiseLabel || "Team Appraisal" });
+    teamItems.push({ key: "myEvaluations", label: user.appraiseLabel || t("menu_team_appraisal") });
   }
   if (user.isLeader || user.isManagement) {
-    teamItems.push({ key: "review", label: "Review Your Team" });
+    teamItems.push({ key: "review", label: t("menu_review_team") });
   }
   if (user.isExecutive) {
-    teamItems.push({ key: "gm", label: "Approve Final Decisions" });
+    teamItems.push({ key: "gm", label: t("menu_approve_final") });
   }
   if (user.isLeader || user.isManagement) {
-    teamItems.push({ key: "trainingNeeds", label: "Training Needs" });
+    teamItems.push({ key: "trainingNeeds", label: t("menu_training_needs") });
   }
   if (teamItems.length) groups.push({ name: "MyTeams", items: teamItems });
 
   if (user.isExecutive) {
     groups.push({ name: "MyReport", items: [
-      { key: "review", label: "Review Everyone's Records" },
-      { key: "feedback", label: "Read Staff Feedback" },
-      { key: "trainingNeeds", label: "Training Needs" },
+      { key: "review", label: t("menu_review_all") },
+      { key: "feedback", label: t("menu_read_feedback") },
+      { key: "trainingNeeds", label: t("menu_training_needs") },
     ]});
   }
 
   if (user.isHR) {
     groups.push({ name: "MyHR", items: [
-      { key: "myEvaluations", label: user.appraiseLabel || "Appraise All Staff" },
-      { key: "review", label: "Review Everyone's Records" },
-      { key: "sc", label: "Calculate Service Charge" },
-      { key: "feedback", label: "Read Staff Feedback" },
-      { key: "trainingNeeds", label: "Training Needs" },
+      { key: "myEvaluations", label: user.appraiseLabel || t("menu_appraise_all") },
+      { key: "review", label: t("menu_review_all") },
+      { key: "sc", label: t("menu_calc_sc") },
+      { key: "feedback", label: t("menu_read_feedback") },
+      { key: "trainingNeeds", label: t("menu_training_needs") },
     ]});
   }
 
   if (user.isAdminOperational) {
     groups.push({ name: "MyOperational", items: [
-      { key: "historical", label: "Input Data Historis" },
-      { key: "review", label: "Review Everyone's Records" },
-      { key: "feedback", label: "Read Staff Feedback" },
-      { key: "trainingNeeds", label: "Training Needs" },
+      { key: "historical", label: t("menu_input_historical") },
+      { key: "review", label: t("menu_review_all") },
+      { key: "feedback", label: t("menu_read_feedback") },
+      { key: "trainingNeeds", label: t("menu_training_needs") },
     ]});
   }
 
@@ -811,10 +1043,10 @@ function availableScreensGrouped(user) {
   // universal and always-accessible, doesn't need to live inside role-specific menus.
   const settingsItems = [];
   if (user.hasStaffMappingAccess) {
-    settingsItems.push({ key: "staffMapping", label: "Staff Mapping" });
+    settingsItems.push({ key: "staffMapping", label: t("menu_staff_mapping") });
   }
   if (user.isHR || user.isExecutive || user.isAdminOperational) {
-    settingsItems.push({ key: "kpiManagement", label: "Manage KPI Criteria" });
+    settingsItems.push({ key: "kpiManagement", label: t("menu_manage_kpi") });
   }
   if (settingsItems.length) groups.push({ name: "MySettings", items: settingsItems });
 
@@ -834,14 +1066,12 @@ function availableScreens(user) {
 function goToRoleMenu() {
   const options = availableScreens(state.user);
   if (options.length === 0) {
-    app.innerHTML = topbar("Akses belum diatur") + `
+    app.innerHTML = topbar(t("menu_no_access_title")) + `
       <div class="card">
         <div class="hint" style="font-size:14px;">
-          NIK <strong>${state.user.staffId}</strong> (${state.user.name}) berhasil login, tapi belum ada akses
-          apapun yang diaktifkan. Cek Job Title untuk NIK ini di HR Sheet — pastikan ada di Config_PositionMap
-          dengan Tier yang sesuai.
+          NIK <strong>${state.user.staffId}</strong> (${state.user.name}) ${t("menu_no_access_body")}
         </div>
-        <button class="secondary" onclick="logout()" style="margin-top:12px;">Kembali ke login</button>
+        <button class="secondary" onclick="logout()" style="margin-top:12px;">${t("menu_back_to_login")}</button>
       </div>`;
     return;
   }
@@ -855,7 +1085,7 @@ function menuItemHtml(o) {
   const ACTION_KEYS = ["self", "myEvaluations", "gm", "sc", "historical", "trainingNeeds"];
   const isAction = ACTION_KEYS.indexOf(o.key) !== -1;
   const color = isAction ? "var(--coral)" : "var(--teal)";
-  const tag = isAction ? "AKSI" : "LIHAT";
+  const tag = isAction ? t("menu_tag_action") : t("menu_tag_view");
   const bg = isAction ? "var(--red-bg)" : "var(--green-bg)";
   return `
     <div class="staff-row" style="border-left: 4px solid ${color};" onclick="goToScreen('${o.key}')">
@@ -866,7 +1096,7 @@ function menuItemHtml(o) {
 
 function renderRoleMenu() {
   const options = availableScreens(state.user);
-  app.innerHTML = topbar("Pilih menu") + `
+  app.innerHTML = topbar(t("menu_pick_title")) + `
     <div class="card">
       <div class="hint">${state.user.name} punya lebih dari satu akses:</div>
       ${options.map(menuItemHtml).join("")}
@@ -1124,7 +1354,7 @@ async function renderSettings() {
   if (_isLoadingSettings) return; // ignore rapid repeat clicks while a fetch is already in flight
   _isLoadingSettings = true;
   try {
-  app.innerHTML = topbar("Pengaturan Akun") + `<div class="loading">Memuat...</div>`;
+  app.innerHTML = topbar(t("settings_title")) + `<div class="loading">Memuat...</div>`;
   const [profile, photoRes] = await Promise.all([
     apiGet("getMyProfile", { staffId: state.user.staffId }),
     apiGet("getStaffPhoto", { staffId: state.user.staffId }),
@@ -1132,66 +1362,79 @@ async function renderSettings() {
   const initial = (profile.name || "?").trim().charAt(0).toUpperCase();
   const photoSrc = photoRes.found ? (photoRes.dataUri || photoRes.url) : null;
 
-  app.innerHTML = topbar("Pengaturan Akun") + `
-    <button class="ghost" onclick="goBackFromSettings()">&larr; Kembali</button>
+  app.innerHTML = topbar(t("settings_title")) + `
+    <button class="ghost" onclick="goBackFromSettings()">${t("settings_back")}</button>
     <div class="card">
       <input type="file" id="photo-file-input" accept="image/*" style="display:none;" onchange="doUploadPhoto()" />
       <div style="display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:6px;">
-        <div onclick="showPhotoModal('${photoSrc || ""}', '${escapeAttr(profile.name || "")}', true)" style="cursor:pointer;" title="Klik buat lihat/ganti foto">
+        <div onclick="showPhotoModal('${photoSrc || ""}', '${escapeAttr(profile.name || "")}', true)" style="cursor:pointer;" title="${t("settings_click_photo")}">
           ${photoSrc
             ? `<img src="${photoSrc}" style="width:72px; height:72px; border-radius:18px; object-fit:cover; display:block;" />`
             : `<div style="width:72px; height:72px; border-radius:18px; background:linear-gradient(135deg, var(--teal), var(--coral)); display:flex; align-items:center; justify-content:center;"><span style="color:#fff; font-weight:800; font-size:26px;">${initial}</span></div>`}
         </div>
         <div style="font-weight:800; font-size:16px;">${profile.name || "-"}</div>
-        <div class="hint" id="photo-upload-note" style="margin:0;">Klik foto buat lihat/ganti</div>
+        <div class="hint" id="photo-upload-note" style="margin:0;">${t("settings_click_photo")}</div>
       </div>
     </div>
 
     <div class="card" style="padding:0; overflow:visible;">
       <div onclick="toggleSettingsSection('profile')" style="padding:16px 18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:700;">👤 Profil Saya</span>
+        <span style="font-weight:700;">${t("settings_profile")}</span>
         <span id="settings-chevron-profile">▾</span>
       </div>
       <div id="settings-section-profile" style="display:none; padding:0 18px 18px;">
         <table class="mini">
-          <tr><td>NIK</td><td>${profile.staffId || "-"}</td></tr>
-          <tr><td>Job Title</td><td>${profile.jobTitle || "-"}</td></tr>
-          <tr><td>Department</td><td>${profile.department && profile.department !== "-" ? profile.department : "-"}</td></tr>
-          <tr><td>Tier</td><td>${profile.tier || "-"}</td></tr>
+          <tr><td>${t("settings_nik")}</td><td>${profile.staffId || "-"}</td></tr>
+          <tr><td>${t("settings_job_title")}</td><td>${profile.jobTitle || "-"}</td></tr>
+          <tr><td>${t("settings_department")}</td><td>${profile.department && profile.department !== "-" ? profile.department : "-"}</td></tr>
+          <tr><td>${t("settings_tier")}</td><td>${profile.tier || "-"}</td></tr>
         </table>
       </div>
     </div>
 
     <div class="card" style="padding:0; overflow:visible;">
       <div onclick="toggleSettingsSection('contract')" style="padding:16px 18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:700;">📄 Kontrak Saya</span>
+        <span style="font-weight:700;">${t("settings_contract")}</span>
         <span id="settings-chevron-contract">▾</span>
       </div>
       <div id="settings-section-contract" style="display:none; padding:0 18px 18px;">
         <table class="mini">
-          <tr><td>Tanggal Bergabung</td><td>${profile.joiningDate || "-"}</td></tr>
-          <tr><td>Status Kepegawaian</td><td>${profile.employeeStatus || "-"}</td></tr>
-          <tr><td>Kontrak Berakhir</td><td>${profile.contractEndDate || "-"}</td></tr>
+          <tr><td>${t("settings_join_date")}</td><td>${profile.joiningDate || "-"}</td></tr>
+          <tr><td>${t("settings_employee_status")}</td><td>${profile.employeeStatus || "-"}</td></tr>
+          <tr><td>${t("settings_contract_end")}</td><td>${profile.contractEndDate || "-"}</td></tr>
         </table>
-        ${!profile.contractEndDate ? '<div class="hint" style="margin-top:8px;">Belum ada data kontrak tercatat — hubungi HR kalau ini gak sesuai.</div>' : ""}
+        ${!profile.contractEndDate ? `<div class="hint" style="margin-top:8px;">${t("settings_no_contract_data")}</div>` : ""}
       </div>
     </div>
 
     <div class="card" style="padding:0; overflow:visible;">
       <div onclick="toggleSettingsSection('pin')" style="padding:16px 18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-weight:700;">🔒 Ganti PIN</span>
+        <span style="font-weight:700;">${t("settings_change_pin")}</span>
         <span id="settings-chevron-pin">▾</span>
       </div>
       <div id="settings-section-pin" style="display:none; padding:0 18px 18px;">
-        <div class="hint" style="margin-bottom:12px;">Pakai PIN yang gampang kamu inget tapi gak gampang ditebak orang lain.</div>
-        <label>PIN Sekarang</label>
+        <div class="hint" style="margin-bottom:12px;">${t("settings_pin_hint")}</div>
+        <label>${t("settings_pin_current")}</label>
         <input type="password" id="current-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" required minlength="4" />
-        <label>PIN Baru (4 digit)</label>
+        <label>${t("settings_pin_new")}</label>
         <input type="password" id="new-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" required minlength="4" />
-        <label>Ulangi PIN Baru</label>
+        <label>${t("settings_pin_confirm")}</label>
         <input type="password" id="confirm-pin-input" inputmode="numeric" maxlength="4" placeholder="••••" required minlength="4" />
         <div class="hint" id="change-pin-note" style="margin-top:8px;"></div>
-        <button class="primary" onclick="doChangeOwnPin()" style="margin-top:10px;">Simpan PIN Baru</button>
+        <button class="primary" onclick="doChangeOwnPin()" style="margin-top:10px;">${t("settings_pin_save")}</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0; overflow:visible;">
+      <div onclick="toggleSettingsSection('language')" style="padding:16px 18px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:700;">${t("settings_language")}</span>
+        <span id="settings-chevron-language">▾</span>
+      </div>
+      <div id="settings-section-language" style="display:none; padding:0 18px 18px;">
+        <div class="row-flex">
+          <button class="${state.lang === "id" ? "primary" : "secondary"}" onclick="setLanguage('id')" style="flex:1;">${t("settings_language_id")}</button>
+          <button class="${state.lang === "en" ? "primary" : "secondary"}" onclick="setLanguage('en')" style="flex:1;">${t("settings_language_en")}</button>
+        </div>
       </div>
     </div>
   `;
@@ -2966,13 +3209,13 @@ function goBackFromHistory() {
 async function renderAppraisalForm({ evaluatorType, target }) {
   state.targetStaff = target; // always keep this in sync so submitForm can read it reliably
   const subtitle = `${target.department && target.department !== "-" ? target.department : ""}${target.tier ? (target.department && target.department !== "-" ? " · " : "") + target.tier + " tier" : ""}`;
-  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memeriksa akses...</div>`;
+  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">${t("form_checking_access")}</div>`;
 
   const access = await apiGet("checkAccess", { staffId: target.staffId, evaluatorType });
   if (access.error) {
     app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
       <div class="card"><div class="error">${friendlyError(access.error)}</div>
-      <button class="secondary" onclick="goBack()">Kembali</button></div>`;
+      <button class="secondary" onclick="goBack()">${t("form_back")}</button></div>`;
     return;
   }
   if (!access.allowed) {
@@ -2990,38 +3233,38 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       } else {
         app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
           <div class="card">
-            <div class="hint" style="font-size:14px;">Waktu buat Appraise Yourself bulan ini sudah lewat, dan kamu belum sempat mengisinya. Bagian Self kamu akan dihitung 0 untuk bulan ini. Hubungi HR kalau ada alasan khusus.</div>
-            <button class="secondary" onclick="goBack()" style="margin-top:12px;">Kembali</button>
+            <div class="hint" style="font-size:14px;">${t("form_self_too_late")}</div>
+            <button class="secondary" onclick="goBack()" style="margin-top:12px;">${t("form_back")}</button>
           </div>`;
       }
       return;
     }
     let msg;
     if (access.reason === "too_early") {
-      msg = `Belum waktunya. Coba lagi mulai <strong>${access.retryDateLabel}</strong>.`;
+      msg = `${t("form_too_early")} <strong>${access.retryDateLabel}</strong>.`;
     } else if (access.reason === "too_late") {
-      msg = "Waktu untuk mengisi appraisal ini sudah lewat.";
+      msg = t("form_too_late_full");
     } else if (access.reason === "max_attempts_reached") {
-      msg = `Appraisal ini sudah diisi ${access.submissionCount}× (maksimal ${access.submissionCount}×). Tidak bisa diisi ulang lagi. Hubungi HR kalau butuh koreksi.`;
+      msg = `${t("form_max_attempts")} ${access.submissionCount}${t("form_max_attempts_suffix")} ${access.submissionCount}${t("form_max_attempts_suffix2")}`;
     } else if (access.reason === "deferred_to_previous_cycle") {
-      msg = "Kontrak staff ini berakhir terlalu awal bulan ini untuk siklus appraisal baru — keputusan appraisal bulan lalu yang berlaku untuk periode ini.";
+      msg = t("form_deferred");
     } else {
-      msg = "Data kontrak untuk staff ini tidak ditemukan. Hubungi HR.";
+      msg = t("form_no_contract");
     }
     app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
       <div class="card">
         <div class="hint" style="font-size:14px;">${msg}</div>
-        <button class="secondary" onclick="goBack()" style="margin-top:12px;">Kembali</button>
+        <button class="secondary" onclick="goBack()" style="margin-top:12px;">${t("form_back")}</button>
       </div>`;
     return;
   }
 
-  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">Memuat form...</div>`;
+  app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">${t("form_loading")}</div>`;
   const cfg = await apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId });
   if (cfg.error) {
     app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
       <div class="card"><div class="error">${friendlyError(cfg.error)}</div>
-      <button class="secondary" onclick="goBack()">Kembali</button></div>`;
+      <button class="secondary" onclick="goBack()">${t("form_back")}</button></div>`;
     return;
   }
   state.kpiConfig = cfg;
@@ -3053,7 +3296,7 @@ function renderFormBody(evaluatorType, target, cfg) {
     <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
       <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}${state.leaderReference && state.leaderReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--teal);">· Leader/Mgmt: ${state.leaderReference[criterion]}</span>` : ""}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ""}
-      ${rubric ? `<details style="margin:4px 0 8px;"><summary style="cursor:pointer; font-size:11px; color:var(--teal); font-weight:700;">📏 Lihat panduan skor 1-5</summary><div class="hint" style="white-space:pre-line; margin-top:4px;">${rubric}</div></details>` : ""}
+      ${rubric ? `<details style="margin:4px 0 8px;"><summary style="cursor:pointer; font-size:11px; color:var(--teal); font-weight:700;">${t("form_view_rubric")}</summary><div class="hint" style="white-space:pre-line; margin-top:4px;">${rubric}</div></details>` : ""}
       <div class="score-select">
         ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
       </div>
@@ -3066,10 +3309,10 @@ function renderFormBody(evaluatorType, target, cfg) {
         ${inputType === "checkbox"
           ? `<label style="display:flex; align-items:center; gap:8px; flex:0 0 80px; margin-bottom:0; cursor:pointer;">
                <input type="checkbox" class="bonus-count" data-idx="${idx}" style="width:20px; height:20px; margin:0;" />
-               <span style="font-size:13px; color:var(--text-muted);">Terjadi</span>
+               <span style="font-size:13px; color:var(--text-muted);">${t("form_bonus_occurred")}</span>
              </label>`
           : `<input type="number" min="0" class="bonus-count" data-idx="${idx}" value="0" style="margin-bottom:0; flex:0 0 80px;" />`}
-        <input type="text" class="bonus-notes" data-idx="${idx}" placeholder="Evidence / notes (opsional)" style="margin-bottom:0;" />
+        <input type="text" class="bonus-notes" data-idx="${idx}" placeholder="${t("form_bonus_notes_placeholder")}" style="margin-bottom:0;" />
       </div>
     </div>`;
 
@@ -3083,7 +3326,7 @@ function renderFormBody(evaluatorType, target, cfg) {
       </div>
 
       <div class="hint" style="background:var(--sand); padding:9px 12px; border-radius:10px; margin-bottom:8px;">
-        Skor: <strong>1</strong> Sangat Kurang · <strong>2</strong> Kurang · <strong>3</strong> Cukup · <strong>4</strong> Baik · <strong>5</strong> Sangat Baik
+        ${t("form_score_legend")}
       </div>
       ${evaluatorType !== "self" ? (state.selfReference
         ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself — skornya ditampilkan sebagai referensi di tiap kriteria (label "Self: X").${state.leaderReference ? ` Skor Leader/Mgmt juga ditampilkan (label "Leader/Mgmt: X").` : ""}</div>`
@@ -3091,35 +3334,35 @@ function renderFormBody(evaluatorType, target, cfg) {
       ) : ""}
       <div class="hint" id="progress-counter" style="text-align:right; font-weight:700; color:var(--teal); margin-bottom:14px;"></div>
 
-      <div class="section-title">Section A — Attitude</div>
+      <div class="section-title">${t("form_section_a")}</div>
       ${cfg.attitude.map(c => scoreRow(c.name, c.description, c.rubric)).join("")}
 
-      <div class="section-title">Section B — Discipline</div>
+      <div class="section-title">${t("form_section_b")}</div>
       ${cfg.discipline.map(c => scoreRow(c.name, `Target: ${c.target}`, c.rubric)).join("")}
 
-      <div class="section-title">Section C — Performance KPI</div>
+      <div class="section-title">${t("form_section_c")}</div>
       ${cfg.placeholder
         ? `<div class="hint" style="background:var(--sand); padding:12px; border-radius:8px;">${cfg.placeholderNote}</div>`
         : cfg.kpi.map(c => scoreRow(c.name, `Target: ${c.target}`, c.rubric)).join("")}
 
       ${isSelf ? "" : `
-        <div class="section-title">Section D — Bonus &amp; Deduction</div>
-        <div class="hint">Isi jumlah kejadian bulan ini. Biarkan 0 kalau tidak ada.</div>
+        <div class="section-title">${t("form_section_d")}</div>
+        <div class="hint">${t("form_bonus_hint")}</div>
         ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i, b.inputType)).join("")}
       `}
 
       ${isSelf ? `
-        <div class="section-title">Feedback to Management</div>
+        <div class="section-title">${t("form_feedback_section")}</div>
         <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
-          🔒 Kotak ini dibaca terbatas oleh level manajemen & HR yang berwenang — gak akan bocor ke Leader/Manager langsungmu. Ngomong aja apa yang perlu disampaikan.
+          ${t("form_feedback_privacy")}
         </div>
-        <textarea id="management-feedback" rows="4" placeholder="Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
+        <textarea id="management-feedback" rows="4" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
       ` : ""}
 
       <div class="error" id="form-error"></div>
-      <button class="primary" onclick="reviewBeforeSubmit('${evaluatorType}')" style="margin-top: 14px;">Submit Appraisal</button>
+      <button class="primary" onclick="reviewBeforeSubmit('${evaluatorType}')" style="margin-top: 14px;">${t("form_submit")}</button>
       <div class="center" style="margin-top: 10px;">
-        <button class="ghost" onclick="cancelForm()">Batal</button>
+        <button class="ghost" onclick="cancelForm()">${t("form_cancel")}</button>
       </div>
     </div>`;
 
@@ -3154,7 +3397,7 @@ function renderFormBody(evaluatorType, target, cfg) {
 
 function updateProgressCounter() {
   const el = document.getElementById("progress-counter");
-  if (el) el.textContent = `${Object.keys(state.scores).length} dari ${state._totalCriteria} kriteria terisi`;
+  if (el) el.textContent = `${Object.keys(state.scores).length} ${t("form_progress")} ${state._totalCriteria} ${t("form_progress_suffix")}`;
 }
 
 function selectScore(el, criterion, value) {

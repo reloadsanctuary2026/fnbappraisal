@@ -251,7 +251,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-150-fix-escapeattr-newlines — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-151-pin-reset-button-persists-fix — LIVE</div>
 
 <script>
 // =================================================================
@@ -839,10 +839,11 @@ async function renderNotifications() {
           </div>
           ${n.read ? "" : `<span class="badge pending">Baru</span>`}
         </div>
-        ${isPinResetRequest ? `
+        ${isPinResetRequest && !n.read ? `
           <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doResetStaffPin('${n.aboutStaffId}', '${n.id}', this)">🔑 Reset PIN Sekarang</button>
           <div id="pin-reset-result-${n.id}" style="font-size:13px;"></div>
         ` : ""}
+        ${isPinResetRequest && n.read ? `<div class="hint" style="color:var(--green); font-weight:600;">✅ Sudah direset.</div>` : ""}
       </div>`;
     }).join("")}
     ${!list.length ? '<div class="hint">Belum ada notifikasi.</div>' : ""}

@@ -251,7 +251,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-151-pin-reset-button-persists-fix — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-152-trim-pin-reset-old-wording — LIVE</div>
 
 <script>
 // =================================================================
@@ -830,11 +830,19 @@ async function renderNotifications() {
       // roster, goes back to the Sheet to find the row again, copies the new PIN out to
       // message the person. This button collapses all of that into one click, right here.
       const isPinResetRequest = n.message.indexOf("minta reset PIN") !== -1;
+      // Older notifications (created before this button existed) have the OLD manual
+      // instructions baked right into the stored text ("...— hapus cell PIN mereka di HR
+      // Sheet lalu jalankan generateRandomPins()."). Showing that verbatim next to a
+      // "✅ Sudah direset." status is actively confusing — looks like there's still a
+      // manual step outstanding. Cut the display off at the em dash for ANY pin-reset
+      // notification (old or new wording alike) — the button/status below already says
+      // everything that's actually needed, the instructional tail never needs to be seen.
+      const displayMessage = isPinResetRequest ? n.message.split(" — ")[0] : n.message;
       return `
       <div class="staff-row" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"} ${isPinResetRequest ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${!isPinResetRequest && !n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (!isPinResetRequest && n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
           <div>
-            <div class="name" style="font-weight:${n.read ? "500" : "700"};">${n.message}${n.actionScreen ? ' <span style="color:var(--teal); font-size:11px;">→ buka</span>' : ""}</div>
+            <div class="name" style="font-weight:${n.read ? "500" : "700"};">${displayMessage}${n.actionScreen ? ' <span style="color:var(--teal); font-size:11px;">→ buka</span>' : ""}</div>
             <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
           </div>
           ${n.read ? "" : `<span class="badge pending">Baru</span>`}

@@ -251,7 +251,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-08-29-148-server-side-logout — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-150-fix-escapeattr-newlines — LIVE</div>
 
 <script>
 // =================================================================
@@ -824,19 +824,50 @@ async function renderNotifications() {
   app.innerHTML = topbar("Notifikasi") + `
     <button class="ghost" onclick="goBackFromNotifications()">&larr; Kembali</button>
     <div class="hint" style="margin-top:8px;">${list.length} notifikasi</div>
-    ${list.map(n => `
-      <div class="staff-row" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"}" ${!n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
-        <div>
-          <div class="name" style="font-weight:${n.read ? "500" : "700"};">${n.message}${n.actionScreen ? ' <span style="color:var(--teal); font-size:11px;">→ buka</span>' : ""}</div>
-          <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
+    ${list.map(n => {
+      // "Lupa PIN?" requests used to mean: HR opens the HR Sheet, clears the cell by hand,
+      // switches to the Apps Script editor, runs generateRandomPins() for the WHOLE
+      // roster, goes back to the Sheet to find the row again, copies the new PIN out to
+      // message the person. This button collapses all of that into one click, right here.
+      const isPinResetRequest = n.message.indexOf("minta reset PIN") !== -1;
+      return `
+      <div class="staff-row" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"} ${isPinResetRequest ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${!isPinResetRequest && !n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (!isPinResetRequest && n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <div>
+            <div class="name" style="font-weight:${n.read ? "500" : "700"};">${n.message}${n.actionScreen ? ' <span style="color:var(--teal); font-size:11px;">→ buka</span>' : ""}</div>
+            <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
+          </div>
+          ${n.read ? "" : `<span class="badge pending">Baru</span>`}
         </div>
-        ${n.read ? "" : `<span class="badge pending">Baru</span>`}
-      </div>`).join("")}
+        ${isPinResetRequest ? `
+          <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doResetStaffPin('${n.aboutStaffId}', '${n.id}', this)">🔑 Reset PIN Sekarang</button>
+          <div id="pin-reset-result-${n.id}" style="font-size:13px;"></div>
+        ` : ""}
+      </div>`;
+    }).join("")}
     ${!list.length ? '<div class="hint">Belum ada notifikasi.</div>' : ""}
   `;
   } finally {
     _isLoadingNotifications = false;
   }
+}
+
+async function doResetStaffPin(staffId, notificationId, btnEl) {
+  const resultEl = document.getElementById(`pin-reset-result-${notificationId}`);
+  if (btnEl) btnEl.disabled = true;
+  if (resultEl) { resultEl.textContent = "Memproses..."; resultEl.style.color = "var(--text-muted)"; }
+  const res = await apiPost("resetStaffPin", { requesterId: state.user.staffId, staffId });
+  if (res.error || res.success === false) {
+    if (resultEl) { resultEl.textContent = "Gagal reset: " + friendlyError(res.error); resultEl.style.color = "var(--red)"; }
+    if (btnEl) btnEl.disabled = false;
+    return;
+  }
+  if (resultEl) {
+    resultEl.innerHTML = `✅ PIN baru buat <strong>${res.staffName}</strong>: <strong style="font-size:17px; letter-spacing:3px;">${res.newPin}</strong><br><span style="font-size:11px; color:var(--text-muted);">Sampaikan PIN ini ke orangnya lewat WA/telpon ya — dia gak bisa lihat ini sendiri.</span>`;
+    resultEl.style.color = "var(--green)";
+  }
+  if (btnEl) btnEl.remove();
+  await apiPost("markNotificationRead", { notificationId });
 }
 
 function navigateToScreen(screen) {
@@ -1329,7 +1360,20 @@ function sortMyEvalList(criteria) {
 }
 
 
-function escapeAttr(s) { return String(s).replace(/'/g, "\\'"); }
+// Escapes text for safe embedding inside a single-quoted JS string literal within an
+// onclick="..." HTML attribute. Previously only escaped ' — but rubric text stored with
+// real line breaks between "Skor 1 = ...", "Skor 3 = ...", "Skor 5 = ..." would leave a
+// RAW newline sitting inside that JS string literal, which is a syntax error (only
+// backtick template literals allow literal newlines). The browser silently swallows that
+// parse error, so clicking the button just... does nothing — exactly what looked like a
+// broken "Edit" button on any criterion with a real multi-line rubric filled in.
+function escapeAttr(s) {
+  return String(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r");
+}
 
 /** Shared performer/underperform badge — was being hand-written with the same ternary in
  *  5+ different screens (Review, Approval, Compliance, etc.). isPerformer decides the

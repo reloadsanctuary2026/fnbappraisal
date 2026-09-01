@@ -252,7 +252,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-150-fix-escapeattr-newlines — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-151-pin-reset-button-persists-fix — TEST</div>
 
 <script>
 // =================================================================
@@ -264,7 +264,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwqUUo-avmoBoj9ZqmdGUTM
 // then re-upload just this one file — no other changes needed. Staff who still have this
 // TEST link bookmarked/saved will see a friendly "we've moved" screen with a button
 // straight to the real (LIVE) app, instead of the normal login screen.
-const TEST_ENV_CLOSED = false;
+const TEST_ENV_CLOSED = true;
 const LIVE_APP_URL = "https://reloadsanctuary2026.github.io/fnbappraisal/";
 const LMS_URL = "https://script.google.com/macros/s/AKfycbx7ID6GZMXYoj8ymmwAcGuxHWb-hGli-FRDqcDgazgIL38JOT4jbARBht85PFosc34a_Q/exec";
 
@@ -851,10 +851,11 @@ async function renderNotifications() {
           </div>
           ${n.read ? "" : `<span class="badge pending">Baru</span>`}
         </div>
-        ${isPinResetRequest ? `
+        ${isPinResetRequest && !n.read ? `
           <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doResetStaffPin('${n.aboutStaffId}', '${n.id}', this)">🔑 Reset PIN Sekarang</button>
           <div id="pin-reset-result-${n.id}" style="font-size:13px;"></div>
         ` : ""}
+        ${isPinResetRequest && n.read ? `<div class="hint" style="color:var(--green); font-weight:600;">✅ Sudah direset.</div>` : ""}
       </div>`;
     }).join("")}
     ${!list.length ? '<div class="hint">Belum ada notifikasi.</div>' : ""}

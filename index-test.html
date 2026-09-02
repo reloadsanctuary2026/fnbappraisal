@@ -293,7 +293,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-02-160-unit-picker-hover-sweep — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-02-162-fix-logout-loses-business-unit — TEST</div>
 
 <script>
 // =================================================================
@@ -885,7 +885,14 @@ async function renderNotifications() {
 
   app.innerHTML = topbar("Notifikasi") + `
     <button class="ghost" onclick="goBackFromNotifications()">&larr; Kembali</button>
-    <div class="hint" style="margin-top:8px;">${list.length} notifikasi</div>
+    <input type="text" placeholder="Cari nama/isi notifikasi..." oninput="updateNotificationFilter('search', this.value)" style="margin:10px 0;" />
+    <div class="row-flex" style="margin-bottom:10px;">
+      <button class="primary" id="notif-filter-all" style="flex:1;" onclick="setNotificationFilterTab('all')">Semua</button>
+      <button class="secondary" id="notif-filter-unread" style="flex:1;" onclick="setNotificationFilterTab('unread')">Belum Dibaca</button>
+      <button class="secondary" id="notif-filter-action" style="flex:1;" onclick="setNotificationFilterTab('action')">Perlu Tindakan</button>
+    </div>
+    <div class="hint" id="notif-count-hint">${list.length} notifikasi</div>
+    <div id="notif-list-container">
     ${list.map(n => {
       // "Lupa PIN?" requests used to mean: HR opens the HR Sheet, clears the cell by hand,
       // switches to the Apps Script editor, runs generateRandomPins() for the WHOLE
@@ -900,8 +907,9 @@ async function renderNotifications() {
       // notification (old or new wording alike) — the button/status below already says
       // everything that's actually needed, the instructional tail never needs to be seen.
       const displayMessage = isPinResetRequest ? n.message.split(" — ")[0] : n.message;
+      const needsAction = isPinResetRequest && !n.read;
       return `
-      <div class="staff-row" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"} ${isPinResetRequest ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${!isPinResetRequest && !n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (!isPinResetRequest && n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
+      <div class="staff-row" data-search="${escapeAttr(n.message.toLowerCase())}" data-read="${n.read}" data-action-needed="${needsAction}" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"} ${isPinResetRequest ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${!isPinResetRequest && !n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (!isPinResetRequest && n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
           <div>
             <div class="name" style="font-weight:${n.read ? "500" : "700"};">${displayMessage}${n.actionScreen ? ' <span style="color:var(--teal); font-size:11px;">→ buka</span>' : ""}</div>
@@ -916,11 +924,47 @@ async function renderNotifications() {
         ${isPinResetRequest && n.read ? `<div class="hint" style="color:var(--green); font-weight:600;">✅ Sudah direset.</div>` : ""}
       </div>`;
     }).join("")}
+    </div>
+    <div class="hint" id="notif-empty-note" style="display:none; text-align:center; padding:16px 0;">Gak ada notifikasi yang cocok sama filter/pencarian.</div>
     ${!list.length ? '<div class="hint">Belum ada notifikasi.</div>' : ""}
   `;
+  state._notifFilters = { search: "", tab: "all" };
   } finally {
     _isLoadingNotifications = false;
   }
+}
+
+function setNotificationFilterTab(tab) {
+  state._notifFilters = state._notifFilters || {};
+  state._notifFilters.tab = tab;
+  ["all", "unread", "action"].forEach(key => {
+    const btn = document.getElementById(`notif-filter-${key}`);
+    if (btn) btn.className = key === tab ? "primary" : "secondary";
+  });
+  applyNotificationFilters();
+}
+
+function updateNotificationFilter(key, value) {
+  state._notifFilters = state._notifFilters || {};
+  state._notifFilters[key] = value;
+  applyNotificationFilters();
+}
+
+function applyNotificationFilters() {
+  const f = state._notifFilters || { search: "", tab: "all" };
+  let visibleCount = 0;
+  document.querySelectorAll("#notif-list-container [data-search]").forEach(el => {
+    let show = true;
+    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
+    if (f.tab === "unread" && el.dataset.read !== "false") show = false;
+    if (f.tab === "action" && el.dataset.actionNeeded !== "true") show = false;
+    el.style.display = show ? "" : "none";
+    if (show) visibleCount++;
+  });
+  const emptyNote = document.getElementById("notif-empty-note");
+  if (emptyNote) emptyNote.style.display = visibleCount === 0 ? "" : "none";
+  const countHint = document.getElementById("notif-count-hint");
+  if (countHint) countHint.textContent = `${visibleCount} notifikasi`;
 }
 
 async function doResetStaffPin(staffId, notificationId, btnEl) {
@@ -1423,7 +1467,17 @@ function logout() {
   // state.user is cleared below, since apiPost reads the session token from state.user.
   apiPost("logout", {}).catch(() => {});
   localStorage.removeItem("appraisalSession");
-  state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {} };
+  // businessUnit/lang are DEVICE preferences (still saved in localStorage), not part of
+  // the authenticated session — wiping them here (like the old code did by replacing the
+  // whole state object) meant state.businessUnit silently became undefined post-logout.
+  // That undefined then got sent to the backend as the literal string "undefined" (how
+  // URLSearchParams stringifies it), which never matches a real employee's actual unit —
+  // triggering a false "wrong unit" rejection that confusingly LOOKED like it agreed with
+  // itself, since businessUnitLabel()'s own fallback also happens to read "F&B" whenever
+  // state.businessUnit isn't a recognized key.
+  const preservedBusinessUnit = state.businessUnit;
+  const preservedLang = state.lang;
+  state = { screen: "login", user: null, month: currentMonth(), targetStaff: null, kpiConfig: null, scores: {}, businessUnit: preservedBusinessUnit, lang: preservedLang };
   render();
 }
 

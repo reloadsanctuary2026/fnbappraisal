@@ -293,7 +293,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-02-163-i18n-notifications — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-02-164-brown-purple-red-theme — TEST</div>
 
 <script>
 // =================================================================
@@ -1079,9 +1079,12 @@ const UNIT_PICKER_BACKGROUNDS = {
 
 const BUSINESS_UNIT_THEMES = {
   default: { teal: "#0E4749", tealDark: "#082F31", coral: "#FF6B4A", coralDark: "#E85535", gold: "#F2A65A", logoA: "#F2A65A", logoB: "#FF6B4A" },
-  fnb: { teal: "#7A614F", tealDark: "#554132", coral: "#800020", coralDark: "#5C0018", gold: "#AA7655", logoA: "#DECAB8", logoB: "#DECAB8" },        // Wheat Brown + Shade of Royal Brown + Burgundy + French Beige; logo in Bone for contrast
-  gym: { teal: "#756D64", tealDark: "#302F2F", coral: "#728639", coralDark: "#54622A", gold: "#7A614F", logoA: "#DECAB8", logoB: "#DECAB8" },       // Shade of Sandstone + Dark Charcoal + Shade of Wasabi + Wheat Brown; logo in Bone for contrast
-  backoffice: { teal: "#202A44", tealDark: "#302F2F", coral: "#7A614F", coralDark: "#554132", gold: "#DECAB8", logoA: "#DECAB8", logoB: "#DECAB8" }, // Navy Blue + Dark Charcoal + Wheat Brown + Bone; logo in solid Bone for contrast
+  // 3 clearly distinct hues (brown / purple / red) so units never look "samey" again —
+  // logo uses a warm cream, tested at 8.6-13.7:1 contrast against every topbar tone here
+  // (WCAG minimum for this kind of element is ~3:1), so it stays crisp regardless of unit.
+  fnb: { teal: "#5C3A21", tealDark: "#3B2415", coral: "#B5651D", coralDark: "#8A4513", gold: "#D9A566", logoA: "#F2EDE4", logoB: "#F2EDE4" },        // Coklat
+  gym: { teal: "#4A2C5E", tealDark: "#2D1B3D", coral: "#8E44AD", coralDark: "#6C3483", gold: "#C39BD3", logoA: "#F2EDE4", logoB: "#F2EDE4" },        // Ungu
+  backoffice: { teal: "#6B2020", tealDark: "#401212", coral: "#C0392B", coralDark: "#922B21", gold: "#E6B8A2", logoA: "#F2EDE4", logoB: "#F2EDE4" }, // Merah
 };
 
 // logoA/logoB are SEPARATE from gold/coral — the logo mark needs to stay legible against

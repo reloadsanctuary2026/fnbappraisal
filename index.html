@@ -63,18 +63,40 @@
     aspect-ratio: 1 / 1; cursor: pointer; background: #fff;
     transition: transform 0.12s ease, box-shadow 0.15s ease;
   }
-  .unit-picker-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(32,48,47,0.12); }
+  .unit-picker-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(32,48,47,0.16); }
   .unit-picker-card:active { transform: scale(0.98); }
   .unit-picker-card .unit-picker-bg {
     position: absolute; inset: 0; background-size: cover; background-position: center;
-    opacity: 0.16;
+    opacity: 0.16; transform: scale(1.04);
+    transition: opacity 0.35s ease, transform 0.35s ease;
   }
+  .unit-picker-card:hover .unit-picker-bg { opacity: 0.55; transform: scale(1.1); }
+  /* The diagonal "shine" streak — sits above the photo, swept across on hover via ::after
+     so it never needs its own extra markup. Parked off-screen to the left at rest, slides
+     all the way past the right edge on hover; skewed so it reads as a light sweep rather
+     than a flat vertical bar. */
+  .unit-picker-card::after {
+    content: ""; position: absolute; top: 0; left: -75%; width: 45%; height: 100%;
+    background: linear-gradient(115deg, transparent, rgba(255,255,255,0.65), transparent);
+    transform: skewX(-20deg); pointer-events: none;
+    transition: left 0.65s ease;
+  }
+  .unit-picker-card:hover::after { left: 135%; }
   .unit-picker-card .unit-picker-overlay {
     position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
     text-align: center; padding: 12px;
   }
-  .unit-picker-card .unit-picker-emoji { font-size: 30px; }
-  .unit-picker-card .unit-picker-label { font-weight: 800; font-size: 14px; color: var(--text); }
+  /* A soft bottom scrim keeps the label readable once the photo brightens on hover —
+     without it, a light patch of photo right behind dark text would hurt legibility. */
+  .unit-picker-card .unit-picker-scrim {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 60%;
+    background: linear-gradient(to top, rgba(255,255,255,0.85), transparent);
+    opacity: 0; transition: opacity 0.35s ease; pointer-events: none;
+  }
+  .unit-picker-card:hover .unit-picker-scrim { opacity: 1; }
+  .unit-picker-card .unit-picker-emoji { font-size: 30px; transition: transform 0.3s ease; }
+  .unit-picker-card:hover .unit-picker-emoji { transform: scale(1.15); }
+  .unit-picker-card .unit-picker-label { font-weight: 800; font-size: 14px; color: var(--text); position: relative; }
   .lang-toggle-pre-login button { border: none; background: transparent; color: rgba(255,255,255,0.8); font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 16px; cursor: pointer; }
   .lang-toggle-pre-login button.active { background: #fff; color: var(--teal-dark); }
   .logo-mark {
@@ -270,7 +292,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-02-159-logo-contrast-and-360-rename — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-02-160-unit-picker-hover-sweep — LIVE</div>
 
 <script>
 // =================================================================
@@ -1021,6 +1043,7 @@ function renderBusinessUnitPicker() {
         ${units.map(u => `
           <div class="unit-picker-card" onclick="chooseBusinessUnit('${u.key}')">
             <div class="unit-picker-bg" style="background-image:url('${UNIT_PICKER_BACKGROUNDS[u.key]}');"></div>
+            <div class="unit-picker-scrim"></div>
             <div class="unit-picker-overlay">
               <span class="unit-picker-emoji">${u.emoji}</span>
               <span class="unit-picker-label">${u.label}</span>

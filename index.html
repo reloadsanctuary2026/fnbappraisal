@@ -251,7 +251,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-156-business-unit-theming — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-157-lighter-unit-themes — LIVE</div>
 
 <script>
 // =================================================================
@@ -933,18 +933,21 @@ function businessUnitLabel() {
   return map[state.businessUnit] || "F&B";
 }
 
-// Each unit shares the SAME dark-neutral foundation approach (a dark primary + one warm
-// accent + one muted highlight) — only the specific hues differ, all sourced from the
-// official brand palette, so units read as "the same family, different department" rather
-// than clashing, unrelated color schemes.
+// Each unit shares the SAME approach (a medium-dark primary + one distinct accent + one
+// warm highlight) — only the specific hues differ, all sourced from the official brand
+// palette, so units read as "the same family, different department" without any of them
+// going near-black/oppressively dark. "default" is the neutral pre-picker look — it isn't
+// any one unit's identity, so it deliberately stays the original palette rather than
+// defaulting to F&B's.
 const BUSINESS_UNIT_THEMES = {
-  fnb: { teal: "#554132", tealDark: "#2A1E04", coral: "#800020", coralDark: "#5C0018", gold: "#AA7655" },       // Shade of Royal Brown + Zinnwaldite + Burgundy + French Beige
-  gym: { teal: "#302F2F", tealDark: "#131313", coral: "#728639", coralDark: "#54622A", gold: "#7A614F" },       // Dark Charcoal + Chinese Black + Shade of Wasabi + Wheat Brown
-  backoffice: { teal: "#202A44", tealDark: "#131313", coral: "#756D64", coralDark: "#5A534B", gold: "#DECAB8" }, // Navy Blue + Chinese Black + Shade of Sandstone + Bone
+  default: { teal: "#0E4749", tealDark: "#082F31", coral: "#FF6B4A", coralDark: "#E85535", gold: "#F2A65A" },
+  fnb: { teal: "#7A614F", tealDark: "#554132", coral: "#800020", coralDark: "#5C0018", gold: "#AA7655" },        // Wheat Brown + Shade of Royal Brown + Burgundy + French Beige
+  gym: { teal: "#756D64", tealDark: "#302F2F", coral: "#728639", coralDark: "#54622A", gold: "#7A614F" },       // Shade of Sandstone + Dark Charcoal + Shade of Wasabi + Wheat Brown
+  backoffice: { teal: "#202A44", tealDark: "#302F2F", coral: "#7A614F", coralDark: "#554132", gold: "#DECAB8" }, // Navy Blue + Dark Charcoal + Wheat Brown + Bone
 };
 
 function applyBusinessUnitTheme() {
-  const theme = BUSINESS_UNIT_THEMES[state.businessUnit] || BUSINESS_UNIT_THEMES.fnb;
+  const theme = BUSINESS_UNIT_THEMES[state.businessUnit] || BUSINESS_UNIT_THEMES.default;
   const root = document.documentElement.style;
   root.setProperty("--teal", theme.teal);
   root.setProperty("--teal-dark", theme.tealDark);

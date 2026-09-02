@@ -251,7 +251,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-152-trim-pin-reset-old-wording — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-155-historical-input-calibration-warning — LIVE</div>
 
 <script>
 // =================================================================
@@ -600,11 +600,13 @@ function t(key) {
 function setLanguage(lang) {
   state.lang = (lang === "en") ? "en" : "id";
   try { localStorage.setItem("appLang", state.lang); } catch (e) { /* localStorage unavailable — language just won't persist across reloads */ }
-  // The PIN entry step isn't its own state.screen value — it's drawn directly by
-  // showPinPrompt(), not routed through render() — so toggling language while sitting on
-  // it needs to redraw THAT screen specifically, or it'd wrongly bounce back to the NIK
-  // entry screen and lose the fact that a NIK was already confirmed.
-  if (!state.user && document.getElementById("pin-code-input")) {
+  // None of the PIN entry step, the business-unit picker, or the "TEST is closed" notice
+  // are their own state.screen value — they're drawn directly, not routed through
+  // render() — so toggling language while sitting on any of them needs to redraw THAT
+  // screen specifically, or it'd wrongly bounce to some other pre-login screen.
+  if (document.getElementById("business-unit-picker")) {
+    renderBusinessUnitPicker();
+  } else if (!state.user && document.getElementById("pin-code-input")) {
     showPinPrompt();
   } else {
     render();
@@ -626,6 +628,7 @@ let state = {
   _preserveScores: false,
   _pendingBonusEntries: null,
   lang: (function () { try { return localStorage.getItem("appLang") || "id"; } catch (e) { return "id"; } })(),
+  businessUnit: (function () { try { return localStorage.getItem("businessUnit") || null; } catch (e) { return null; } })(),
 };
 
 const app = document.getElementById("app");
@@ -913,15 +916,57 @@ function langTogglePreLoginHtml() {
     </div>`;
 }
 
+// =================================================================
+// Business Unit picker — shown once before login, purely cosmetic/branding at this stage
+// (NIK+PIN still authenticates exactly the same regardless of choice — we can't gate
+// anything by unit here since we don't know who the person is yet without their NIK).
+// Remembered per-device (like language), so it's not asked on every single visit.
+// =================================================================
+function businessUnitLabel() {
+  const map = { fnb: "F&B", gym: "Gym", backoffice: "Back Office" };
+  return map[state.businessUnit] || "F&B";
+}
+
+function chooseBusinessUnit(unitKey) {
+  state.businessUnit = unitKey;
+  try { localStorage.setItem("businessUnit", unitKey); } catch (e) { /* just won't be remembered next visit */ }
+  renderLogin();
+}
+
+function changeBusinessUnit() {
+  try { localStorage.removeItem("businessUnit"); } catch (e) { /* no-op */ }
+  state.businessUnit = null;
+  renderBusinessUnitPicker();
+}
+
+function renderBusinessUnitPicker() {
+  const units = [
+    { key: "fnb", label: "F&B", emoji: "🍽️" },
+    { key: "gym", label: "Gym", emoji: "🏋️" },
+    { key: "backoffice", label: "Back Office", emoji: "🏢" },
+  ];
+  app.innerHTML = `
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
+    <div class="card" id="business-unit-picker">
+      <h2>Pilih Unit Bisnis Kamu</h2>
+      <div class="hint" style="margin-bottom:14px;">Ini cuma buat nampilin tampilan yang sesuai — proses login tetap sama, pakai NIK & PIN kamu seperti biasa.</div>
+      ${units.map(u => `
+        <button class="secondary" style="width:100%; margin-bottom:10px; padding:16px; font-size:15px; text-align:left; display:flex; align-items:center; gap:12px;" onclick="chooseBusinessUnit('${u.key}')">
+          <span style="font-size:22px;">${u.emoji}</span> <span style="font-weight:700;">${u.label}</span>
+        </button>`).join("")}
+    </div>`;
+}
+
 function renderLogin() {
   app.innerHTML = `
-    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload ${businessUnitLabel()} Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
     <div class="card">
       <h2>${t("login_title")}</h2>
       <label>${t("login_nik_label")}</label>
       <input type="text" id="nik-input" inputmode="numeric" placeholder="${t("login_nik_placeholder")}" maxlength="10" />
       <div class="error" id="login-error"></div>
       <button class="primary" id="login-step1-btn" onclick="doLoginStep1()">${t("login_continue")}</button>
+      <button class="ghost" style="margin-top:8px; width:100%;" onclick="changeBusinessUnit()">Ganti Unit Bisnis (sekarang: ${businessUnitLabel()})</button>
     </div>`;
   document.getElementById("nik-input").focus();
   document.getElementById("nik-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep1(); });
@@ -937,9 +982,11 @@ async function doLoginStep1() {
   btn.textContent = t("login_connecting");
   btn.style.opacity = "0.7";
   try {
-    const res = await apiGetWithRetry("checkNikExists", { nik });
+    const res = await apiGetWithRetry("checkNikExists", { nik, businessUnit: state.businessUnit }, 2, (r) => r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
     if (!res.found) {
-      errEl.textContent = t("login_nik_not_found");
+      errEl.innerHTML = res.error === "wrong_business_unit"
+        ? `NIK ini terdaftar di unit <strong>${res.actualUnitLabel}</strong>, bukan ${businessUnitLabel()}. <button class="ghost" style="display:inline-block; padding:4px 10px; font-size:12px; margin-left:4px;" onclick="changeBusinessUnit()">Ganti Unit</button>`
+        : t("login_nik_not_found");
       return;
     }
     if (!res.hasPin) {
@@ -965,7 +1012,7 @@ async function doLoginStep1() {
 
 function showPinPrompt() {
   app.innerHTML = `
-    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload F&amp;B Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload ${businessUnitLabel()} Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
     <div class="card">
       <h2>${t("pin_title")}</h2>
       <label>${t("pin_label")}</label>
@@ -1004,12 +1051,16 @@ async function completeLogin(nik, pin) {
   if (errEl) errEl.textContent = "";
   if (btn) { btn.disabled = true; btn.textContent = t("login_connecting"); btn.style.opacity = "0.7"; }
   try {
-    const res = await apiGetWithRetry("login", { nik, pin }, 2, (r) => r.error !== "invalid_pin" && (!!r.error || r.found === false));
+    const res = await apiGetWithRetry("login", { nik, pin, businessUnit: state.businessUnit }, 2, (r) => r.error !== "invalid_pin" && r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
     if (!res.found) {
       if (errEl) {
-        errEl.textContent = res.error === "invalid_pin" ? t("pin_wrong")
-          : res.error === "pin_not_set" ? t("pin_not_set_short")
-          : t("login_nik_not_found");
+        if (res.error === "wrong_business_unit") {
+          errEl.innerHTML = `NIK ini terdaftar di unit <strong>${res.actualUnitLabel}</strong>, bukan ${businessUnitLabel()}. <button class="ghost" style="display:inline-block; padding:4px 10px; font-size:12px; margin-left:4px;" onclick="changeBusinessUnit()">Ganti Unit</button>`;
+        } else {
+          errEl.textContent = res.error === "invalid_pin" ? t("pin_wrong")
+            : res.error === "pin_not_set" ? t("pin_not_set_short")
+            : t("login_nik_not_found");
+        }
       }
       return;
     }
@@ -2495,11 +2546,28 @@ async function loadHistoricalForm() {
   const hasDetailScores = Object.keys(existingScores.attitude).length || Object.keys(existingScores.discipline).length || Object.keys(existingScores.kpi).length;
 
   const noteEl = document.getElementById("historical-existing-note");
-  noteEl.textContent = !existing.found ? "" : (existing.selfTotal || existing.hrTotal)
+  const baseNote = !existing.found ? "" : (existing.selfTotal || existing.hrTotal)
     ? "⚠️ Bulan ini sudah punya data Self/HR (siklus normal) — hati-hati kalau ditimpa."
     : hasDetailScores
       ? `✏️ Bulan ini udah ada data historis (Final Score: ${Number(existing.finalScore).toFixed(1)}) — form di bawah udah ke-isi otomatis, tinggal koreksi yang perlu terus Simpan ulang.`
       : `Sudah ada data historis bulan ini (Final Score: ${Number(existing.finalScore).toFixed(1)}), tapi detail per-kriterianya gak ke-simpen (data lama sebelum fitur ini ada) — isi ulang semua kriteria dari awal.`;
+
+  // Executive already applying a manual Calibration Adjustment means someone deliberately
+  // reasoned through "this number needs correcting" — overwriting it via Historical Input
+  // would silently discard that reasoning (the Calibration columns don't get preserved by
+  // a full re-save, since the whole record is being replaced from scratch). This is a
+  // process decision, not a hard block — Admin decides, but only AFTER seeing this plainly.
+  const calibrationWarning = existing.found && Number(existing.calibrationAdjustment)
+    ? `<div style="background:var(--red-bg); color:var(--red); padding:12px 14px; border-radius:10px; font-weight:700; margin-bottom:10px;">
+        🚫 Bulan ini SUDAH DAPAT Calibration Adjustment dari Executive: ${Number(existing.calibrationAdjustment) > 0 ? "+" : ""}${existing.calibrationAdjustment} poin.<br/>
+        <span style="font-weight:500; font-size:13px;">Alasan Executive: "${existing.calibrationReason || "-"}"</span><br/>
+        <span style="font-weight:500; font-size:13px;">Jangan ditimpa sebelum konfirmasi verbal ke Executive dulu.</span>
+      </div>`
+    : existing.found
+      ? `<div style="background:var(--green-bg); color:var(--green); padding:10px 14px; border-radius:10px; font-weight:600; margin-bottom:10px;">✅ Bulan ini belum pernah dapat Calibration Adjustment — aman buat ditimpa kalau memang perlu.</div>`
+      : "";
+
+  noteEl.innerHTML = calibrationWarning + (baseNote ? `<div>${baseNote}</div>` : "");
 
   const scoreRow = (label, desc, id, existingValue) => `
     <div class="criterion-row">
@@ -4270,7 +4338,18 @@ async function tryResumeSession() {
   }
 }
 
-tryResumeSession();
+/** Boot sequence: an already-logged-in device (valid saved session) skips straight to
+ *  resuming it — the business-unit picker is a pre-login welcome step, irrelevant once
+ *  someone's already authenticated. Otherwise, ask for a business unit first (remembered
+ *  for next time, like language) before showing the normal NIK/PIN login. */
+function bootApp() {
+  const savedSession = localStorage.getItem("appraisalSession");
+  if (savedSession) { tryResumeSession(); return; }
+  if (state.businessUnit) { renderLogin(); return; }
+  renderBusinessUnitPicker();
+}
+
+bootApp();
 </script>
 </body>
 </html>

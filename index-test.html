@@ -252,7 +252,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-155-historical-input-calibration-warning — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-01-156-business-unit-theming — TEST</div>
 
 <script>
 // =================================================================
@@ -415,6 +415,9 @@ const translations = {
   id: {
     logout: "Keluar",
     login_title: "Masuk dengan NIK",
+    unit_picker_title: "Pilih Unit Bisnis",
+    unit_picker_subtitle: "Pilih unit tempat kamu bekerja untuk melanjutkan.",
+    unit_change_btn: "Ganti Unit Bisnis",
     login_nik_label: "NIK (Nomor Induk Karyawan)",
     login_nik_placeholder: "Contoh: 1096",
     login_continue: "Lanjut",
@@ -508,6 +511,9 @@ const translations = {
   en: {
     logout: "Log Out",
     login_title: "Sign in with Employee ID",
+    unit_picker_title: "Select Business Unit",
+    unit_picker_subtitle: "Choose the unit you work for to continue.",
+    unit_change_btn: "Change Business Unit",
     login_nik_label: "Employee ID Number",
     login_nik_placeholder: "e.g. 1096",
     login_continue: "Continue",
@@ -939,15 +945,37 @@ function businessUnitLabel() {
   return map[state.businessUnit] || "F&B";
 }
 
+// Each unit shares the SAME dark-neutral foundation approach (a dark primary + one warm
+// accent + one muted highlight) — only the specific hues differ, all sourced from the
+// official brand palette, so units read as "the same family, different department" rather
+// than clashing, unrelated color schemes.
+const BUSINESS_UNIT_THEMES = {
+  fnb: { teal: "#554132", tealDark: "#2A1E04", coral: "#800020", coralDark: "#5C0018", gold: "#AA7655" },       // Shade of Royal Brown + Zinnwaldite + Burgundy + French Beige
+  gym: { teal: "#302F2F", tealDark: "#131313", coral: "#728639", coralDark: "#54622A", gold: "#7A614F" },       // Dark Charcoal + Chinese Black + Shade of Wasabi + Wheat Brown
+  backoffice: { teal: "#202A44", tealDark: "#131313", coral: "#756D64", coralDark: "#5A534B", gold: "#DECAB8" }, // Navy Blue + Chinese Black + Shade of Sandstone + Bone
+};
+
+function applyBusinessUnitTheme() {
+  const theme = BUSINESS_UNIT_THEMES[state.businessUnit] || BUSINESS_UNIT_THEMES.fnb;
+  const root = document.documentElement.style;
+  root.setProperty("--teal", theme.teal);
+  root.setProperty("--teal-dark", theme.tealDark);
+  root.setProperty("--coral", theme.coral);
+  root.setProperty("--coral-dark", theme.coralDark);
+  root.setProperty("--gold", theme.gold);
+}
+
 function chooseBusinessUnit(unitKey) {
   state.businessUnit = unitKey;
   try { localStorage.setItem("businessUnit", unitKey); } catch (e) { /* just won't be remembered next visit */ }
+  applyBusinessUnitTheme();
   renderLogin();
 }
 
 function changeBusinessUnit() {
   try { localStorage.removeItem("businessUnit"); } catch (e) { /* no-op */ }
   state.businessUnit = null;
+  applyBusinessUnitTheme(); // reset to the default (F&B) palette while the picker itself is neutral
   renderBusinessUnitPicker();
 }
 
@@ -960,8 +988,8 @@ function renderBusinessUnitPicker() {
   app.innerHTML = `
     <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload Appraisal</h1></div>${langTogglePreLoginHtml()}</div>
     <div class="card" id="business-unit-picker">
-      <h2>Pilih Unit Bisnis Kamu</h2>
-      <div class="hint" style="margin-bottom:14px;">Ini cuma buat nampilin tampilan yang sesuai — proses login tetap sama, pakai NIK & PIN kamu seperti biasa.</div>
+      <h2>${t("unit_picker_title")}</h2>
+      <div class="hint" style="margin-bottom:14px;">${t("unit_picker_subtitle")}</div>
       ${units.map(u => `
         <button class="secondary" style="width:100%; margin-bottom:10px; padding:16px; font-size:15px; text-align:left; display:flex; align-items:center; gap:12px;" onclick="chooseBusinessUnit('${u.key}')">
           <span style="font-size:22px;">${u.emoji}</span> <span style="font-weight:700;">${u.label}</span>
@@ -978,7 +1006,7 @@ function renderLogin() {
       <input type="text" id="nik-input" inputmode="numeric" placeholder="${t("login_nik_placeholder")}" maxlength="10" />
       <div class="error" id="login-error"></div>
       <button class="primary" id="login-step1-btn" onclick="doLoginStep1()">${t("login_continue")}</button>
-      <button class="ghost" style="margin-top:8px; width:100%;" onclick="changeBusinessUnit()">Ganti Unit Bisnis (sekarang: ${businessUnitLabel()})</button>
+      <button class="ghost" style="margin-top:8px; width:100%;" onclick="changeBusinessUnit()">${t("unit_change_btn")} (${businessUnitLabel()})</button>
     </div>`;
   document.getElementById("nik-input").focus();
   document.getElementById("nik-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep1(); });
@@ -4390,6 +4418,7 @@ async function tryResumeSession() {
  *  like language) before showing the normal NIK/PIN login. */
 function bootApp() {
   if (TEST_ENV_CLOSED) { renderTestEnvClosedScreen(); return; }
+  applyBusinessUnitTheme(); // theme persists across the whole session, not just pre-login screens
   const savedSession = localStorage.getItem("appraisalSession");
   if (savedSession) { tryResumeSession(); return; }
   if (state.businessUnit) { renderLogin(); return; }

@@ -292,7 +292,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-02-162-fix-logout-loses-business-unit — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-02-163-i18n-notifications — LIVE</div>
 
 <script>
 // =================================================================
@@ -540,6 +540,22 @@ const translations = {
     form_progress: "dari",
     form_progress_suffix: "kriteria terisi",
     form_view_rubric: "📏 Lihat panduan skor 1-5",
+    notif_title: "Notifikasi",
+    notif_search_placeholder: "Cari nama/isi notifikasi...",
+    notif_tab_all: "Semua",
+    notif_tab_unread: "Belum Dibaca",
+    notif_tab_action: "Perlu Tindakan",
+    notif_count_suffix: "notifikasi",
+    notif_badge_new: "Baru",
+    notif_open_link: "→ buka",
+    notif_empty_filtered: "Gak ada notifikasi yang cocok sama filter/pencarian.",
+    notif_empty_all: "Belum ada notifikasi.",
+    notif_reset_pin_btn: "🔑 Reset PIN Sekarang",
+    notif_reset_processing: "Memproses...",
+    notif_reset_done: "✅ Sudah direset.",
+    notif_reset_relay_note: "Sampaikan PIN ini ke orangnya lewat WA/telpon ya — dia gak bisa lihat ini sendiri.",
+    notif_reset_failed_prefix: "Gagal reset:",
+    notif_pin_new_label: "PIN baru buat",
   },
   en: {
     logout: "Log Out",
@@ -636,6 +652,22 @@ const translations = {
     form_progress: "of",
     form_progress_suffix: "criteria filled in",
     form_view_rubric: "📏 View 1-5 scoring guide",
+    notif_title: "Notifications",
+    notif_search_placeholder: "Search name/notification text...",
+    notif_tab_all: "All",
+    notif_tab_unread: "Unread",
+    notif_tab_action: "Needs Action",
+    notif_count_suffix: "notifications",
+    notif_badge_new: "New",
+    notif_open_link: "→ open",
+    notif_empty_filtered: "No notifications match your filter/search.",
+    notif_empty_all: "No notifications yet.",
+    notif_reset_pin_btn: "🔑 Reset PIN Now",
+    notif_reset_processing: "Processing...",
+    notif_reset_done: "✅ Reset complete.",
+    notif_reset_relay_note: "Please pass this PIN to them via WhatsApp/phone — they can't see this themselves.",
+    notif_reset_failed_prefix: "Reset failed:",
+    notif_pin_new_label: "New PIN for",
   },
 };
 
@@ -862,24 +894,24 @@ async function renderNotifications() {
   if (_isLoadingNotifications) return; // ignore rapid repeat clicks while a fetch is already in flight
   _isLoadingNotifications = true;
   try {
-    app.innerHTML = topbar("Notifikasi") + `<div class="loading">Memuat...</div>`;
+    app.innerHTML = topbar(t("notif_title")) + `<div class="loading">${t("form_loading")}</div>`;
     const res = await apiGet("getNotifications", { staffId: state.user.staffId });
     if (res.error) {
-      app.innerHTML = topbar("Notifikasi") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
+      app.innerHTML = topbar(t("notif_title")) + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
       return;
     }
     const list = res.notifications || [];
     state.unreadCount = list.filter(n => !n.read).length;
 
-  app.innerHTML = topbar("Notifikasi") + `
-    <button class="ghost" onclick="goBackFromNotifications()">&larr; Kembali</button>
-    <input type="text" placeholder="Cari nama/isi notifikasi..." oninput="updateNotificationFilter('search', this.value)" style="margin:10px 0;" />
+  app.innerHTML = topbar(t("notif_title")) + `
+    <button class="ghost" onclick="goBackFromNotifications()">&larr; ${t("form_back")}</button>
+    <input type="text" placeholder="${t("notif_search_placeholder")}" oninput="updateNotificationFilter('search', this.value)" style="margin:10px 0;" />
     <div class="row-flex" style="margin-bottom:10px;">
-      <button class="primary" id="notif-filter-all" style="flex:1;" onclick="setNotificationFilterTab('all')">Semua</button>
-      <button class="secondary" id="notif-filter-unread" style="flex:1;" onclick="setNotificationFilterTab('unread')">Belum Dibaca</button>
-      <button class="secondary" id="notif-filter-action" style="flex:1;" onclick="setNotificationFilterTab('action')">Perlu Tindakan</button>
+      <button class="primary" id="notif-filter-all" style="flex:1;" onclick="setNotificationFilterTab('all')">${t("notif_tab_all")}</button>
+      <button class="secondary" id="notif-filter-unread" style="flex:1;" onclick="setNotificationFilterTab('unread')">${t("notif_tab_unread")}</button>
+      <button class="secondary" id="notif-filter-action" style="flex:1;" onclick="setNotificationFilterTab('action')">${t("notif_tab_action")}</button>
     </div>
-    <div class="hint" id="notif-count-hint">${list.length} notifikasi</div>
+    <div class="hint" id="notif-count-hint">${list.length} ${t("notif_count_suffix")}</div>
     <div id="notif-list-container">
     ${list.map(n => {
       // "Lupa PIN?" requests used to mean: HR opens the HR Sheet, clears the cell by hand,
@@ -900,21 +932,21 @@ async function renderNotifications() {
       <div class="staff-row" data-search="${escapeAttr(n.message.toLowerCase())}" data-read="${n.read}" data-action-needed="${needsAction}" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"} ${isPinResetRequest ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${!isPinResetRequest && !n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (!isPinResetRequest && n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
           <div>
-            <div class="name" style="font-weight:${n.read ? "500" : "700"};">${displayMessage}${n.actionScreen ? ' <span style="color:var(--teal); font-size:11px;">→ buka</span>' : ""}</div>
+            <div class="name" style="font-weight:${n.read ? "500" : "700"};">${displayMessage}${n.actionScreen ? ` <span style="color:var(--teal); font-size:11px;">${t("notif_open_link")}</span>` : ""}</div>
             <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
           </div>
-          ${n.read ? "" : `<span class="badge pending">Baru</span>`}
+          ${n.read ? "" : `<span class="badge pending">${t("notif_badge_new")}</span>`}
         </div>
         ${isPinResetRequest && !n.read ? `
-          <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doResetStaffPin('${n.aboutStaffId}', '${n.id}', this)">🔑 Reset PIN Sekarang</button>
+          <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doResetStaffPin('${n.aboutStaffId}', '${n.id}', this)">${t("notif_reset_pin_btn")}</button>
           <div id="pin-reset-result-${n.id}" style="font-size:13px;"></div>
         ` : ""}
-        ${isPinResetRequest && n.read ? `<div class="hint" style="color:var(--green); font-weight:600;">✅ Sudah direset.</div>` : ""}
+        ${isPinResetRequest && n.read ? `<div class="hint" style="color:var(--green); font-weight:600;">${t("notif_reset_done")}</div>` : ""}
       </div>`;
     }).join("")}
     </div>
-    <div class="hint" id="notif-empty-note" style="display:none; text-align:center; padding:16px 0;">Gak ada notifikasi yang cocok sama filter/pencarian.</div>
-    ${!list.length ? '<div class="hint">Belum ada notifikasi.</div>' : ""}
+    <div class="hint" id="notif-empty-note" style="display:none; text-align:center; padding:16px 0;">${t("notif_empty_filtered")}</div>
+    ${!list.length ? `<div class="hint">${t("notif_empty_all")}</div>` : ""}
   `;
   state._notifFilters = { search: "", tab: "all" };
   } finally {
@@ -958,15 +990,15 @@ function applyNotificationFilters() {
 async function doResetStaffPin(staffId, notificationId, btnEl) {
   const resultEl = document.getElementById(`pin-reset-result-${notificationId}`);
   if (btnEl) btnEl.disabled = true;
-  if (resultEl) { resultEl.textContent = "Memproses..."; resultEl.style.color = "var(--text-muted)"; }
+  if (resultEl) { resultEl.textContent = t("notif_reset_processing"); resultEl.style.color = "var(--text-muted)"; }
   const res = await apiPost("resetStaffPin", { requesterId: state.user.staffId, staffId });
   if (res.error || res.success === false) {
-    if (resultEl) { resultEl.textContent = "Gagal reset: " + friendlyError(res.error); resultEl.style.color = "var(--red)"; }
+    if (resultEl) { resultEl.textContent = t("notif_reset_failed_prefix") + " " + friendlyError(res.error); resultEl.style.color = "var(--red)"; }
     if (btnEl) btnEl.disabled = false;
     return;
   }
   if (resultEl) {
-    resultEl.innerHTML = `✅ PIN baru buat <strong>${res.staffName}</strong>: <strong style="font-size:17px; letter-spacing:3px;">${res.newPin}</strong><br><span style="font-size:11px; color:var(--text-muted);">Sampaikan PIN ini ke orangnya lewat WA/telpon ya — dia gak bisa lihat ini sendiri.</span>`;
+    resultEl.innerHTML = `✅ ${t("notif_pin_new_label")} <strong>${res.staffName}</strong>: <strong style="font-size:17px; letter-spacing:3px;">${res.newPin}</strong><br><span style="font-size:11px; color:var(--text-muted);">${t("notif_reset_relay_note")}</span>`;
     resultEl.style.color = "var(--green)";
   }
   if (btnEl) btnEl.remove();

@@ -292,7 +292,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-03-165-fnb-blue-theme — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-03-168-staff-mapping-dynamic-tier-columns — LIVE</div>
 
 <script>
 // =================================================================
@@ -411,6 +411,8 @@ function friendlyError(code) {
     max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
     session_expired: "Sesi kamu udah habis, login ulang ya.",
     identity_mismatch: "Permintaan gak valid — coba refresh halaman dan login ulang.",
+    staff_outside_your_business_unit: "Orang ini bukan bagian dari unit bisnis kamu.",
+    evaluator_outside_your_business_unit: "Salah satu yang kamu pilih bukan bagian dari unit bisnis kamu.",
     pin_not_set: "PIN belum di-set. Hubungi HR.",
   };
   if (map[code]) return map[code];
@@ -2283,7 +2285,7 @@ async function doDeleteKpiCriterion(section, rowIndex) {
 async function doExportStaffMapping() {
   const noteEl = document.getElementById("staff-mapping-export-note");
   noteEl.textContent = "Membuat sheet export...";
-  const res = await apiPost("exportStaffMapping", { requesterId: state.user.staffId });
+  const res = await apiPost("exportStaffMapping", { requesterId: state.user.staffId, businessUnitFilter: state._staffMappingUnitFilter || "" });
   if (res.error || res.success === false) {
     noteEl.textContent = "Gagal export: " + friendlyError(res.error);
     return;
@@ -2291,15 +2293,22 @@ async function doExportStaffMapping() {
   noteEl.innerHTML = `Sheet siap (${res.rowCount} orang)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel (.xlsx) buat share ke siapa aja.`;
 }
 
+function switchStaffMappingUnit(unit) {
+  state._staffMappingUnitFilter = unit;
+  renderStaffMapping();
+}
+
 async function renderStaffMapping() {
   app.innerHTML = topbar("Staff Mapping") + `<div class="loading">Memuat...</div>`;
-  const res = await apiGet("getStaffMapping", { requesterId: state.user.staffId });
+  const res = await apiGet("getStaffMapping", { requesterId: state.user.staffId, businessUnitFilter: state._staffMappingUnitFilter || "" });
   const showMenuLink = availableScreens(state.user).length > 1;
 
   if (!res.found) {
     app.innerHTML = topbar("Staff Mapping") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
+
+  state._staffMappingUnitFilter = res.currentUnit; // keep in sync with whatever the backend actually resolved (first load = requester's own unit)
 
   const rows = res.rows || [];
   state._staffMappingCandidates = res.candidates || { leaders: [], managements: [], executives: [] };
@@ -2308,20 +2317,27 @@ async function renderStaffMapping() {
   const deptKeys = [...new Set(rows.filter(r => r.department !== "-").map(r => r.department))].sort();
   const tierKeys = ["Staff", "Leader", "Management"];
 
-  // Which of the Leader/Management columns actually apply, based on the TARGET's own tier
-  // — a Staff can be given Leader and/or Management as their Superior; a Leader can be
-  // given Management only (never another Leader). A Management gets neither (only
-  // Executive, which isn't part of this checklist system at all — see EXECUTIVE_LABEL
-  // below). Whichever checklist(s) get checked here really do control who's allowed to
+  // Which of the Leader/Management/Executive columns actually apply, based on the
+  // TARGET's own tier — generalized to mirror the backend's isValidSuperiorTierForTarget
+  // (evaluator's tier rank same-or-higher than the target's; Staff targets require
+  // STRICTLY higher, never a Staff peer). This used to be a fixed pairs list (Staff:
+  // Leader/Management only, Leader: Management only, Management: none) before same-tier
+  // (a Management managing another Management, e.g. Gym's Operational Manager over the FOH
+  // Manager) and skip-level (an Executive evaluating a Leader directly, e.g. Gym's Fitness
+  // Manager over the Head Coach) became real needs. Executive-tier ROWS still get no
+  // columns at all — Executive stays purely informational/never assignable as a target,
+  // unchanged. Whichever checklist(s) get checked here really do control who's allowed to
   // submit that person's appraisal (see getEvaluatorSlotsForEmployees on the backend) —
   // this isn't just a display, it's the actual access control.
-  const applicableColumns = { Staff: ["leader", "management"], Leader: ["management"], Management: [] };
-  // Executive is always just informational, for EVERY tier — a fixed name, not computed
-  // from whoever happens to be tagged tier='Executive' in Config_PositionMap (that list
-  // turned out to include several other job titles too — General Manager, etc. — not just
-  // this one person), and not a checklist/editable from here either. If who holds this
-  // needs to change later, this line is the one place to update.
-  const EXECUTIVE_LABEL = "Rohendi Frinsen";
+  const TIER_RANK = { Staff: 1, Leader: 2, Management: 3, Executive: 4 };
+  const COLUMN_TIER = { leader: "Leader", management: "Management", executive: "Executive" };
+  const isColumnApplicable = (targetTier, columnKey) => {
+    if (targetTier === "Executive" || !targetTier) return false;
+    const targetRank = TIER_RANK[targetTier] || 0;
+    const columnRank = TIER_RANK[COLUMN_TIER[columnKey]] || 0;
+    if (targetTier === "Staff") return columnRank > targetRank;
+    return columnRank >= targetRank;
+  };
 
   // Builds one checklist popover (trigger button + hidden panel). `scope` keeps row vs.
   // bulk IDs from colliding; `rowStaffId` is '' for the bulk bar (no single target yet).
@@ -2353,8 +2369,7 @@ async function renderStaffMapping() {
   };
 
   const rowHtml = (r) => {
-    const cols = applicableColumns[r.tier] || [];
-    const colCell = (columnKey, candidates, autoLabel) => cols.includes(columnKey)
+    const colCell = (columnKey, candidates, autoLabel) => isColumnApplicable(r.tier, columnKey)
       ? `<div class="col-${columnKey}">${buildChecklistColumn("row", r.staffId, columnKey, candidates, (r.evaluatorStaffIds || []).map(String), autoLabel)}</div>`
       : `<div class="col-${columnKey} col-na">—</div>`;
 
@@ -2371,7 +2386,7 @@ async function renderStaffMapping() {
         <div class="col-tier"><span class="tier-pill">${r.tier}</span></div>
         ${colCell("leader", state._staffMappingCandidates.leaders, r.autoLeaderLabel)}
         ${colCell("management", state._staffMappingCandidates.managements, r.autoManagementLabel)}
-        <div class="col-executive col-executive-static">${EXECUTIVE_LABEL}</div>
+        ${colCell("executive", state._staffMappingCandidates.executives, r.autoExecutiveLabel)}
         <div class="mapping-save-flash" id="superior-save-note-${r.staffId}" style="grid-column: 1 / -1; margin-left: 26px;"></div>
       </div>`;
   };
@@ -2380,6 +2395,12 @@ async function renderStaffMapping() {
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <h2>Staff Mapping</h2>
+      ${res.canSwitchUnits ? `
+        <div class="row-flex" style="margin-bottom:10px;">
+          ${[["fnb", "F&B"], ["gym", "Gym"], ["backoffice", "Back Office"]].map(([key, label]) => `
+            <button class="${res.currentUnit === key ? "primary" : "secondary"}" style="flex:1;" onclick="switchStaffMappingUnit('${key}')">${label}</button>`).join("")}
+        </div>
+      ` : ""}
       <div class="hint" style="margin-bottom:10px;">${rows.length} orang — centang Leader/Management/Executive manapun buat jadiin Superior tambahan/pengganti default. Bisa pilih lebih dari satu. Centang beberapa orang buat ganti sekaligus (bulk).</div>
       <button class="secondary" onclick="doExportStaffMapping()" style="margin-bottom:6px;">📊 Export ke Excel</button>
       <div class="hint" id="staff-mapping-export-note" style="margin-bottom:10px;"></div>
@@ -2510,11 +2531,12 @@ function onStaffMappingCheckboxChange(checkbox) {
   updateStaffMappingBulkBar();
 }
 
-/** Bulk bar shows the same Leader/Management checklists as each row. Executive isn't
- *  offered here since it's now purely informational everywhere (see EXECUTIVE_LABEL in
- *  renderStaffMapping) — not something to assign via checkbox, for any tier. Checking
- *  boxes here doesn't save immediately (unlike per-row) — it waits for "Terapkan" since
- *  it's about to overwrite MULTIPLE people at once. */
+/** Bulk bar shows the same Leader/Management/Executive checklists as each row — Executive
+ *  used to be excluded here since it was purely informational everywhere, but it's now a
+ *  real assignable option too (see isColumnApplicable in renderStaffMapping, for skip-level
+ *  cases like an Executive evaluating a Leader directly). Checking boxes here doesn't save
+ *  immediately (unlike per-row) — it waits for "Terapkan" since it's about to overwrite
+ *  MULTIPLE people at once. */
 function updateStaffMappingBulkBar() {
   const checked = Array.from(document.querySelectorAll(".mapping-checkbox[data-staffid]:checked"));
   const bar = document.getElementById("staff-mapping-bulk-bar");
@@ -2539,7 +2561,8 @@ function updateStaffMappingBulkBar() {
       </div>`;
     container.innerHTML =
       buildBulkColumn("leader", "+ Leader", state._staffMappingCandidates.leaders) +
-      buildBulkColumn("management", "+ Management", state._staffMappingCandidates.managements);
+      buildBulkColumn("management", "+ Management", state._staffMappingCandidates.managements) +
+      buildBulkColumn("executive", "+ Executive", state._staffMappingCandidates.executives);
     container.dataset.built = "true";
   }
 

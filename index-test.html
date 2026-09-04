@@ -293,7 +293,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-169-friendlier-deferred-contract-message — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-170-review-multi-month-range — TEST</div>
 
 <script>
 // =================================================================
@@ -3116,14 +3116,28 @@ function changeReviewMonth(value) {
   renderReview();
 }
 
+function changeReviewEndMonth(value) {
+  if (!value) return;
+  state._reviewEndMonth = value;
+  renderReview();
+}
+
+function toggleReviewRangeMode(checked) {
+  state._reviewRangeMode = checked;
+  if (checked && !state._reviewEndMonth) state._reviewEndMonth = state.month;
+  renderReview();
+}
+
 async function renderReview() {
   const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? "Review Everyone's Records" : "Review Your Team";
   const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational;
   const viewMode = state._reviewViewMode || "list";
 
   app.innerHTML = topbar(title) + `<div class="loading">Memuat data...</div>`;
+  const rangeMode = !!state._reviewRangeMode;
+  const effectiveEndMonth = rangeMode ? (state._reviewEndMonth || state.month) : state.month;
   const [res, progressRes] = await Promise.all([
-    apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month }),
+    apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month, endMonth: effectiveEndMonth }),
     canSeeCompliance ? apiGet("getEvaluatorProgress", { requesterId: state.user.staffId }) : Promise.resolve(null),
   ]);
   if (res.error) {
@@ -3257,7 +3271,7 @@ async function renderReview() {
                 <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:pointer; border: 1.5px solid ${r.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'};" onclick="showComparisonModal('${r.staffId}', '${escapeAttr(r.name)}')">
                   <div>
                     <div class="name">${r.name}</div>
-                    <div class="dept">Final Score: ${Number(r.finalScore||0).toFixed(1)}</div>
+                    <div class="dept">Final Score: ${Number(r.finalScore||0).toFixed(1)}${rangeMode ? ` · ${monthLabelID(r.month)}` : ""}</div>
                     ${r.calibrationAdjustment ? `<div class="dept" style="color:var(--gold); font-weight:700;">⚖️ Calibration ${r.calibrationAdjustment > 0 ? "+" : ""}${r.calibrationAdjustment}</div>` : ""}
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
@@ -3275,8 +3289,25 @@ async function renderReview() {
   app.innerHTML = topbar(title) + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
-      <label>Bulan</label>
-      <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
+      <label style="display:flex; align-items:center; gap:8px; margin-bottom:${rangeMode ? "10px" : "0"};">
+        <input type="checkbox" ${rangeMode ? "checked" : ""} onchange="toggleReviewRangeMode(this.checked)" style="width:auto;" />
+        <span style="font-weight:600; color:var(--text);">Ambil beberapa bulan sekaligus</span>
+      </label>
+      ${rangeMode ? `
+        <div class="row-flex">
+          <div style="flex:1;">
+            <label>Bulan Awal</label>
+            <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
+          </div>
+          <div style="flex:1;">
+            <label>Bulan Akhir</label>
+            <input type="month" id="month-end-picker" value="${effectiveEndMonth}" min="${state.month}" onchange="changeReviewEndMonth(this.value)" />
+          </div>
+        </div>
+      ` : `
+        <label>Bulan</label>
+        <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
+      `}
     </div>
     ${toggleHtml}
     ${bodyHtml}
@@ -3334,7 +3365,8 @@ async function doExportDecisionLog() {
 async function doExportReview() {
   const noteEl = document.getElementById("review-export-note");
   noteEl.textContent = "Membuat sheet export...";
-  const res = await apiPost("exportReviewData", { requesterId: state.user.staffId, month: state.month });
+  const endMonth = state._reviewRangeMode ? (state._reviewEndMonth || state.month) : state.month;
+  const res = await apiPost("exportReviewData", { requesterId: state.user.staffId, month: state.month, endMonth });
   if (res.error || res.success === false) {
     noteEl.textContent = "Gagal export: " + friendlyError(res.error);
     return;

@@ -299,7 +299,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-173-notification-evaluate-now-action — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-174-rubric-cards-display — LIVE</div>
 
 <script>
 // =================================================================
@@ -1664,6 +1664,35 @@ function escapeAttr(s) {
     .replace(/\r/g, "\\r");
 }
 
+/** Splits a rubric string ("Skor 1 = ...\nSkor 3 = ...\nSkor 5 = ...") into 3 clearly
+ *  separated, color-coded cards instead of one dense wall of pre-formatted text — much
+ *  easier to scan at a glance while actually scoring someone. Falls back to the original
+ *  plain-text rendering if the text doesn't match the expected "Skor N = " pattern (e.g.
+ *  an older or hand-typed rubric that doesn't follow the convention exactly), so nothing
+ *  ever silently disappears just because the format was slightly different. */
+function formatRubricHtml(rubric) {
+  const parts = rubric.split(/(?=Skor\s*[135]\s*=)/i).map(p => p.trim()).filter(Boolean);
+  const levelStyle = {
+    "1": { label: "Skor 1", color: "var(--red)", bg: "var(--red-bg)" },
+    "3": { label: "Skor 3", color: "var(--amber)", bg: "var(--amber-bg)" },
+    "5": { label: "Skor 5", color: "var(--green)", bg: "var(--green-bg)" },
+  };
+  const cards = [];
+  for (const part of parts) {
+    const m = part.match(/^Skor\s*([135])\s*=\s*([\s\S]*)$/i);
+    if (!m) { cards.length = 0; break; } // doesn't match the expected pattern at all — abandon and fall back below
+    const style = levelStyle[m[1]];
+    if (!style) { cards.length = 0; break; }
+    cards.push(`
+      <div style="background:${style.bg}; border-radius:10px; padding:10px 12px; margin-bottom:6px;">
+        <div style="font-size:11px; font-weight:800; color:${style.color}; letter-spacing:0.03em; margin-bottom:3px;">${style.label}</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.5;">${m[2].trim()}</div>
+      </div>`);
+  }
+  if (cards.length === 3) return cards.join("");
+  return `<div class="hint" style="white-space:pre-line;">${rubric}</div>`; // fallback — unexpected format, show as-is rather than hiding it
+}
+
 /** Shared performer/underperform badge — was being hand-written with the same ternary in
  *  5+ different screens (Review, Approval, Compliance, etc.). isPerformer decides the
  *  color, label is whatever text should actually show (the word "Performer", or a raw
@@ -2158,7 +2187,7 @@ function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey, r
           <button class="ghost" onclick="doDeleteKpiCriterion('${section}', ${rowIndex})">🗑️</button>
         </div>
       </div>
-      ${rubric ? `<div class="hint" style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); white-space:pre-line;">📏 ${rubric}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">Rubrik skoring belum tersedia untuk kriteria ini.</div>`}
+      ${rubric ? `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">${formatRubricHtml(rubric)}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">Rubrik skoring belum tersedia untuk kriteria ini.</div>`}
     </div>`;
 }
 
@@ -3746,7 +3775,7 @@ function renderFormBody(evaluatorType, target, cfg) {
     <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
       <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}${state.leaderReference && state.leaderReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--teal);">· Leader/Mgmt: ${state.leaderReference[criterion]}</span>` : ""}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ""}
-      ${rubric ? `<details style="margin:4px 0 8px;"><summary style="cursor:pointer; font-size:11px; color:var(--teal); font-weight:700;">${t("form_view_rubric")}</summary><div class="hint" style="white-space:pre-line; margin-top:4px;">${rubric}</div></details>` : ""}
+      ${rubric ? `<details style="margin:4px 0 8px;"><summary style="cursor:pointer; font-size:11px; color:var(--teal); font-weight:700;">${t("form_view_rubric")}</summary><div style="margin-top:8px;">${formatRubricHtml(rubric)}</div></details>` : ""}
       <div class="score-select">
         ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
       </div>

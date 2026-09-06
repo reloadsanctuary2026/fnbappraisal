@@ -299,7 +299,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-176-self-appraisal-compliance-by-tier — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-177-exclude-contract-pending-from-compliance — LIVE</div>
 
 <script>
 // =================================================================
@@ -3208,7 +3208,7 @@ function renderSelfAppraisalComplianceCard(res) {
   if (!res || !res.found) return "";
   const tierOrder = ["Staff", "Leader", "Management"];
   const tierLabel = { Staff: "Staff", Leader: "Leader", Management: "Management" };
-  const anyData = tierOrder.some(t => res.byTier[t] && res.byTier[t].total > 0);
+  const anyData = tierOrder.some(t => res.byTier[t] && (res.byTier[t].total > 0 || res.byTier[t].contractPending.length > 0));
   if (!anyData) return "";
 
   return `
@@ -3217,19 +3217,21 @@ function renderSelfAppraisalComplianceCard(res) {
       <div class="hint" style="margin-bottom:10px;">Siapa saja di bawah cakupan Anda yang belum mengisi Self Appraisal-nya sendiri bulan ini.</div>
       ${tierOrder.map(tier => {
         const bucket = res.byTier[tier];
-        if (!bucket || bucket.total === 0) return "";
+        if (!bucket || (bucket.total === 0 && !bucket.contractPending.length)) return "";
         const missingCount = bucket.total - bucket.done;
-        const percentage = Math.round((bucket.done / bucket.total) * 100);
+        const percentage = bucket.total ? Math.round((bucket.done / bucket.total) * 100) : 100;
         const barColor = percentage >= 100 ? "var(--green)" : percentage >= 50 ? "var(--amber)" : "var(--red)";
         return `
           <div style="margin-bottom:14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div style="font-weight:700;">${tierLabel[tier]}</div>
-              <span class="badge" style="background:${percentage >= 100 ? "var(--green-bg)" : percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${bucket.done}/${bucket.total} sudah isi</span>
+              ${bucket.total > 0 ? `<span class="badge" style="background:${percentage >= 100 ? "var(--green-bg)" : percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${bucket.done}/${bucket.total} sudah isi</span>` : ""}
             </div>
-            <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin:8px 0;">
-              <div style="width:${percentage}%; height:100%; background:${barColor}; border-radius:4px;"></div>
-            </div>
+            ${bucket.total > 0 ? `
+              <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin:8px 0;">
+                <div style="width:${percentage}%; height:100%; background:${barColor}; border-radius:4px;"></div>
+              </div>
+            ` : ""}
             ${missingCount > 0 ? `
               <details>
                 <summary style="cursor:pointer; font-size:13px; color:var(--coral); font-weight:600;">Lihat ${missingCount} orang yang belum mengisi</summary>
@@ -3237,7 +3239,16 @@ function renderSelfAppraisalComplianceCard(res) {
                   ${bucket.missing.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
                 </ul>
               </details>
-            ` : `<div class="hint" style="color:var(--green);">Semua sudah mengisi.</div>`}
+            ` : (bucket.total > 0 ? `<div class="hint" style="color:var(--green);">Semua sudah mengisi.</div>` : "")}
+            ${bucket.contractPending.length > 0 ? `
+              <details style="margin-top:6px;">
+                <summary style="cursor:pointer; font-size:13px; color:var(--amber); font-weight:600;">${bucket.contractPending.length} orang menunggu update kontrak dari HR (belum bisa mengisi)</summary>
+                <div class="hint" style="margin:6px 0 4px;">Kontrak orang-orang ini di HR Sheet belum diperpanjang, sehingga sistem belum membuka Self Appraisal untuk mereka bulan ini. Ini bukan kelalaian mereka — informasikan ke HR untuk memperbarui data kontraknya.</div>
+                <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
+                  ${bucket.contractPending.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
+                </ul>
+              </details>
+            ` : ""}
           </div>`;
       }).join("")}
     </div>`;

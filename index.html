@@ -299,7 +299,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-174-rubric-cards-display — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-175-section-cd-audit-export — LIVE</div>
 
 <script>
 // =================================================================
@@ -2157,6 +2157,16 @@ function renderKpiManagementBody() {
     </div>
     ${section === "kpi" ? kpiCoverageSummary(res) : ""}
     <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+          <h2 style="margin-bottom:2px;">Audit Section C & D — Semua Posisi</h2>
+          <div class="hint">Unduh daftar lengkap kriteria KPI dan item Bonus/Deduction yang berlaku untuk setiap posisi, sekaligus dalam satu file.</div>
+        </div>
+        <button class="secondary" id="section-audit-btn" style="width:auto;" onclick="doGenerateSectionAudit()">📥 Unduh Audit</button>
+      </div>
+      <div class="hint" id="section-audit-note" style="margin-top:8px;"></div>
+    </div>
+    <div class="card">
       <h2>Kriteria yang Ada</h2>
       ${listHtml}
     </div>
@@ -3424,6 +3434,47 @@ async function doExportDecisionLog() {
     return;
   }
   noteEl.innerHTML = `Sheet siap (${res.rowCount} record)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel.`;
+}
+
+/** Downloads a single xlsx covering Section C and Section D for EVERY position at once —
+ *  built after discovering that Kitchen/Bar staff were seeing guest-facing bonus items
+ *  ("Named in Google Review") that made no sense for their role. Instead of only catching
+ *  mismatches like that one by chance (opening one person's form at a time), this lets HR
+ *  review every position's actual resolved criteria and bonus items proactively. */
+async function doGenerateSectionAudit() {
+  const btn = document.getElementById("section-audit-btn");
+  const noteEl = document.getElementById("section-audit-note");
+  const originalLabel = btn.innerHTML;
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="btn-spinner dark"></span>Membuat file...`;
+  noteEl.textContent = "";
+
+  try {
+    const res = await apiPost("generateSectionAuditFile", { requesterId: state.user.staffId });
+    if (res.error || res.success === false) {
+      noteEl.textContent = "Gagal membuat audit: " + friendlyError(res.error);
+      return;
+    }
+    const byteChars = atob(res.fileBase64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([new Uint8Array(byteNumbers)], { type: res.mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = res.fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    noteEl.textContent = `✅ ${res.fileName} (${res.positionCount} posisi) berhasil diunduh.`;
+  } catch (e) {
+    noteEl.textContent = "Gagal membuat audit: koneksi bermasalah, coba lagi.";
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalLabel;
+  }
 }
 
 async function doGenerateReviewExport(format) {

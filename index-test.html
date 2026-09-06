@@ -300,7 +300,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-171-real-file-export-excel-pdf — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-172-calibration-suggestion-and-polish — TEST</div>
 
 <script>
 // =================================================================
@@ -2784,12 +2784,12 @@ async function loadHistoricalForm() {
   // process decision, not a hard block — Admin decides, but only AFTER seeing this plainly.
   const calibrationWarning = existing.found && Number(existing.calibrationAdjustment)
     ? `<div style="background:var(--red-bg); color:var(--red); padding:12px 14px; border-radius:10px; font-weight:700; margin-bottom:10px;">
-        🚫 Bulan ini SUDAH DAPAT Calibration Adjustment dari Executive: ${Number(existing.calibrationAdjustment) > 0 ? "+" : ""}${existing.calibrationAdjustment} poin.<br/>
+        Bulan ini telah menerima Penyesuaian Kalibrasi dari Executive: ${Number(existing.calibrationAdjustment) > 0 ? "+" : ""}${existing.calibrationAdjustment} poin.<br/>
         <span style="font-weight:500; font-size:13px;">Alasan Executive: "${existing.calibrationReason || "-"}"</span><br/>
-        <span style="font-weight:500; font-size:13px;">Jangan ditimpa sebelum konfirmasi verbal ke Executive dulu.</span>
+        <span style="font-weight:500; font-size:13px;">Konfirmasi dengan Executive terlebih dahulu sebelum menimpa data ini.</span>
       </div>`
     : existing.found
-      ? `<div style="background:var(--green-bg); color:var(--green); padding:10px 14px; border-radius:10px; font-weight:600; margin-bottom:10px;">✅ Bulan ini belum pernah dapat Calibration Adjustment — aman buat ditimpa kalau memang perlu.</div>`
+      ? `<div style="background:var(--green-bg); color:var(--green); padding:10px 14px; border-radius:10px; font-weight:600; margin-bottom:10px;">Bulan ini belum pernah menerima Penyesuaian Kalibrasi.</div>`
       : "";
 
   noteEl.innerHTML = calibrationWarning + (baseNote ? `<div>${baseNote}</div>` : "");
@@ -4060,16 +4060,15 @@ async function renderGm() {
         <label>Catatan (wajib)</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
         ${!isEdit ? `
-        <details style="margin:10px 0;">
-          <summary style="cursor:pointer; font-size:12px; font-weight:700; color:var(--gold);">⚖️ Calibration Adjustment (opsional — cuma kalau ada bias evaluator jelas)</summary>
-          <div style="padding:10px 0 0;">
-            <div class="hint">Skor Self/Leader/HR asli TETAP UTUH, gak ke-ubah. Cuma Final Score & Status resmi yang disesuaikan, dan alasannya tercatat permanen.</div>
-            <label>Penyesuaian (poin, boleh minus)</label>
-            <input type="number" id="calibration-adj-${s.staffId}" placeholder="Contoh: +8 atau -5" />
-            <label>Alasan (wajib kalau ada penyesuaian)</label>
-            <input type="text" id="calibration-reason-${s.staffId}" placeholder="Contoh: Leader konsisten lebih ketat 8-10 poin dibanding rata-rata department" />
-          </div>
-        </details>` : ""}
+        <div style="margin-top:14px; padding:14px; background:#fff; border:1.5px solid var(--border); border-radius:12px;">
+          <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:4px;">Kalibrasi Skor</div>
+          <div class="hint" style="margin-bottom:10px;">Skor Self, Leader, dan HR tidak berubah. Penyesuaian ini hanya memengaruhi Final Score dan Status resmi, dan alasannya akan tercatat secara permanen.</div>
+          <div id="calibration-suggestion-${s.staffId}" style="margin-bottom:12px;"></div>
+          <label>Penyesuaian (poin)</label>
+          <input type="number" id="calibration-adj-${s.staffId}" placeholder="Contoh: 8 atau -5" />
+          <label>Alasan Penyesuaian (wajib jika ada penyesuaian)</label>
+          <input type="text" id="calibration-reason-${s.staffId}" placeholder="Contoh: Evaluator secara konsisten memberikan skor lebih rendah dibanding rata-rata" />
+        </div>` : ""}
         <button class="primary" style="margin-top:10px;" onclick="${isEdit ? `submitDecisionEdit('${s.staffId}')` : `submitDecision('${s.staffId}')`}">${isEdit ? "Simpan Perubahan" : "Konfirmasi Approval"}</button>
       </div>`;
   };
@@ -4315,7 +4314,48 @@ function showPhotoModal(src, name, showChangeButton) {
 
 function toggleDecisionForm(staffId) {
   const el = document.getElementById(`decision-form-${staffId}`);
-  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+  if (!el) return;
+  const opening = el.style.display === "none";
+  el.style.display = opening ? "block" : "none";
+  if (opening) loadCalibrationSuggestion(staffId);
+}
+
+/** Fetches and renders the calibration suggestion once per staff (not re-fetched on every
+ *  toggle) — a proposed Calibration Adjustment based on how the assigned Leader evaluator's
+ *  historical average compares to the company-wide average. Purely informational: it fills
+ *  in the existing input fields for convenience if Executive chooses to use it, but never
+ *  applies anything on its own. No-op if this staff's card doesn't have the section at all
+ *  (edit mode doesn't render it). */
+async function loadCalibrationSuggestion(staffId) {
+  const container = document.getElementById(`calibration-suggestion-${staffId}`);
+  if (!container || container.dataset.loaded) return;
+  container.dataset.loaded = "true";
+  container.innerHTML = `<div class="hint">Memuat saran kalibrasi...</div>`;
+
+  const res = await apiGet("getCalibrationSuggestion", { staffId, month: state.month });
+  if (!res.found) {
+    container.innerHTML = `<div class="hint">Belum tersedia cukup data historis untuk memberikan saran kalibrasi pada evaluator bulan ini.</div>`;
+    return;
+  }
+  const positive = res.suggestedAdjustment >= 0;
+  container.innerHTML = `
+    <div style="background:var(--sand); border-radius:10px; padding:12px;">
+      <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; margin-bottom:6px;">SARAN KALIBRASI</div>
+      <div style="font-size:13px; margin-bottom:2px;">Evaluator: <strong>${res.evaluatorName}</strong></div>
+      <div style="font-size:13px; margin-bottom:2px;">Rata-rata skor evaluator ini: <strong>${res.evaluatorAverage}</strong></div>
+      <div style="font-size:13px; margin-bottom:10px;">Rata-rata skor perusahaan: <strong>${res.companyAverage}</strong> (${res.sampleSize} data historis)</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+        <div style="font-weight:700; color:${positive ? "var(--green)" : "var(--red)"};">Saran penyesuaian: ${positive ? "+" : ""}${res.suggestedAdjustment} poin</div>
+        <button type="button" class="secondary" style="padding:6px 12px; font-size:12px; width:auto;" onclick="applyCalibrationSuggestion('${staffId}', ${res.suggestedAdjustment}, '${escapeAttr(res.evaluatorName)}', ${res.evaluatorAverage}, ${res.companyAverage})">Gunakan Saran</button>
+      </div>
+    </div>`;
+}
+
+function applyCalibrationSuggestion(staffId, adjustment, evaluatorName, evaluatorAverage, companyAverage) {
+  const adjEl = document.getElementById(`calibration-adj-${staffId}`);
+  const reasonEl = document.getElementById(`calibration-reason-${staffId}`);
+  if (adjEl) adjEl.value = adjustment;
+  if (reasonEl) reasonEl.value = `Penyesuaian berdasarkan pola historis evaluator (${evaluatorName}): rata-rata ${evaluatorAverage}, dibanding rata-rata perusahaan ${companyAverage}.`;
 }
 
 function toggleDecisionExtras(staffId) {
@@ -4384,7 +4424,7 @@ async function submitDecision(staffId) {
   if (calibrationAdjustment !== 0) {
     const calibrationReason = calibrationReasonEl ? calibrationReasonEl.value.trim() : "";
     if (!calibrationReason) { showToast("Alasan Calibration Adjustment wajib diisi kalau ada penyesuaian.", "error"); return; }
-    if (!confirm(`Yakin kasih Calibration Adjustment ${calibrationAdjustment > 0 ? "+" : ""}${calibrationAdjustment} poin?\n\nAlasan: ${calibrationReason}\n\nSkor asli Self/Leader/HR TETAP UTUH, cuma Final Score resmi yang berubah.`)) return;
+    if (!confirm(`Terapkan penyesuaian kalibrasi sebesar ${calibrationAdjustment > 0 ? "+" : ""}${calibrationAdjustment} poin?\n\nAlasan: ${calibrationReason}\n\nSkor Self, Leader, dan HR tidak berubah — hanya Final Score resmi yang disesuaikan.`)) return;
     payload.calibrationAdjustment = calibrationAdjustment;
     payload.calibrationReason = calibrationReason;
   }

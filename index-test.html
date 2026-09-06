@@ -300,7 +300,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-173-notification-evaluate-now-action — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-175-section-cd-audit-export — TEST</div>
 
 <script>
 // =================================================================
@@ -1676,6 +1676,35 @@ function escapeAttr(s) {
     .replace(/\r/g, "\\r");
 }
 
+/** Splits a rubric string ("Skor 1 = ...\nSkor 3 = ...\nSkor 5 = ...") into 3 clearly
+ *  separated, color-coded cards instead of one dense wall of pre-formatted text — much
+ *  easier to scan at a glance while actually scoring someone. Falls back to the original
+ *  plain-text rendering if the text doesn't match the expected "Skor N = " pattern (e.g.
+ *  an older or hand-typed rubric that doesn't follow the convention exactly), so nothing
+ *  ever silently disappears just because the format was slightly different. */
+function formatRubricHtml(rubric) {
+  const parts = rubric.split(/(?=Skor\s*[135]\s*=)/i).map(p => p.trim()).filter(Boolean);
+  const levelStyle = {
+    "1": { label: "Skor 1", color: "var(--red)", bg: "var(--red-bg)" },
+    "3": { label: "Skor 3", color: "var(--amber)", bg: "var(--amber-bg)" },
+    "5": { label: "Skor 5", color: "var(--green)", bg: "var(--green-bg)" },
+  };
+  const cards = [];
+  for (const part of parts) {
+    const m = part.match(/^Skor\s*([135])\s*=\s*([\s\S]*)$/i);
+    if (!m) { cards.length = 0; break; } // doesn't match the expected pattern at all — abandon and fall back below
+    const style = levelStyle[m[1]];
+    if (!style) { cards.length = 0; break; }
+    cards.push(`
+      <div style="background:${style.bg}; border-radius:10px; padding:10px 12px; margin-bottom:6px;">
+        <div style="font-size:11px; font-weight:800; color:${style.color}; letter-spacing:0.03em; margin-bottom:3px;">${style.label}</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.5;">${m[2].trim()}</div>
+      </div>`);
+  }
+  if (cards.length === 3) return cards.join("");
+  return `<div class="hint" style="white-space:pre-line;">${rubric}</div>`; // fallback — unexpected format, show as-is rather than hiding it
+}
+
 /** Shared performer/underperform badge — was being hand-written with the same ternary in
  *  5+ different screens (Review, Approval, Compliance, etc.). isPerformer decides the
  *  color, label is whatever text should actually show (the word "Performer", or a raw
@@ -2140,6 +2169,16 @@ function renderKpiManagementBody() {
     </div>
     ${section === "kpi" ? kpiCoverageSummary(res) : ""}
     <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+          <h2 style="margin-bottom:2px;">Audit Section C & D — Semua Posisi</h2>
+          <div class="hint">Unduh daftar lengkap kriteria KPI dan item Bonus/Deduction yang berlaku untuk setiap posisi, sekaligus dalam satu file.</div>
+        </div>
+        <button class="secondary" id="section-audit-btn" style="width:auto;" onclick="doGenerateSectionAudit()">📥 Unduh Audit</button>
+      </div>
+      <div class="hint" id="section-audit-note" style="margin-top:8px;"></div>
+    </div>
+    <div class="card">
       <h2>Kriteria yang Ada</h2>
       ${listHtml}
     </div>
@@ -2170,7 +2209,7 @@ function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey, r
           <button class="ghost" onclick="doDeleteKpiCriterion('${section}', ${rowIndex})">🗑️</button>
         </div>
       </div>
-      ${rubric ? `<div class="hint" style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); white-space:pre-line;">📏 ${rubric}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">Rubrik skoring belum tersedia untuk kriteria ini.</div>`}
+      ${rubric ? `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">${formatRubricHtml(rubric)}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">Rubrik skoring belum tersedia untuk kriteria ini.</div>`}
     </div>`;
 }
 
@@ -3407,6 +3446,47 @@ async function doExportDecisionLog() {
   noteEl.innerHTML = `Sheet siap (${res.rowCount} record)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel.`;
 }
 
+/** Downloads a single xlsx covering Section C and Section D for EVERY position at once —
+ *  built after discovering that Kitchen/Bar staff were seeing guest-facing bonus items
+ *  ("Named in Google Review") that made no sense for their role. Instead of only catching
+ *  mismatches like that one by chance (opening one person's form at a time), this lets HR
+ *  review every position's actual resolved criteria and bonus items proactively. */
+async function doGenerateSectionAudit() {
+  const btn = document.getElementById("section-audit-btn");
+  const noteEl = document.getElementById("section-audit-note");
+  const originalLabel = btn.innerHTML;
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="btn-spinner dark"></span>Membuat file...`;
+  noteEl.textContent = "";
+
+  try {
+    const res = await apiPost("generateSectionAuditFile", { requesterId: state.user.staffId });
+    if (res.error || res.success === false) {
+      noteEl.textContent = "Gagal membuat audit: " + friendlyError(res.error);
+      return;
+    }
+    const byteChars = atob(res.fileBase64);
+    const byteNumbers = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+    const blob = new Blob([new Uint8Array(byteNumbers)], { type: res.mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = res.fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    noteEl.textContent = `✅ ${res.fileName} (${res.positionCount} posisi) berhasil diunduh.`;
+  } catch (e) {
+    noteEl.textContent = "Gagal membuat audit: koneksi bermasalah, coba lagi.";
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalLabel;
+  }
+}
+
 async function doGenerateReviewExport(format) {
   const btnId = format === "pdf" ? "review-export-pdf-btn" : "review-export-excel-btn";
   const otherBtnId = format === "pdf" ? "review-export-excel-btn" : "review-export-pdf-btn";
@@ -3756,7 +3836,7 @@ function renderFormBody(evaluatorType, target, cfg) {
     <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
       <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}${state.leaderReference && state.leaderReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--teal);">· Leader/Mgmt: ${state.leaderReference[criterion]}</span>` : ""}</div>
       ${desc ? `<div class="desc">${desc}</div>` : ""}
-      ${rubric ? `<details style="margin:4px 0 8px;"><summary style="cursor:pointer; font-size:11px; color:var(--teal); font-weight:700;">${t("form_view_rubric")}</summary><div class="hint" style="white-space:pre-line; margin-top:4px;">${rubric}</div></details>` : ""}
+      ${rubric ? `<details style="margin:4px 0 8px;"><summary style="cursor:pointer; font-size:11px; color:var(--teal); font-weight:700;">${t("form_view_rubric")}</summary><div style="margin-top:8px;">${formatRubricHtml(rubric)}</div></details>` : ""}
       <div class="score-select">
         ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
       </div>

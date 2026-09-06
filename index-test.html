@@ -300,7 +300,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-177-exclude-contract-pending-from-compliance — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-06-180-i18n-staff-mapping-and-kpi-management — TEST</div>
 
 <script>
 // =================================================================
@@ -532,6 +532,86 @@ const translations = {
     form_back: "Kembali",
     form_checking_access: "Memeriksa akses...",
     form_loading: "Memuat form...",
+    sm_hint: "orang — centang Leader/Management/Executive manapun buat jadiin Superior tambahan/pengganti default. Bisa pilih lebih dari satu. Centang beberapa orang buat ganti sekaligus (bulk).",
+    sm_export_excel_btn: "📊 Export ke Excel",
+    sm_search_placeholder: "Cari nama...",
+    sm_all_tier: "Semua Tier",
+    sm_all_department: "Semua Department",
+    sm_no_candidates: "Belum ada kandidat.",
+    sm_no_match: "Gak ada yang cocok sama filter/pencarian.",
+    sm_col_name: "Nama",
+    sm_col_jobtitle: "Jabatan",
+    sm_bulk_selected_suffix: "dipilih",
+    sm_bulk_apply_btn: "Terapkan",
+    sm_bulk_cancel_btn: "Batal",
+    sm_saving: "Menyimpan...",
+    sm_save_failed_prefix: "Gagal simpan:",
+    sm_saved: "✅ Tersimpan.",
+    sm_bulk_saving_prefix: "Menyimpan",
+    sm_bulk_updated_toast: "orang diupdate.",
+    sm_auto_label: "(Otomatis)",
+    sm_export_generating: "Membuat sheet export...",
+    sm_export_failed_prefix: "Gagal export:",
+    sm_export_ready_prefix: "Sheet siap",
+    sm_export_ready_suffix: "orang)!",
+    sm_export_open_link: "Buka di Google Sheets",
+    sm_export_next_step: "— lalu File → Download → Excel (.xlsx) buat share ke siapa aja.",
+    km_coverage_title: "📋 Ringkasan Cakupan KPI",
+    km_coverage_dedicated: "Punya Kriteria Khusus",
+    km_coverage_fallback: "Tercover via Fallback Department",
+    km_coverage_gaps: "Perlu Perhatian",
+    km_coverage_none_yet: "Belum ada.",
+    km_coverage_none: "Tidak ada.",
+    km_coverage_no_gaps: "Tidak ada gap — semua posisi yang butuh KPI sudah tercover (khusus atau fallback).",
+    km_coverage_dept_suffix: " (Department)",
+    km_coverage_criteria_suffix: "kriteria",
+    km_coverage_no_coverage: "belum ada satupun orang di department ini yang punya cakupan KPI",
+    km_coverage_auto_uses: "otomatis pakai kriteria",
+    km_coverage_dept_also_gap: "department ini juga belum punya kriteria",
+    km_audit_title: "Audit Section C & D — Semua Posisi",
+    km_audit_desc: "Unduh daftar lengkap kriteria KPI dan item Bonus/Deduction yang berlaku untuk setiap posisi, sekaligus dalam satu file.",
+    km_audit_btn: "📥 Unduh Audit",
+    km_existing_criteria_title: "Kriteria yang Ada",
+    km_edit_criteria_title: "✏️ Edit Kriteria",
+    km_add_criteria_title: "+ Tambah Kriteria Baru",
+    km_save_changes_btn: "Simpan Perubahan",
+    km_save_new_btn: "Simpan Kriteria Baru",
+    km_cancel_btn: "Batal",
+    km_no_criteria_for_position: "Belum ada kriteria KPI buat posisi ini.",
+    km_select_position_label: "Pilih Department / Job Title",
+    km_position_hint: "Kriteria khusus untuk Job Title tertentu (misalnya \"Steward\") akan digunakan terlebih dahulu untuk orang dengan Job Title tersebut. Jika belum tersedia, sistem otomatis menggunakan kriteria level Department (misalnya \"Kitchen\") sebagai cadangan.",
+    km_dept_all_titles_suffix: " — semua Job Title di department ini",
+    km_no_criteria_gap: "belum ada kriteria — GAP BENERAN",
+    km_dedicated_criteria_suffix: "kriteria khusus",
+    km_auto_uses_prefix: " — otomatis pakai kriteria",
+    km_no_dedicated_but_safe: "gak ada kriteria khusus, TAPI AMAN (fallback)",
+    km_name_criteria_label: "Nama Kriteria",
+    km_description_label: "Deskripsi",
+    km_data_source_label: "Sumber Data",
+    km_target_label: "Target",
+    km_how_to_measure_label: "Cara Ukur",
+    km_rubric_label: "Rubrik Skoring (opsional, tapi disarankan)",
+    km_rubric_hint: "Cukup isi kondisi di tiap level — Skor 2 & 4 dianggap \"di antara\" otomatis, gak perlu diisi.",
+    km_score1_label: "Skor 1 (paling lemah)",
+    km_score3_label: "Skor 3 (standar/cukup)",
+    km_score5_label: "Skor 5 (paling kuat)",
+    km_rubric_ph1: "Contoh: Sering menolak membantu rekan kerja",
+    km_rubric_ph3: "Contoh: Membantu rekan kerja kalau diminta",
+    km_rubric_ph5: "Contoh: Proaktif membantu tanpa diminta",
+    km_rubric_quality_low: "⚠️ Baru 1 level yang keisi — idealnya minimal Skor 1 & Skor 5 (2 titik ekstrem) biar ada pembanding jelas.",
+    km_rubric_quality_good: "✅ Kelihatan cukup jelas.",
+    km_name_required: "Nama kriteria wajib diisi.",
+    km_criteria_updated_toast: "Kriteria berhasil diperbarui!",
+    km_criteria_added_toast: "Kriteria baru berhasil ditambahkan!",
+    km_delete_confirm: "Yakin hapus kriteria ini? Tindakan ini gak bisa dibatalkan.",
+    km_delete_failed_prefix: "Gagal hapus:",
+    km_criteria_deleted_toast: "Kriteria berhasil dihapus!",
+    km_no_rubric_yet: "Rubrik skoring belum tersedia untuk kriteria ini.",
+    km_audit_generating: "Membuat file...",
+    km_audit_failed_prefix: "Gagal membuat audit:",
+    km_audit_conn_error: "Gagal membuat audit: koneksi bermasalah, coba lagi.",
+    km_audit_ready: "berhasil diunduh.",
+    km_audit_position_suffix: "posisi)",
     form_too_early: "Belum waktunya. Coba lagi mulai",
     form_too_late_full: "Waktu untuk mengisi appraisal ini sudah lewat.",
     form_max_attempts: "Appraisal ini sudah diisi",
@@ -576,6 +656,40 @@ const translations = {
     notif_evaluate_now_btn: "Nilai Sekarang",
     notif_evaluate_loading: "Memuat...",
     notif_evaluate_unavailable: "Penilaian ini tidak lagi tersedia untuk kamu.",
+    review_title_all: "Review Semua Karyawan",
+    review_title_team: "Review Tim Kamu",
+    review_tab_list: "Daftar Karyawan",
+    review_tab_compliance: "Kepatuhan",
+    review_compliance_hint: "Progress evaluator bulan ini — belum termasuk skor, cuma status sudah/belum isi appraisal.",
+    review_people_suffix: "orang",
+    review_no_evaluators: "Belum ada evaluator (Leader/Management/HR) yang terdaftar.",
+    review_stat_total: "Total Appraisal",
+    review_stat_avg: "Rata-rata Skor",
+    review_stat_performer: "Performer",
+    review_stat_underperform: "Underperform",
+    review_stat_approved: "Sudah Di-approve",
+    review_search_placeholder: "Cari nama...",
+    review_sort_placeholder: "Urutkan...",
+    review_sort_name_asc: "Nama (A-Z)",
+    review_sort_name_desc: "Nama (Z-A)",
+    review_sort_score_desc: "Skor Tertinggi",
+    review_sort_score_asc: "Skor Terendah",
+    review_all_departments: "Semua Department",
+    review_underperform_only_btn: "Underperform Saja",
+    review_record_count_suffix: "appraisal record — read only",
+    review_empty_scope: "Belum ada data appraisal di scope kamu.",
+    review_range_checkbox: "Ambil beberapa bulan sekaligus",
+    review_month_label: "Bulan",
+    review_month_start_label: "Bulan Awal",
+    review_month_end_label: "Bulan Akhir",
+    review_underperform_count_suffix: "underperform",
+    selfcompliance_title: "Status Self Appraisal Bulan Ini",
+    selfcompliance_hint: "Siapa saja di bawah cakupan Anda yang belum mengisi Self Appraisal-nya sendiri bulan ini.",
+    selfcompliance_done_suffix: "sudah isi",
+    selfcompliance_view_missing: "Lihat {n} orang yang belum mengisi",
+    selfcompliance_all_done: "Semua sudah mengisi.",
+    selfcompliance_contract_pending: "{n} orang menunggu update kontrak dari HR (belum bisa mengisi)",
+    selfcompliance_contract_pending_note: "Kontrak orang-orang ini di HR Sheet belum diperpanjang, sehingga sistem belum membuka Self Appraisal untuk mereka bulan ini. Ini bukan kelalaian mereka — informasikan ke HR untuk memperbarui data kontraknya.",
   },
   en: {
     logout: "Log Out",
@@ -647,6 +761,86 @@ const translations = {
     form_back: "Back",
     form_checking_access: "Checking access...",
     form_loading: "Loading form...",
+    sm_hint: "people — check any Leader/Management/Executive to make them an additional/replacement Superior. Multiple selections allowed. Check several people to change them all at once (bulk).",
+    sm_export_excel_btn: "📊 Export to Excel",
+    sm_search_placeholder: "Search name...",
+    sm_all_tier: "All Tiers",
+    sm_all_department: "All Departments",
+    sm_no_candidates: "No candidates yet.",
+    sm_no_match: "Nothing matches your filter/search.",
+    sm_col_name: "Name",
+    sm_col_jobtitle: "Job Title",
+    sm_bulk_selected_suffix: "selected",
+    sm_bulk_apply_btn: "Apply",
+    sm_bulk_cancel_btn: "Cancel",
+    sm_saving: "Saving...",
+    sm_save_failed_prefix: "Failed to save:",
+    sm_saved: "✅ Saved.",
+    sm_bulk_saving_prefix: "Saving",
+    sm_bulk_updated_toast: "people updated.",
+    sm_auto_label: "(Automatic)",
+    sm_export_generating: "Generating export sheet...",
+    sm_export_failed_prefix: "Export failed:",
+    sm_export_ready_prefix: "Sheet ready",
+    sm_export_ready_suffix: "people)!",
+    sm_export_open_link: "Open in Google Sheets",
+    sm_export_next_step: "— then File → Download → Excel (.xlsx) to share with anyone.",
+    km_coverage_title: "📋 KPI Coverage Summary",
+    km_coverage_dedicated: "Has Dedicated Criteria",
+    km_coverage_fallback: "Covered via Department Fallback",
+    km_coverage_gaps: "Needs Attention",
+    km_coverage_none_yet: "None yet.",
+    km_coverage_none: "None.",
+    km_coverage_no_gaps: "No gaps — every position that needs KPI already has coverage (dedicated or fallback).",
+    km_coverage_dept_suffix: " (Department)",
+    km_coverage_criteria_suffix: "criteria",
+    km_coverage_no_coverage: "no one in this department has any KPI coverage",
+    km_coverage_auto_uses: "automatically uses",
+    km_coverage_dept_also_gap: "department also has no criteria",
+    km_audit_title: "Section C & D Audit — All Positions",
+    km_audit_desc: "Download the full list of KPI criteria and Bonus/Deduction items that apply to every position, all in one file.",
+    km_audit_btn: "📥 Download Audit",
+    km_existing_criteria_title: "Existing Criteria",
+    km_edit_criteria_title: "✏️ Edit Criterion",
+    km_add_criteria_title: "+ Add New Criterion",
+    km_save_changes_btn: "Save Changes",
+    km_save_new_btn: "Save New Criterion",
+    km_cancel_btn: "Cancel",
+    km_no_criteria_for_position: "No KPI criteria for this position yet.",
+    km_select_position_label: "Select Department / Job Title",
+    km_position_hint: "Criteria specific to a Job Title (e.g. \"Steward\") are used first for anyone with that Job Title. If none exist yet, the system automatically falls back to that Department's criteria (e.g. \"Kitchen\").",
+    km_dept_all_titles_suffix: " — all Job Titles in this department",
+    km_no_criteria_gap: "no criteria yet — REAL GAP",
+    km_dedicated_criteria_suffix: "dedicated criteria",
+    km_auto_uses_prefix: " — automatically uses",
+    km_no_dedicated_but_safe: "no dedicated criteria, but SAFE (fallback)",
+    km_name_criteria_label: "Criterion Name",
+    km_description_label: "Description",
+    km_data_source_label: "Data Source",
+    km_target_label: "Target",
+    km_how_to_measure_label: "How to Measure",
+    km_rubric_label: "Scoring Rubric (optional, but recommended)",
+    km_rubric_hint: "Just fill in the condition for each level — Score 2 & 4 are automatically treated as \"in between\", no need to fill those in.",
+    km_score1_label: "Score 1 (weakest)",
+    km_score3_label: "Score 3 (standard/adequate)",
+    km_score5_label: "Score 5 (strongest)",
+    km_rubric_ph1: "Example: Often refuses to help coworkers",
+    km_rubric_ph3: "Example: Helps coworkers when asked",
+    km_rubric_ph5: "Example: Proactively helps without being asked",
+    km_rubric_quality_low: "⚠️ Only 1 level filled in so far — ideally fill in at least Score 1 & Score 5 (2 extreme points) for a clear comparison.",
+    km_rubric_quality_good: "✅ Looks clear enough.",
+    km_name_required: "Criterion name is required.",
+    km_criteria_updated_toast: "Criterion updated successfully!",
+    km_criteria_added_toast: "New criterion added successfully!",
+    km_delete_confirm: "Delete this criterion? This action cannot be undone.",
+    km_delete_failed_prefix: "Delete failed:",
+    km_criteria_deleted_toast: "Criterion deleted successfully!",
+    km_no_rubric_yet: "No scoring rubric available for this criterion yet.",
+    km_audit_generating: "Generating file...",
+    km_audit_failed_prefix: "Failed to generate audit:",
+    km_audit_conn_error: "Failed to generate audit: connection issue, try again.",
+    km_audit_ready: "downloaded successfully.",
+    km_audit_position_suffix: "positions)",
     form_too_early: "Not open yet. Try again starting",
     form_too_late_full: "The window to fill out this appraisal has closed.",
     form_max_attempts: "This appraisal has already been submitted",
@@ -691,6 +885,40 @@ const translations = {
     notif_evaluate_now_btn: "Evaluate Now",
     notif_evaluate_loading: "Loading...",
     notif_evaluate_unavailable: "This evaluation is no longer available to you.",
+    review_title_all: "Review Everyone's Records",
+    review_title_team: "Review Your Team",
+    review_tab_list: "Staff List",
+    review_tab_compliance: "Compliance",
+    review_compliance_hint: "This month's evaluator progress — doesn't include scores yet, just submitted/not-submitted status.",
+    review_people_suffix: "people",
+    review_no_evaluators: "No evaluators (Leader/Management/HR) registered yet.",
+    review_stat_total: "Total Appraisals",
+    review_stat_avg: "Average Score",
+    review_stat_performer: "Performer",
+    review_stat_underperform: "Underperform",
+    review_stat_approved: "Approved",
+    review_search_placeholder: "Search name...",
+    review_sort_placeholder: "Sort...",
+    review_sort_name_asc: "Name (A-Z)",
+    review_sort_name_desc: "Name (Z-A)",
+    review_sort_score_desc: "Highest Score",
+    review_sort_score_asc: "Lowest Score",
+    review_all_departments: "All Departments",
+    review_underperform_only_btn: "Underperform Only",
+    review_record_count_suffix: "appraisal records — read only",
+    review_empty_scope: "No appraisal data in your scope yet.",
+    review_range_checkbox: "Pull multiple months at once",
+    review_month_label: "Month",
+    review_month_start_label: "Start Month",
+    review_month_end_label: "End Month",
+    review_underperform_count_suffix: "underperform",
+    selfcompliance_title: "This Month's Self Appraisal Status",
+    selfcompliance_hint: "Everyone under your scope who hasn't filled in their own Self Appraisal this month.",
+    selfcompliance_done_suffix: "submitted",
+    selfcompliance_view_missing: "View {n} people who haven't submitted",
+    selfcompliance_all_done: "Everyone has submitted.",
+    selfcompliance_contract_pending: "{n} people waiting on a contract update from HR (can't submit yet)",
+    selfcompliance_contract_pending_note: "These people's contracts haven't been renewed in the HR Sheet yet, so the system hasn't opened Self Appraisal for them this month. This isn't their fault — let HR know to update the contract data.",
   },
 };
 
@@ -752,6 +980,7 @@ function render() {
   if (state.screen === "settings") return renderSettings();
   if (state.screen === "staffMapping") return renderStaffMapping();
   if (state.screen === "kpiManagement") return renderKpiManagement();
+  if (state.screen === "devTools") return renderDevTools();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
   if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
@@ -1170,7 +1399,7 @@ function renderBusinessUnitPicker() {
     { key: "backoffice", label: "Back Office", emoji: "🏢" },
   ];
   app.innerHTML = `
-    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload 360°</h1></div>${langTogglePreLoginHtml()}</div>
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark" onclick="onLogoTapped()" style="cursor:pointer;"></div><h1>Reload 360°</h1></div>${langTogglePreLoginHtml()}</div>
     <div class="card" id="business-unit-picker">
       <h2>${t("unit_picker_title")}</h2>
       <div class="hint" style="margin-bottom:14px;">${t("unit_picker_subtitle")}</div>
@@ -1186,6 +1415,27 @@ function renderBusinessUnitPicker() {
           </div>`).join("")}
       </div>
     </div>`;
+}
+
+/** Hidden entry point for the internal superadmin/dev-tools account (NIK 9999) — tapping
+ *  the logo 10 times within a few seconds of each other skips the business-unit picker
+ *  entirely and goes straight to the normal login form, WITHOUT any unit selected. That
+ *  matters specifically for 9999: checkNikExists/login only enforce the business-unit
+ *  match when a businessUnit was actually passed in, so arriving here with none set is
+ *  exactly what lets this one account log in regardless of its own (deliberately blank)
+ *  businessUnit. Resets if taps are too far apart, so it can never trigger by accident from
+ *  ordinary slow, spaced-out clicks over a long session. */
+function onLogoTapped() {
+  const now = Date.now();
+  if (!state._logoTapTimestamps) state._logoTapTimestamps = [];
+  state._logoTapTimestamps = state._logoTapTimestamps.filter(t => now - t < 3000);
+  state._logoTapTimestamps.push(now);
+  if (state._logoTapTimestamps.length >= 10) {
+    state._logoTapTimestamps = [];
+    state.businessUnit = null;
+    applyBusinessUnitTheme();
+    renderLogin();
+  }
 }
 
 function renderLogin() {
@@ -1213,7 +1463,13 @@ async function doLoginStep1() {
   btn.textContent = t("login_connecting");
   btn.style.opacity = "0.7";
   try {
-    const res = await apiGetWithRetry("checkNikExists", { nik, businessUnit: state.businessUnit }, 2, (r) => r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
+    // Explicit fallback to "" (not just relying on state.businessUnit directly) — passing
+    // null/undefined through URLSearchParams stringifies it as the literal text "null"/
+    // "undefined", which is a TRUTHY non-empty string the backend would then try to match
+    // against, incorrectly rejecting anyone logging in with no business unit selected
+    // (the superadmin login path specifically arrives here that way on purpose). Same class
+    // of bug logout() used to have with businessUnit going missing after clearing state.
+    const res = await apiGetWithRetry("checkNikExists", { nik, businessUnit: state.businessUnit || "" }, 2, (r) => r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
     if (!res.found) {
       errEl.innerHTML = res.error === "wrong_business_unit"
         ? `NIK ini terdaftar di unit <strong>${res.actualUnitLabel}</strong>, bukan ${businessUnitLabel()}. <button class="ghost" style="display:inline-block; padding:4px 10px; font-size:12px; margin-left:4px;" onclick="changeBusinessUnit()">Ganti Unit</button>`
@@ -1282,7 +1538,9 @@ async function completeLogin(nik, pin) {
   if (errEl) errEl.textContent = "";
   if (btn) { btn.disabled = true; btn.textContent = t("login_connecting"); btn.style.opacity = "0.7"; }
   try {
-    const res = await apiGetWithRetry("login", { nik, pin, businessUnit: state.businessUnit }, 2, (r) => r.error !== "invalid_pin" && r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
+    // Same "" fallback as doLoginStep1 above — see that comment for why null/undefined
+    // must never be passed through directly here.
+    const res = await apiGetWithRetry("login", { nik, pin, businessUnit: state.businessUnit || "" }, 2, (r) => r.error !== "invalid_pin" && r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
     if (!res.found) {
       if (errEl) {
         if (res.error === "wrong_business_unit") {
@@ -1373,6 +1631,12 @@ function availableScreensGrouped(user) {
     settingsItems.push({ key: "kpiManagement", label: t("menu_manage_kpi") });
   }
   if (settingsItems.length) groups.push({ name: "MySettings", items: settingsItems });
+
+  if (user.isSuperAdmin) {
+    groups.push({ name: "DevTools", items: [
+      { key: "devTools", label: "🛠️ Dev Tools (Superadmin)" },
+    ]});
+  }
 
   return groups;
 }
@@ -2057,19 +2321,19 @@ function kpiCoverageSummary(res) {
   res.allPositionKeys.forEach(k => {
     const isDept = (res.departmentKeys || []).indexOf(k) !== -1;
     const hasOwn = res.kpiByPosition[k] && res.kpiByPosition[k].length;
-    const label = k + (isDept ? " (Department)" : "");
+    const label = k + (isDept ? t("km_coverage_dept_suffix") : "");
 
     if (hasOwn) {
-      withOwnCriteria.push(`${label} — ${res.kpiByPosition[k].length} criteria`);
+      withOwnCriteria.push(`${label} — ${res.kpiByPosition[k].length} ${t("km_coverage_criteria_suffix")}`);
     } else if (isDept) {
-      realGaps.push(`${label} — no one in this department has any KPI coverage`);
+      realGaps.push(`${label} — ${t("km_coverage_no_coverage")}`);
     } else {
       const fallbackDept = (res.staffTitleToDepartment || {})[k];
       const deptHasCriteria = fallbackDept && res.kpiByPosition[fallbackDept] && res.kpiByPosition[fallbackDept].length;
       if (deptHasCriteria) {
-        coveredByFallback.push(`${label} — automatically uses ${fallbackDept} criteria (${res.kpiByPosition[fallbackDept].length})`);
+        coveredByFallback.push(`${label} — ${t("km_coverage_auto_uses")} ${fallbackDept} (${res.kpiByPosition[fallbackDept].length})`);
       } else {
-        realGaps.push(`${label}${fallbackDept ? ` — ${fallbackDept} department also has no criteria` : ""}`);
+        realGaps.push(`${label}${fallbackDept ? ` — ${fallbackDept} ${t("km_coverage_dept_also_gap")}` : ""}`);
       }
     }
   });
@@ -2084,18 +2348,100 @@ function kpiCoverageSummary(res) {
 
   return `
     <div class="card">
-      <h2>📋 KPI Coverage Summary</h2>
-      ${detailsBlock(`✅ Has Dedicated Criteria (${withOwnCriteria.length})`, "linear-gradient(90deg, var(--green), #0f7a4f)", withOwnCriteria, "None yet.")}
-      ${detailsBlock(`🔄 Covered via Department Fallback (${coveredByFallback.length})`, "linear-gradient(90deg, var(--teal), var(--teal-dark))", coveredByFallback, "None.")}
-      ${detailsBlock(`🚨 Needs Attention (${realGaps.length})`, "linear-gradient(90deg, var(--red), #8a2318)", realGaps, "No gaps — every position that needs KPI already has coverage (dedicated or fallback).")}
+      <h2>${t("km_coverage_title")}</h2>
+      ${detailsBlock(`✅ ${t("km_coverage_dedicated")} (${withOwnCriteria.length})`, "linear-gradient(90deg, var(--green), #0f7a4f)", withOwnCriteria, t("km_coverage_none_yet"))}
+      ${detailsBlock(`🔄 ${t("km_coverage_fallback")} (${coveredByFallback.length})`, "linear-gradient(90deg, var(--teal), var(--teal-dark))", coveredByFallback, t("km_coverage_none"))}
+      ${detailsBlock(`🚨 ${t("km_coverage_gaps")} (${realGaps.length})`, "linear-gradient(90deg, var(--red), #8a2318)", realGaps, t("km_coverage_no_gaps"))}
     </div>`;
+}
+
+/** Superadmin-only (NIK 9999) — Health Check + one-click maintenance actions that used to
+ *  require opening the Apps Script editor directly. See runSystemHealthCheck and
+ *  runMaintenanceAction on the backend; both independently re-check isSuperAdmin
+ *  server-side too, so this screen being reachable is not itself the only gate. */
+async function renderDevTools() {
+  if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
+  const showMenuLink = availableScreens(state.user).length > 1;
+  app.innerHTML = topbar("🛠️ Dev Tools") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <h2>System Health Check</h2>
+      <div class="hint" style="margin-bottom:10px;">Scan read-only — cuma melaporkan, tidak mengubah data apapun.</div>
+      <button class="secondary" id="health-check-btn" onclick="doRunHealthCheck()">🩺 Jalankan Health Check</button>
+      <div id="health-check-results" style="margin-top:12px;"></div>
+    </div>
+    <div class="card">
+      <h2>Maintenance Actions</h2>
+      <div class="hint" style="margin-bottom:10px;">Sebelumnya hanya bisa dijalankan lewat Apps Script editor.</div>
+      <button class="secondary" id="maint-dedupeKpiSheet-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('dedupeKpiSheet', this)">Bersihkan Duplikat KPI</button>
+      <button class="secondary" id="maint-migratePhotosToLinks-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('migratePhotosToLinks', this)">Migrasi Foto ke Link</button>
+      <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">Clear All Caches</button>
+      <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <div class="hint">Versi backend: ${state.user._debugVersion || "-"}</div>
+    </div>`;
+}
+
+async function doRunHealthCheck() {
+  const btn = document.getElementById("health-check-btn");
+  const resultsEl = document.getElementById("health-check-results");
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="btn-spinner dark"></span>Memindai...`;
+  resultsEl.innerHTML = "";
+  try {
+    const res = await apiGet("runSystemHealthCheck", { requesterId: state.user.staffId });
+    if (!res.found) {
+      resultsEl.innerHTML = `<div class="error">${friendlyError(res.error)}</div>`;
+      return;
+    }
+    if (res.issueCount === 0) {
+      resultsEl.innerHTML = `<div class="hint" style="color:var(--green); font-weight:600;">✅ Tidak ada masalah ditemukan.</div>`;
+      return;
+    }
+    const severityColor = { error: "var(--red)", warning: "var(--amber)", info: "var(--text-muted)" };
+    const severityBg = { error: "var(--red-bg)", warning: "var(--amber-bg)", info: "var(--sand)" };
+    resultsEl.innerHTML = `
+      <div class="hint" style="margin-bottom:8px;">${res.issueCount} temuan — dicek ${new Date(res.checkedAt).toLocaleString("id-ID")}</div>
+      ${res.issues.map(issue => `
+        <div style="background:${severityBg[issue.severity]}; border-radius:10px; padding:10px 12px; margin-bottom:8px;">
+          <div style="font-weight:700; color:${severityColor[issue.severity]}; font-size:13px;">${issue.area} — ${issue.title}</div>
+          ${issue.detail ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${issue.detail}</div>` : ""}
+          ${issue.action ? `<div style="font-size:12px; margin-top:4px;"><strong>Tindakan:</strong> ${issue.action}</div>` : ""}
+        </div>`).join("")}`;
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="error">Gagal memindai, coba lagi.</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+async function doRunMaintenanceAction(action, btnEl) {
+  const noteEl = document.getElementById("maintenance-result-note");
+  const originalLabel = btnEl.textContent;
+  document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = true);
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Memproses...`;
+  noteEl.textContent = "";
+  try {
+    const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action });
+    noteEl.textContent = (res.error || res.success === false)
+      ? `Gagal: ${friendlyError(res.error)}`
+      : `✅ Selesai (${action}).`;
+  } catch (e) {
+    noteEl.textContent = "Gagal, koneksi bermasalah.";
+  } finally {
+    document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = false);
+    btnEl.textContent = originalLabel;
+  }
 }
 
 async function renderKpiManagement() {
   if (_isLoadingKpiManagement) return;
   _isLoadingKpiManagement = true;
   try {
-    app.innerHTML = topbar("Manage KPI Criteria") + `<div class="loading">Memuat...</div>`;
+    app.innerHTML = topbar("Manage KPI Criteria") + `<div class="loading">${t("form_loading")}</div>`;
     const res = await apiGet("getAllKpiCriteriaForManagement", { requesterId: state.user.staffId });
     if (!res.found) {
       app.innerHTML = topbar("Manage KPI Criteria") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
@@ -2117,49 +2463,49 @@ function renderKpiManagementBody() {
   let listHtml, addFormHtml;
   if (section === "attitude") {
     listHtml = res.attitude.map(c => kpiCriterionRow("attitude", c.rowIndex, c.name, c.description, null, null, c.rubric)).join("");
-    addFormHtml = kpiAddForm("attitude", "Nama Kriteria", "Deskripsi", null);
+    addFormHtml = kpiAddForm("attitude", t("km_name_criteria_label"), t("km_description_label"), null);
   } else if (section === "discipline") {
     listHtml = res.discipline.map(c => kpiCriterionRow("discipline", c.rowIndex, c.name, c.dataSource, c.target, null, c.rubric)).join("");
-    addFormHtml = kpiAddForm("discipline", "Nama Kriteria", "Sumber Data", "Target");
+    addFormHtml = kpiAddForm("discipline", t("km_name_criteria_label"), t("km_data_source_label"), t("km_target_label"));
   } else {
     const position = state._kpiMgmtPosition || Object.keys(res.kpiByPosition)[0] || res.allPositionKeys[0];
     state._kpiMgmtPosition = position;
     const items = res.kpiByPosition[position] || [];
     listHtml = `
-      <label>Pilih Department / Job Title</label>
-      <div class="hint" style="margin-bottom:8px;">Kriteria khusus untuk Job Title tertentu (misalnya "Steward") akan digunakan terlebih dahulu untuk orang dengan Job Title tersebut. Jika belum tersedia, sistem otomatis menggunakan kriteria level Department (misalnya "Kitchen") sebagai cadangan.</div>
+      <label>${t("km_select_position_label")}</label>
+      <div class="hint" style="margin-bottom:8px;">${t("km_position_hint")}</div>
       <select onchange="switchKpiManagementPosition(this.value)">
         ${res.allPositionKeys.map(k => {
           const isDept = (res.departmentKeys || []).indexOf(k) !== -1;
           const hasOwn = res.kpiByPosition[k] && res.kpiByPosition[k].length;
           let tag, countLabel;
           if (isDept) {
-            tag = " — semua Job Title di department ini";
-            countLabel = hasOwn ? `${res.kpiByPosition[k].length} kriteria` : "belum ada kriteria — GAP BENERAN";
+            tag = t("km_dept_all_titles_suffix");
+            countLabel = hasOwn ? `${res.kpiByPosition[k].length} ${t("km_coverage_criteria_suffix")}` : t("km_no_criteria_gap");
           } else {
             const fallbackDept = (res.staffTitleToDepartment || {})[k];
             if (hasOwn) {
               tag = "";
-              countLabel = `${res.kpiByPosition[k].length} kriteria khusus`;
+              countLabel = `${res.kpiByPosition[k].length} ${t("km_dedicated_criteria_suffix")}`;
             } else if (fallbackDept) {
-              tag = ` — otomatis pakai kriteria ${fallbackDept}`;
-              countLabel = "gak ada kriteria khusus, TAPI AMAN (fallback)";
+              tag = `${t("km_auto_uses_prefix")} ${fallbackDept}`;
+              countLabel = t("km_no_dedicated_but_safe");
             } else {
               tag = "";
-              countLabel = "belum ada kriteria — GAP BENERAN";
+              countLabel = t("km_no_criteria_gap");
             }
           }
           return `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k}${tag} (${countLabel})</option>`;
         }).join("")}
       </select>
       ${items.map(c => kpiCriterionRow("kpi", c.rowIndex, c.name, c.howToMeasure, c.target, position, c.rubric)).join("")}
-      ${!items.length ? '<div class="hint">Belum ada kriteria KPI buat posisi ini.</div>' : ""}
+      ${!items.length ? `<div class="hint">${t("km_no_criteria_for_position")}</div>` : ""}
     `;
-    addFormHtml = kpiAddForm("kpi", "Nama Kriteria", "Cara Ukur", "Target", position);
+    addFormHtml = kpiAddForm("kpi", t("km_name_criteria_label"), t("km_how_to_measure_label"), t("km_target_label"), position);
   }
 
   app.innerHTML = topbar("Manage KPI Criteria") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
       ${tabSwitcher([
         { key: "attitude", label: "Attitude" },
@@ -2171,28 +2517,28 @@ function renderKpiManagementBody() {
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <div>
-          <h2 style="margin-bottom:2px;">Audit Section C & D — Semua Posisi</h2>
-          <div class="hint">Unduh daftar lengkap kriteria KPI dan item Bonus/Deduction yang berlaku untuk setiap posisi, sekaligus dalam satu file.</div>
+          <h2 style="margin-bottom:2px;">${t("km_audit_title")}</h2>
+          <div class="hint">${t("km_audit_desc")}</div>
         </div>
-        <button class="secondary" id="section-audit-btn" style="width:auto;" onclick="doGenerateSectionAudit()">📥 Unduh Audit</button>
+        <button class="secondary" id="section-audit-btn" style="width:auto;" onclick="doGenerateSectionAudit()">${t("km_audit_btn")}</button>
       </div>
       <div class="hint" id="section-audit-note" style="margin-top:8px;"></div>
     </div>
     <div class="card">
-      <h2>Kriteria yang Ada</h2>
+      <h2>${t("km_existing_criteria_title")}</h2>
       ${listHtml}
     </div>
     ${state._kpiFormOpen ? `
     <div class="card">
-      <h2>${state._kpiFormEditing ? "✏️ Edit Kriteria" : "+ Tambah Kriteria Baru"}</h2>
+      <h2>${state._kpiFormEditing ? t("km_edit_criteria_title") : t("km_add_criteria_title")}</h2>
       ${addFormHtml}
       <div class="hint" id="kpi-mgmt-note" style="margin-top:8px;"></div>
       <div class="row-flex" style="margin-top:10px;">
-        <button class="primary" style="flex:1;" onclick="doSaveKpiCriterion()">${state._kpiFormEditing ? "Simpan Perubahan" : "Simpan Kriteria Baru"}</button>
-        <button class="secondary" style="flex:0 0 auto;" onclick="closeKpiForm()">Batal</button>
+        <button class="primary" style="flex:1;" onclick="doSaveKpiCriterion()">${state._kpiFormEditing ? t("km_save_changes_btn") : t("km_save_new_btn")}</button>
+        <button class="secondary" style="flex:0 0 auto;" onclick="closeKpiForm()">${t("km_cancel_btn")}</button>
       </div>
     </div>` : `
-    <button class="primary" onclick="openKpiFormForAdd()" style="width:100%; margin-bottom:14px;">+ Tambah Kriteria Baru</button>`}
+    <button class="primary" onclick="openKpiFormForAdd()" style="width:100%; margin-bottom:14px;">${t("km_add_criteria_title")}</button>`}
   `;
 }
 
@@ -2209,7 +2555,7 @@ function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey, r
           <button class="ghost" onclick="doDeleteKpiCriterion('${section}', ${rowIndex})">🗑️</button>
         </div>
       </div>
-      ${rubric ? `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">${formatRubricHtml(rubric)}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">Rubrik skoring belum tersedia untuk kriteria ini.</div>`}
+      ${rubric ? `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">${formatRubricHtml(rubric)}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">${t("km_no_rubric_yet")}</div>`}
     </div>`;
 }
 
@@ -2227,10 +2573,10 @@ function checkRubricQuality() {
 
   if (filledCount === 0) { warningEl.textContent = ""; return; }
   if (filledCount === 1) {
-    warningEl.textContent = "⚠️ Baru 1 level yang keisi — idealnya minimal Skor 1 & Skor 5 (2 titik ekstrem) biar ada pembanding jelas.";
+    warningEl.textContent = t("km_rubric_quality_low");
     warningEl.style.color = "var(--coral)";
   } else {
-    warningEl.textContent = "✅ Kelihatan cukup jelas.";
+    warningEl.textContent = t("km_rubric_quality_good");
     warningEl.style.color = "var(--green)";
   }
 }
@@ -2275,14 +2621,14 @@ function kpiAddForm(section, label1, label2, label3, positionKey) {
     <input type="text" id="kpi-form-name" placeholder="${label1}" />
     ${label2 ? `<label>${label2}</label><input type="text" id="kpi-form-field2" placeholder="${label2}" />` : ""}
     ${label3 ? `<label>${label3}</label><input type="text" id="kpi-form-field3" placeholder="${label3}" />` : ""}
-    <label>Rubrik Skoring (opsional, tapi disarankan)</label>
-    <div class="hint" style="margin-bottom:8px;">Cukup isi kondisi di tiap level — Skor 2 & 4 dianggap "di antara" otomatis, gak perlu diisi.</div>
-    <label style="font-size:12px; color:var(--red);">Skor 1 (paling lemah)</label>
-    <input type="text" id="kpi-form-rubric-1" placeholder="Contoh: Sering menolak membantu rekan kerja" oninput="checkRubricQuality()" />
-    <label style="font-size:12px; color:var(--gold);">Skor 3 (standar/cukup)</label>
-    <input type="text" id="kpi-form-rubric-3" placeholder="Contoh: Membantu rekan kerja kalau diminta" oninput="checkRubricQuality()" />
-    <label style="font-size:12px; color:var(--green);">Skor 5 (paling kuat)</label>
-    <input type="text" id="kpi-form-rubric-5" placeholder="Contoh: Proaktif membantu tanpa diminta" oninput="checkRubricQuality()" />
+    <label>${t("km_rubric_label")}</label>
+    <div class="hint" style="margin-bottom:8px;">${t("km_rubric_hint")}</div>
+    <label style="font-size:12px; color:var(--red);">${t("km_score1_label")}</label>
+    <input type="text" id="kpi-form-rubric-1" placeholder="${t("km_rubric_ph1")}" oninput="checkRubricQuality()" />
+    <label style="font-size:12px; color:var(--gold);">${t("km_score3_label")}</label>
+    <input type="text" id="kpi-form-rubric-3" placeholder="${t("km_rubric_ph3")}" oninput="checkRubricQuality()" />
+    <label style="font-size:12px; color:var(--green);">${t("km_score5_label")}</label>
+    <input type="text" id="kpi-form-rubric-5" placeholder="${t("km_rubric_ph5")}" oninput="checkRubricQuality()" />
     <div class="hint" id="kpi-form-rubric-warning" style="margin-bottom:14px;"></div>
   `;
 }
@@ -2342,9 +2688,9 @@ async function doSaveKpiCriterion() {
   const positionEl = document.getElementById("kpi-form-position");
   const noteEl = document.getElementById("kpi-mgmt-note");
 
-  if (!name) { noteEl.textContent = "Nama kriteria wajib diisi."; noteEl.style.color = "var(--red)"; return; }
+  if (!name) { noteEl.textContent = t("km_name_required"); noteEl.style.color = "var(--red)"; return; }
 
-  noteEl.textContent = "Menyimpan...";
+  noteEl.textContent = t("sm_saving");
   noteEl.style.color = "var(--text-muted)";
   const payload = {
     requesterId: state.user.staffId, section, name,
@@ -2357,32 +2703,33 @@ async function doSaveKpiCriterion() {
 
   const res = await apiPost("saveKpiCriterion", payload);
   if (res.error || res.success === false) {
-    noteEl.textContent = "Gagal simpan: " + friendlyError(res.error);
+    noteEl.textContent = t("sm_save_failed_prefix") + " " + friendlyError(res.error);
     noteEl.style.color = "var(--red)";
     return;
   }
-  showToast(rowIndex ? "Kriteria berhasil diperbarui!" : "Kriteria baru berhasil ditambahkan!");
+  showToast(rowIndex ? t("km_criteria_updated_toast") : t("km_criteria_added_toast"));
   state._kpiFormOpen = false;
   state._kpiFormEditing = false;
   renderKpiManagement();
 }
 
 async function doDeleteKpiCriterion(section, rowIndex) {
-  if (!confirm("Yakin hapus kriteria ini? Tindakan ini gak bisa dibatalkan.")) return;
+  if (!confirm(t("km_delete_confirm"))) return;
   const res = await apiPost("deleteKpiCriterion", { requesterId: state.user.staffId, section, rowIndex });
-  if (res.error || res.success === false) { showToast("Gagal hapus: " + friendlyError(res.error), "error"); return; }
-  showToast("Kriteria berhasil dihapus!");
+  if (res.error || res.success === false) { showToast(t("km_delete_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  showToast(t("km_criteria_deleted_toast"));
   renderKpiManagement();
 }
+
 async function doExportStaffMapping() {
   const noteEl = document.getElementById("staff-mapping-export-note");
-  noteEl.textContent = "Membuat sheet export...";
+  noteEl.textContent = t("sm_export_generating");
   const res = await apiPost("exportStaffMapping", { requesterId: state.user.staffId, businessUnitFilter: state._staffMappingUnitFilter || "" });
   if (res.error || res.success === false) {
-    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    noteEl.textContent = t("sm_export_failed_prefix") + " " + friendlyError(res.error);
     return;
   }
-  noteEl.innerHTML = `Sheet siap (${res.rowCount} orang)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel (.xlsx) buat share ke siapa aja.`;
+  noteEl.innerHTML = `${t("sm_export_ready_prefix")} (${res.rowCount} ${t("sm_export_ready_suffix")} <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">${t("sm_export_open_link")}</a> ${t("sm_export_next_step")}`;
 }
 
 function switchStaffMappingUnit(unit) {
@@ -2391,7 +2738,7 @@ function switchStaffMappingUnit(unit) {
 }
 
 async function renderStaffMapping() {
-  app.innerHTML = topbar("Staff Mapping") + `<div class="loading">Memuat...</div>`;
+  app.innerHTML = topbar("Staff Mapping") + `<div class="loading">${t("form_loading")}</div>`;
   const res = await apiGet("getStaffMapping", { requesterId: state.user.staffId, businessUnitFilter: state._staffMappingUnitFilter || "" });
   const showMenuLink = availableScreens(state.user).length > 1;
 
@@ -2408,6 +2755,7 @@ async function renderStaffMapping() {
 
   const deptKeys = [...new Set(rows.filter(r => r.department !== "-").map(r => r.department))].sort();
   const tierKeys = ["Staff", "Leader", "Management"];
+
   // Which of the Leader/Management/Executive columns actually apply, based on the
   // TARGET's own tier — generalized to mirror the backend's isValidSuperiorTierForTarget
   // (evaluator's tier rank same-or-higher than the target's; Staff targets require
@@ -2442,11 +2790,11 @@ async function renderStaffMapping() {
     // one — the full names are still right there, fully readable, the moment the panel
     // opens; nothing is lost, just kept out of the closed button.
     const triggerLabel = isOverridden
-      ? (selectedNames.length === 1 ? selectedNames[0] : `${selectedNames.length} dipilih`)
-      : (autoLabel || "(Otomatis)");
+      ? (selectedNames.length === 1 ? selectedNames[0] : `${selectedNames.length} ${t("sm_bulk_selected_suffix")}`)
+      : (autoLabel || t("sm_auto_label"));
     return `
       <div class="superior-ms" data-row-staffid="${rowStaffId}" data-column="${columnKey}">
-        <button type="button" class="superior-ms-trigger ${isOverridden ? "is-overridden" : ""}" id="trigger-${domId}" data-auto-label="${escapeAttr(autoLabel || "(Otomatis)")}" onclick="toggleSuperiorPanel('${domId}')">
+        <button type="button" class="superior-ms-trigger ${isOverridden ? "is-overridden" : ""}" id="trigger-${domId}" data-auto-label="${escapeAttr(autoLabel || t("sm_auto_label"))}" onclick="toggleSuperiorPanel('${domId}')">
           <span class="ms-label">${triggerLabel}</span><span class="ms-chevron">▾</span>
         </button>
         <div class="superior-ms-panel hidden" id="panel-${domId}">
@@ -2454,7 +2802,7 @@ async function renderStaffMapping() {
             <label class="ms-option">
               <input type="checkbox" value="${c.staffId}" data-name="${escapeAttr(c.name)}" ${selectedIds.includes(String(c.staffId)) ? "checked" : ""} onchange="onSuperiorCheckboxChange('${scope}', '${rowStaffId}')">
               <span>${c.name}</span>
-            </label>`).join("") : `<div class="hint" style="padding:8px;">Belum ada kandidat.</div>`}
+            </label>`).join("") : `<div class="hint" style="padding:8px;">${t("sm_no_candidates")}</div>`}
         </div>
       </div>`;
   };
@@ -2483,7 +2831,7 @@ async function renderStaffMapping() {
   };
 
   app.innerHTML = topbar("Staff Mapping") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
       <h2>Staff Mapping</h2>
       ${res.canSwitchUnits ? `
@@ -2492,27 +2840,27 @@ async function renderStaffMapping() {
             <button class="${res.currentUnit === key ? "primary" : "secondary"}" style="flex:1;" onclick="switchStaffMappingUnit('${key}')">${label}</button>`).join("")}
         </div>
       ` : ""}
-      <button class="secondary" onclick="doExportStaffMapping()" style="margin-bottom:6px;">📊 Export ke Excel</button>
+      <div class="hint" style="margin-bottom:10px;">${rows.length} ${t("sm_hint")}</div>
+      <button class="secondary" onclick="doExportStaffMapping()" style="margin-bottom:6px;">${t("sm_export_excel_btn")}</button>
       <div class="hint" id="staff-mapping-export-note" style="margin-bottom:10px;"></div>
-      <div class="hint" style="margin-bottom:10px;">${rows.length} orang — centang Leader/Management/Executive manapun buat jadiin Superior tambahan/pengganti default. Bisa pilih lebih dari satu. Centang beberapa orang buat ganti sekaligus (bulk).</div>
-      <input type="text" placeholder="Cari nama..." oninput="updateStaffMappingFilter('search', this.value)" style="margin-bottom:10px;" />
+      <input type="text" placeholder="${t("sm_search_placeholder")}" oninput="updateStaffMappingFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:4px;">
         <select onchange="updateStaffMappingFilter('tier', this.value)">
-          <option value="">Semua Tier</option>
+          <option value="">${t("sm_all_tier")}</option>
           ${tierKeys.map(t => `<option value="${t}">${t}</option>`).join("")}
         </select>
         <select onchange="updateStaffMappingFilter('department', this.value)">
-          <option value="">Semua Department</option>
+          <option value="">${t("sm_all_department")}</option>
           ${deptKeys.map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
         </select>
       </div>
     </div>
     <div class="bulk-bar" id="staff-mapping-bulk-bar">
       <div class="bulk-top-row">
-        <span class="bulk-count" id="staff-mapping-bulk-count">0 dipilih</span>
+        <span class="bulk-count" id="staff-mapping-bulk-count">0 ${t("sm_bulk_selected_suffix")}</span>
         <div class="bulk-checklists" id="staff-mapping-bulk-checklists"></div>
-        <button class="bulk-apply" onclick="applyBulkStaffSuperior()">Terapkan</button>
-        <button class="bulk-cancel" onclick="clearStaffMappingSelection()">Batal</button>
+        <button class="bulk-apply" onclick="applyBulkStaffSuperior()">${t("sm_bulk_apply_btn")}</button>
+        <button class="bulk-cancel" onclick="clearStaffMappingSelection()">${t("sm_bulk_cancel_btn")}</button>
       </div>
       <div class="bulk-warn" id="staff-mapping-bulk-warn" style="display:none;"></div>
     </div>
@@ -2520,9 +2868,9 @@ async function renderStaffMapping() {
       <div class="mapping-row head">
         <div style="display:flex; align-items:center; gap:8px;">
           <input type="checkbox" class="mapping-checkbox" id="mapping-select-all" onchange="toggleStaffMappingSelectAll(this.checked)">
-          <span class="sortable-th" onclick="sortStaffMappingList('name')" id="sort-th-name">Name<span class="sort-arrow" id="sort-arrow-name"></span></span>
+          <span class="sortable-th" onclick="sortStaffMappingList('name')" id="sort-th-name">${t("sm_col_name")}<span class="sort-arrow" id="sort-arrow-name"></span></span>
         </div>
-        <div class="sortable-th" onclick="sortStaffMappingList('jobTitle')" id="sort-th-jobTitle">Job Title<span class="sort-arrow" id="sort-arrow-jobTitle"></span></div>
+        <div class="sortable-th" onclick="sortStaffMappingList('jobTitle')" id="sort-th-jobTitle">${t("sm_col_jobtitle")}<span class="sort-arrow" id="sort-arrow-jobTitle"></span></div>
         <div class="sortable-th" onclick="sortStaffMappingList('tier')" id="sort-th-tier">Tier<span class="sort-arrow" id="sort-arrow-tier"></span></div>
         <div>Leader</div>
         <div>Management</div>
@@ -2531,7 +2879,7 @@ async function renderStaffMapping() {
       <div id="staff-mapping-list-container">
         ${rows.map(rowHtml).join("")}
       </div>
-      <div class="hint" id="staff-mapping-empty-note" style="display:none; text-align:center; padding:16px 0;">Gak ada yang cocok sama filter/pencarian.</div>
+      <div class="hint" id="staff-mapping-empty-note" style="display:none; text-align:center; padding:16px 0;">${t("sm_no_match")}</div>
     </div>
   `;
 
@@ -2544,13 +2892,13 @@ function staffMappingOutsideClickHandler(e) {
   if (e.target.closest(".superior-ms")) return;
   document.querySelectorAll(".superior-ms-panel").forEach(p => p.classList.add("hidden"));
 }
+
 /** Panels used to be position:absolute relative to their trigger, which looked fine until
  *  a row near the bottom of a .card opened one — .card has overflow:hidden (for its
  *  rounded corners), which silently clipped the panel instead of letting it show fully.
  *  Fixed positioning computed from the trigger's actual on-screen rect escapes that
  *  clipping entirely (fixed elements aren't contained by an ancestor's overflow), and lets
  *  the panel flip to open UPWARD instead of down when there isn't enough room below. */
-
 function toggleSuperiorPanel(domId) {
   const panel = document.getElementById(`panel-${domId}`);
   const trigger = document.getElementById(`trigger-${domId}`);
@@ -2585,10 +2933,10 @@ async function onSuperiorCheckboxChange(scope, rowStaffId) {
   if (scope === "bulk") return; // bulk saves explicitly via the "Terapkan" button instead
   const checked = Array.from(document.querySelectorAll(`.superior-ms[data-row-staffid="${rowStaffId}"] input[type=checkbox]:checked`)).map(cb => cb.value);
   const noteEl = document.getElementById(`superior-save-note-${rowStaffId}`);
-  if (noteEl) { noteEl.textContent = "Menyimpan..."; noteEl.style.color = "var(--text-muted)"; }
+  if (noteEl) { noteEl.textContent = t("sm_saving"); noteEl.style.color = "var(--text-muted)"; }
   const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId: rowStaffId, evaluatorStaffIds: checked });
   if (res.error || res.success === false) {
-    if (noteEl) { noteEl.textContent = "Gagal simpan: " + friendlyError(res.error); noteEl.style.color = "var(--red)"; }
+    if (noteEl) { noteEl.textContent = t("sm_save_failed_prefix") + " " + friendlyError(res.error); noteEl.style.color = "var(--red)"; }
     return;
   }
   document.querySelectorAll(`.superior-ms[data-row-staffid="${rowStaffId}"]`).forEach(msEl => {
@@ -2604,7 +2952,7 @@ async function onSuperiorCheckboxChange(scope, rowStaffId) {
       trigger.classList.remove("is-overridden");
     }
   });
-  if (noteEl) { noteEl.textContent = "✅ Tersimpan."; noteEl.style.color = "var(--green)"; setTimeout(() => { if (noteEl) noteEl.textContent = ""; }, 2000); }
+  if (noteEl) { noteEl.textContent = t("sm_saved"); noteEl.style.color = "var(--green)"; setTimeout(() => { if (noteEl) noteEl.textContent = ""; }, 2000); }
 }
 
 function toggleStaffMappingSelectAll(checked) {
@@ -2657,7 +3005,7 @@ function updateStaffMappingBulkBar() {
     container.dataset.built = "true";
   }
 
-  document.getElementById("staff-mapping-bulk-count").textContent = `${checked.length} dipilih`;
+  document.getElementById("staff-mapping-bulk-count").textContent = `${checked.length} ${t("sm_bulk_selected_suffix")}`;
   bar.style.display = "flex";
 }
 
@@ -2675,15 +3023,15 @@ async function applyBulkStaffSuperior() {
   const evaluatorStaffIds = Array.from(document.querySelectorAll("#staff-mapping-bulk-checklists input[type=checkbox]:checked")).map(cb => cb.value);
   const applyBtn = document.querySelector(".bulk-bar .bulk-apply");
   applyBtn.disabled = true;
-  applyBtn.textContent = `Menyimpan 0/${checked.length}...`;
+  applyBtn.textContent = `${t("sm_bulk_saving_prefix")} 0/${checked.length}...`;
   let done = 0;
   for (const cb of checked) {
     const staffId = cb.dataset.staffid;
     await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
     done++;
-    applyBtn.textContent = `Menyimpan ${done}/${checked.length}...`;
+    applyBtn.textContent = `${t("sm_bulk_saving_prefix")} ${done}/${checked.length}...`;
   }
-  showToast(`✅ ${checked.length} orang diupdate.`);
+  showToast(`✅ ${checked.length} ${t("sm_bulk_updated_toast")}`);
   renderStaffMapping();
 }
 
@@ -3223,8 +3571,8 @@ function renderSelfAppraisalComplianceCard(res) {
 
   return `
     <div class="card">
-      <h2>Status Self Appraisal Bulan Ini</h2>
-      <div class="hint" style="margin-bottom:10px;">Siapa saja di bawah cakupan Anda yang belum mengisi Self Appraisal-nya sendiri bulan ini.</div>
+      <h2>${t("selfcompliance_title")}</h2>
+      <div class="hint" style="margin-bottom:10px;">${t("selfcompliance_hint")}</div>
       ${tierOrder.map(tier => {
         const bucket = res.byTier[tier];
         if (!bucket || (bucket.total === 0 && !bucket.contractPending.length)) return "";
@@ -3235,7 +3583,7 @@ function renderSelfAppraisalComplianceCard(res) {
           <div style="margin-bottom:14px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div style="font-weight:700;">${tierLabel[tier]}</div>
-              ${bucket.total > 0 ? `<span class="badge" style="background:${percentage >= 100 ? "var(--green-bg)" : percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${bucket.done}/${bucket.total} sudah isi</span>` : ""}
+              ${bucket.total > 0 ? `<span class="badge" style="background:${percentage >= 100 ? "var(--green-bg)" : percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${bucket.done}/${bucket.total} ${t("selfcompliance_done_suffix")}</span>` : ""}
             </div>
             ${bucket.total > 0 ? `
               <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin:8px 0;">
@@ -3244,16 +3592,16 @@ function renderSelfAppraisalComplianceCard(res) {
             ` : ""}
             ${missingCount > 0 ? `
               <details>
-                <summary style="cursor:pointer; font-size:13px; color:var(--coral); font-weight:600;">Lihat ${missingCount} orang yang belum mengisi</summary>
+                <summary style="cursor:pointer; font-size:13px; color:var(--coral); font-weight:600;">${t("selfcompliance_view_missing").replace("{n}", missingCount)}</summary>
                 <ul style="margin:8px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
                   ${bucket.missing.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
                 </ul>
               </details>
-            ` : (bucket.total > 0 ? `<div class="hint" style="color:var(--green);">Semua sudah mengisi.</div>` : "")}
+            ` : (bucket.total > 0 ? `<div class="hint" style="color:var(--green);">${t("selfcompliance_all_done")}</div>` : "")}
             ${bucket.contractPending.length > 0 ? `
               <details style="margin-top:6px;">
-                <summary style="cursor:pointer; font-size:13px; color:var(--amber); font-weight:600;">${bucket.contractPending.length} orang menunggu update kontrak dari HR (belum bisa mengisi)</summary>
-                <div class="hint" style="margin:6px 0 4px;">Kontrak orang-orang ini di HR Sheet belum diperpanjang, sehingga sistem belum membuka Self Appraisal untuk mereka bulan ini. Ini bukan kelalaian mereka — informasikan ke HR untuk memperbarui data kontraknya.</div>
+                <summary style="cursor:pointer; font-size:13px; color:var(--amber); font-weight:600;">${t("selfcompliance_contract_pending").replace("{n}", bucket.contractPending.length)}</summary>
+                <div class="hint" style="margin:6px 0 4px;">${t("selfcompliance_contract_pending_note")}</div>
                 <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
                   ${bucket.contractPending.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
                 </ul>
@@ -3265,11 +3613,11 @@ function renderSelfAppraisalComplianceCard(res) {
 }
 
 async function renderReview() {
-  const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? "Review Everyone's Records" : "Review Your Team";
+  const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? t("review_title_all") : t("review_title_team");
   const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational || state.user.isManagement;
   const viewMode = state._reviewViewMode || "list";
 
-  app.innerHTML = topbar(title) + `<div class="loading">Memuat data...</div>`;
+  app.innerHTML = topbar(title) + `<div class="loading">${t("form_loading")}</div>`;
   const rangeMode = !!state._reviewRangeMode;
   const effectiveEndMonth = rangeMode ? (state._reviewEndMonth || state.month) : state.month;
   const [res, progressRes, selfComplianceRes] = await Promise.all([
@@ -3290,8 +3638,8 @@ async function renderReview() {
   const showMenuLink = availableScreens(state.user).length > 1;
 
   const toggleHtml = canSeeCompliance ? tabSwitcher([
-    { key: "list", label: "Daftar Karyawan" },
-    { key: "compliance", label: "Compliance" },
+    { key: "list", label: t("review_tab_list") },
+    { key: "compliance", label: t("review_tab_compliance") },
   ], viewMode, "switchReviewViewMode") : "";
 
   let bodyHtml;
@@ -3317,15 +3665,15 @@ async function renderReview() {
       };
       bodyHtml = `
         <div class="card">
-          <div class="hint">Progress evaluator bulan ini — belum termasuk skor, cuma status "sudah/belum isi appraisal".</div>
+          <div class="hint">${t("review_compliance_hint")}</div>
         </div>
         ${renderSelfAppraisalComplianceCard(selfComplianceRes)}
         ${groupOrder.map(tier => {
           const group = progress.filter(p => p.tier === tier);
           if (!group.length) return "";
-          return `<div class="card"><h2>${groupLabel[tier]} (${group.length} orang)</h2>${group.map(rowHtml).join("")}</div>`;
+          return `<div class="card"><h2>${groupLabel[tier]} (${group.length} ${t("review_people_suffix")})</h2>${group.map(rowHtml).join("")}</div>`;
         }).join("")}
-        ${!progress.length ? '<div class="card"><div class="hint">Belum ada evaluator (Leader/Management/HR) yang terdaftar.</div></div>' : ""}`;
+        ${!progress.length ? `<div class="card"><div class="hint">${t("review_no_evaluators")}</div></div>` : ""}`;
     }
   } else {
     // Stats computed client-side straight from `rows` — no separate getCompanySummary call
@@ -3355,32 +3703,32 @@ async function renderReview() {
     bodyHtml = `
       <div class="card">
         <div class="row-flex" style="flex-wrap:wrap; gap:8px;">
-          ${statBox("Total Appraisal", total)}
-          ${statBox("Rata-rata Skor", avgScore.toFixed(1))}
-          ${statBox("Performer", performerCount, "var(--green)")}
-          ${statBox("Underperform", underperformCount, "var(--red)")}
-          ${statBox("Sudah Di-approve", `${approvedCount}/${total}`, "var(--gold)")}
+          ${statBox(t("review_stat_total"), total)}
+          ${statBox(t("review_stat_avg"), avgScore.toFixed(1))}
+          ${statBox(t("review_stat_performer"), performerCount, "var(--green)")}
+          ${statBox(t("review_stat_underperform"), underperformCount, "var(--red)")}
+          ${statBox(t("review_stat_approved"), `${approvedCount}/${total}`, "var(--gold)")}
         </div>
       </div>
       <div class="card">
-        <input type="text" placeholder="Cari nama..." oninput="updateReviewFilter('search', this.value)" style="margin-bottom:10px;" />
+        <input type="text" placeholder="${t("review_search_placeholder")}" oninput="updateReviewFilter('search', this.value)" style="margin-bottom:10px;" />
         <div class="row-flex" style="margin-bottom:10px;">
           <select onchange="sortReviewList(this.value)">
-            <option value="">Urutkan...</option>
-            <option value="name-asc">Nama (A-Z)</option>
-            <option value="name-desc">Nama (Z-A)</option>
-            <option value="score-desc">Skor Tertinggi</option>
-            <option value="score-asc">Skor Terendah</option>
+            <option value="">${t("review_sort_placeholder")}</option>
+            <option value="name-asc">${t("review_sort_name_asc")}</option>
+            <option value="name-desc">${t("review_sort_name_desc")}</option>
+            <option value="score-desc">${t("review_sort_score_desc")}</option>
+            <option value="score-asc">${t("review_sort_score_asc")}</option>
           </select>
           ${deptKeys.length > 1 ? `
           <select onchange="updateReviewFilter('department', this.value)">
-            <option value="">Semua Department</option>
+            <option value="">${t("review_all_departments")}</option>
             ${deptKeys.map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
           </select>` : ""}
         </div>
-        <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">Underperform Saja</button>
+        <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">${t("review_underperform_only_btn")}</button>
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
-          <div class="hint">${total} appraisal record — read only</div>
+          <div class="hint">${total} ${t("review_record_count_suffix")}</div>
           <div style="display:flex; gap:8px;">
             <button class="secondary" id="review-export-excel-btn" onclick="doGenerateReviewExport('xlsx')">📊 Excel</button>
             <button class="secondary" id="review-export-pdf-btn" onclick="doGenerateReviewExport('pdf')">📄 PDF</button>
@@ -3401,8 +3749,8 @@ async function renderReview() {
                 <span id="${summaryId}" style="display:inline-block; transition:transform 0.15s ease; font-size:14px; transform:rotate(90deg);">▸</span>
                 <div>
                   <span style="font-weight:700;">${dept}</span>
-                  <span style="font-weight:400; opacity:0.85;"> (${deptRows.length} orang)</span>
-                  ${deptUnderperform > 0 ? `<div style="font-size:12px; color:#FFD9CF; margin-top:2px;">${deptUnderperform} underperform</div>` : ""}
+                  <span style="font-weight:400; opacity:0.85;"> (${deptRows.length} ${t("review_people_suffix")})</span>
+                  ${deptUnderperform > 0 ? `<div style="font-size:12px; color:#FFD9CF; margin-top:2px;">${deptUnderperform} ${t("review_underperform_count_suffix")}</div>` : ""}
                 </div>
               </div>
               ${statusBadge(deptAvg >= 60, deptAvg.toFixed(1))}
@@ -3416,7 +3764,7 @@ async function renderReview() {
                     ${r.calibrationAdjustment ? `<div class="dept" style="color:var(--gold); font-weight:700;">⚖️ Calibration ${r.calibrationAdjustment > 0 ? "+" : ""}${r.calibrationAdjustment}</div>` : ""}
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
-                    ${statusBadge(r.status === 'Performer', r.status)}
+                    ${statusBadge(r.status === 'Performer', r.status === 'Performer' ? t("review_stat_performer") : t("review_stat_underperform"))}
                     <span style="color:var(--text-muted); font-size:16px;">›</span>
                   </div>
                 </div>`).join("")}
@@ -3424,29 +3772,29 @@ async function renderReview() {
           </details>`;
         }).join("")}
       </div>
-      ${!rows.length ? '<div class="hint">Belum ada data appraisal di scope kamu.</div>' : ""}`;
+      ${!rows.length ? `<div class="hint">${t("review_empty_scope")}</div>` : ""}`;
   }
 
   app.innerHTML = topbar(title) + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
       <label style="display:flex; align-items:center; gap:8px; margin-bottom:${rangeMode ? "10px" : "0"};">
         <input type="checkbox" ${rangeMode ? "checked" : ""} onchange="toggleReviewRangeMode(this.checked)" style="width:auto;" />
-        <span style="font-weight:600; color:var(--text);">Ambil beberapa bulan sekaligus</span>
+        <span style="font-weight:600; color:var(--text);">${t("review_range_checkbox")}</span>
       </label>
       ${rangeMode ? `
         <div class="row-flex">
           <div style="flex:1;">
-            <label>Bulan Awal</label>
+            <label>${t("review_month_start_label")}</label>
             <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
           </div>
           <div style="flex:1;">
-            <label>Bulan Akhir</label>
+            <label>${t("review_month_end_label")}</label>
             <input type="month" id="month-end-picker" value="${effectiveEndMonth}" min="${state.month}" onchange="changeReviewEndMonth(this.value)" />
           </div>
         </div>
       ` : `
-        <label>Bulan</label>
+        <label>${t("review_month_label")}</label>
         <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
       `}
     </div>
@@ -3514,13 +3862,13 @@ async function doGenerateSectionAudit() {
   const originalLabel = btn.innerHTML;
 
   btn.disabled = true;
-  btn.innerHTML = `<span class="btn-spinner dark"></span>Membuat file...`;
+  btn.innerHTML = `<span class="btn-spinner dark"></span>${t("km_audit_generating")}`;
   noteEl.textContent = "";
 
   try {
     const res = await apiPost("generateSectionAuditFile", { requesterId: state.user.staffId });
     if (res.error || res.success === false) {
-      noteEl.textContent = "Gagal membuat audit: " + friendlyError(res.error);
+      noteEl.textContent = t("km_audit_failed_prefix") + " " + friendlyError(res.error);
       return;
     }
     const byteChars = atob(res.fileBase64);
@@ -3535,9 +3883,9 @@ async function doGenerateSectionAudit() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    noteEl.textContent = `✅ ${res.fileName} (${res.positionCount} posisi) berhasil diunduh.`;
+    noteEl.textContent = `✅ ${res.fileName} (${res.positionCount} ${t("km_audit_position_suffix")} ${t("km_audit_ready")}`;
   } catch (e) {
-    noteEl.textContent = "Gagal membuat audit: koneksi bermasalah, coba lagi.";
+    noteEl.textContent = t("km_audit_conn_error");
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalLabel;

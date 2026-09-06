@@ -300,7 +300,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-172-calibration-suggestion-and-polish — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-173-notification-evaluate-now-action — TEST</div>
 
 <script>
 // =================================================================
@@ -573,6 +573,9 @@ const translations = {
     notif_reset_relay_note: "Sampaikan PIN ini ke orangnya lewat WA/telpon ya — dia gak bisa lihat ini sendiri.",
     notif_reset_failed_prefix: "Gagal reset:",
     notif_pin_new_label: "PIN baru buat",
+    notif_evaluate_now_btn: "Nilai Sekarang",
+    notif_evaluate_loading: "Memuat...",
+    notif_evaluate_unavailable: "Penilaian ini tidak lagi tersedia untuk kamu.",
   },
   en: {
     logout: "Log Out",
@@ -685,6 +688,9 @@ const translations = {
     notif_reset_relay_note: "Please pass this PIN to them via WhatsApp/phone — they can't see this themselves.",
     notif_reset_failed_prefix: "Reset failed:",
     notif_pin_new_label: "New PIN for",
+    notif_evaluate_now_btn: "Evaluate Now",
+    notif_evaluate_loading: "Loading...",
+    notif_evaluate_unavailable: "This evaluation is no longer available to you.",
   },
 };
 
@@ -940,6 +946,10 @@ async function renderNotifications() {
       // roster, goes back to the Sheet to find the row again, copies the new PIN out to
       // message the person. This button collapses all of that into one click, right here.
       const isPinResetRequest = n.message.indexOf("minta reset PIN") !== -1;
+      // "X sudah isi Self Appraisal" is sent to whoever is next in line to evaluate that
+      // person — previously just informational text with nowhere to go from here, leaving
+      // the recipient to navigate to Team Appraisal and find that person manually.
+      const isSelfDoneNotification = n.message.indexOf("sudah isi Self Appraisal") !== -1;
       // Older notifications (created before this button existed) have the OLD manual
       // instructions baked right into the stored text ("...— hapus cell PIN mereka di HR
       // Sheet lalu jalankan generateRandomPins()."). Showing that verbatim next to a
@@ -949,8 +959,9 @@ async function renderNotifications() {
       // everything that's actually needed, the instructional tail never needs to be seen.
       const displayMessage = isPinResetRequest ? n.message.split(" — ")[0] : n.message;
       const needsAction = isPinResetRequest && !n.read;
+      const stackedLayout = isPinResetRequest || isSelfDoneNotification;
       return `
-      <div class="staff-row" data-search="${escapeAttr(n.message.toLowerCase())}" data-read="${n.read}" data-action-needed="${needsAction}" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"} ${isPinResetRequest ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${!isPinResetRequest && !n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (!isPinResetRequest && n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
+      <div class="staff-row" data-search="${escapeAttr(n.message.toLowerCase())}" data-read="${n.read}" data-action-needed="${needsAction}" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"} ${stackedLayout ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${!isPinResetRequest && !isSelfDoneNotification && !n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (!isPinResetRequest && !isSelfDoneNotification && n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
         <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
           <div>
             <div class="name" style="font-weight:${n.read ? "500" : "700"};">${displayMessage}${n.actionScreen ? ` <span style="color:var(--teal); font-size:11px;">${t("notif_open_link")}</span>` : ""}</div>
@@ -963,6 +974,9 @@ async function renderNotifications() {
           <div id="pin-reset-result-${n.id}" style="font-size:13px;"></div>
         ` : ""}
         ${isPinResetRequest && n.read ? `<div class="hint" style="color:var(--green); font-weight:600;">${t("notif_reset_done")}</div>` : ""}
+        ${isSelfDoneNotification ? `
+          <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doGoEvaluateFromNotification('${n.aboutStaffId}', '${n.id}', this)">${t("notif_evaluate_now_btn")}</button>
+        ` : ""}
       </div>`;
     }).join("")}
     </div>
@@ -1006,6 +1020,27 @@ function applyNotificationFilters() {
   if (emptyNote) emptyNote.style.display = visibleCount === 0 ? "" : "none";
   const countHint = document.getElementById("notif-count-hint");
   if (countHint) countHint.textContent = `${visibleCount} notifikasi`;
+}
+
+/** "Nilai Sekarang" on a "sudah isi Self Appraisal" notification — jumps straight into
+ *  evaluating that person instead of leaving the recipient to find them manually in Team
+ *  Appraisal. Re-checks eligibility live server-side (see getNotificationActionTarget)
+ *  rather than assuming the notification is still valid, since Staff Mapping or the
+ *  appraisal window could have changed since it was sent. */
+async function doGoEvaluateFromNotification(staffId, notificationId, btnEl) {
+  const originalLabel = btnEl ? btnEl.textContent : "";
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = t("notif_evaluate_loading"); }
+  try {
+    const res = await apiGet("getNotificationActionTarget", { evaluatorId: state.user.staffId, targetId: staffId });
+    if (!res.found) {
+      showToast(t("notif_evaluate_unavailable"), "error");
+      return;
+    }
+    await apiPost("markNotificationRead", { notificationId });
+    renderAppraisalForm({ evaluatorType: res.evaluatorType, target: res.target });
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = originalLabel; }
+  }
 }
 
 async function doResetStaffPin(staffId, notificationId, btnEl) {

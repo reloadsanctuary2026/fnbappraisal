@@ -299,7 +299,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-175-section-cd-audit-export — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-176-self-appraisal-compliance-by-tier — LIVE</div>
 
 <script>
 // =================================================================
@@ -3199,17 +3199,62 @@ function toggleReviewRangeMode(checked) {
   renderReview();
 }
 
+/** "Berapa Staff/Leader/Management saya yang belum isi Self Appraisal bulan ini, dan
+ *  siapa saja" — a different question from the evaluator-progress card below it (which
+ *  tracks whether Leaders/Management/HR have finished EVALUATING others). Scoped to
+ *  whatever the viewer can already see (their own team/oversight), broken down by tier,
+ *  each with an expandable list of exactly who's still missing. */
+function renderSelfAppraisalComplianceCard(res) {
+  if (!res || !res.found) return "";
+  const tierOrder = ["Staff", "Leader", "Management"];
+  const tierLabel = { Staff: "Staff", Leader: "Leader", Management: "Management" };
+  const anyData = tierOrder.some(t => res.byTier[t] && res.byTier[t].total > 0);
+  if (!anyData) return "";
+
+  return `
+    <div class="card">
+      <h2>Status Self Appraisal Bulan Ini</h2>
+      <div class="hint" style="margin-bottom:10px;">Siapa saja di bawah cakupan Anda yang belum mengisi Self Appraisal-nya sendiri bulan ini.</div>
+      ${tierOrder.map(tier => {
+        const bucket = res.byTier[tier];
+        if (!bucket || bucket.total === 0) return "";
+        const missingCount = bucket.total - bucket.done;
+        const percentage = Math.round((bucket.done / bucket.total) * 100);
+        const barColor = percentage >= 100 ? "var(--green)" : percentage >= 50 ? "var(--amber)" : "var(--red)";
+        return `
+          <div style="margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight:700;">${tierLabel[tier]}</div>
+              <span class="badge" style="background:${percentage >= 100 ? "var(--green-bg)" : percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${bucket.done}/${bucket.total} sudah isi</span>
+            </div>
+            <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin:8px 0;">
+              <div style="width:${percentage}%; height:100%; background:${barColor}; border-radius:4px;"></div>
+            </div>
+            ${missingCount > 0 ? `
+              <details>
+                <summary style="cursor:pointer; font-size:13px; color:var(--coral); font-weight:600;">Lihat ${missingCount} orang yang belum mengisi</summary>
+                <ul style="margin:8px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
+                  ${bucket.missing.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
+                </ul>
+              </details>
+            ` : `<div class="hint" style="color:var(--green);">Semua sudah mengisi.</div>`}
+          </div>`;
+      }).join("")}
+    </div>`;
+}
+
 async function renderReview() {
   const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? "Review Everyone's Records" : "Review Your Team";
-  const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational;
+  const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational || state.user.isManagement;
   const viewMode = state._reviewViewMode || "list";
 
   app.innerHTML = topbar(title) + `<div class="loading">Memuat data...</div>`;
   const rangeMode = !!state._reviewRangeMode;
   const effectiveEndMonth = rangeMode ? (state._reviewEndMonth || state.month) : state.month;
-  const [res, progressRes] = await Promise.all([
+  const [res, progressRes, selfComplianceRes] = await Promise.all([
     apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month, endMonth: effectiveEndMonth }),
     canSeeCompliance ? apiGet("getEvaluatorProgress", { requesterId: state.user.staffId }) : Promise.resolve(null),
+    canSeeCompliance ? apiGet("getSelfAppraisalComplianceStatus", { requesterId: state.user.staffId }) : Promise.resolve(null),
   ]);
   if (res.error) {
     app.innerHTML = topbar(title) + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
@@ -3253,6 +3298,7 @@ async function renderReview() {
         <div class="card">
           <div class="hint">Progress evaluator bulan ini — belum termasuk skor, cuma status "sudah/belum isi appraisal".</div>
         </div>
+        ${renderSelfAppraisalComplianceCard(selfComplianceRes)}
         ${groupOrder.map(tier => {
           const group = progress.filter(p => p.tier === tier);
           if (!group.length) return "";

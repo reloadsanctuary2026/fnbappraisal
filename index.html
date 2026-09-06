@@ -299,7 +299,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-04-177-exclude-contract-pending-from-compliance — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-06-178-superadmin-account-and-devtools — LIVE</div>
 
 <script>
 // =================================================================
@@ -740,6 +740,7 @@ function render() {
   if (state.screen === "settings") return renderSettings();
   if (state.screen === "staffMapping") return renderStaffMapping();
   if (state.screen === "kpiManagement") return renderKpiManagement();
+  if (state.screen === "devTools") return renderDevTools();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
   if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
@@ -1158,7 +1159,7 @@ function renderBusinessUnitPicker() {
     { key: "backoffice", label: "Back Office", emoji: "🏢" },
   ];
   app.innerHTML = `
-    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload 360°</h1></div>${langTogglePreLoginHtml()}</div>
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark" onclick="onLogoTapped()" style="cursor:pointer;"></div><h1>Reload 360°</h1></div>${langTogglePreLoginHtml()}</div>
     <div class="card" id="business-unit-picker">
       <h2>${t("unit_picker_title")}</h2>
       <div class="hint" style="margin-bottom:14px;">${t("unit_picker_subtitle")}</div>
@@ -1174,6 +1175,27 @@ function renderBusinessUnitPicker() {
           </div>`).join("")}
       </div>
     </div>`;
+}
+
+/** Hidden entry point for the internal superadmin/dev-tools account (NIK 9999) — tapping
+ *  the logo 10 times within a few seconds of each other skips the business-unit picker
+ *  entirely and goes straight to the normal login form, WITHOUT any unit selected. That
+ *  matters specifically for 9999: checkNikExists/login only enforce the business-unit
+ *  match when a businessUnit was actually passed in, so arriving here with none set is
+ *  exactly what lets this one account log in regardless of its own (deliberately blank)
+ *  businessUnit. Resets if taps are too far apart, so it can never trigger by accident from
+ *  ordinary slow, spaced-out clicks over a long session. */
+function onLogoTapped() {
+  const now = Date.now();
+  if (!state._logoTapTimestamps) state._logoTapTimestamps = [];
+  state._logoTapTimestamps = state._logoTapTimestamps.filter(t => now - t < 3000);
+  state._logoTapTimestamps.push(now);
+  if (state._logoTapTimestamps.length >= 10) {
+    state._logoTapTimestamps = [];
+    state.businessUnit = null;
+    applyBusinessUnitTheme();
+    renderLogin();
+  }
 }
 
 function renderLogin() {
@@ -1201,7 +1223,13 @@ async function doLoginStep1() {
   btn.textContent = t("login_connecting");
   btn.style.opacity = "0.7";
   try {
-    const res = await apiGetWithRetry("checkNikExists", { nik, businessUnit: state.businessUnit }, 2, (r) => r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
+    // Explicit fallback to "" (not just relying on state.businessUnit directly) — passing
+    // null/undefined through URLSearchParams stringifies it as the literal text "null"/
+    // "undefined", which is a TRUTHY non-empty string the backend would then try to match
+    // against, incorrectly rejecting anyone logging in with no business unit selected
+    // (the superadmin login path specifically arrives here that way on purpose). Same class
+    // of bug logout() used to have with businessUnit going missing after clearing state.
+    const res = await apiGetWithRetry("checkNikExists", { nik, businessUnit: state.businessUnit || "" }, 2, (r) => r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
     if (!res.found) {
       errEl.innerHTML = res.error === "wrong_business_unit"
         ? `NIK ini terdaftar di unit <strong>${res.actualUnitLabel}</strong>, bukan ${businessUnitLabel()}. <button class="ghost" style="display:inline-block; padding:4px 10px; font-size:12px; margin-left:4px;" onclick="changeBusinessUnit()">Ganti Unit</button>`
@@ -1270,7 +1298,9 @@ async function completeLogin(nik, pin) {
   if (errEl) errEl.textContent = "";
   if (btn) { btn.disabled = true; btn.textContent = t("login_connecting"); btn.style.opacity = "0.7"; }
   try {
-    const res = await apiGetWithRetry("login", { nik, pin, businessUnit: state.businessUnit }, 2, (r) => r.error !== "invalid_pin" && r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
+    // Same "" fallback as doLoginStep1 above — see that comment for why null/undefined
+    // must never be passed through directly here.
+    const res = await apiGetWithRetry("login", { nik, pin, businessUnit: state.businessUnit || "" }, 2, (r) => r.error !== "invalid_pin" && r.error !== "wrong_business_unit" && (!!r.error || r.found === false));
     if (!res.found) {
       if (errEl) {
         if (res.error === "wrong_business_unit") {
@@ -1361,6 +1391,12 @@ function availableScreensGrouped(user) {
     settingsItems.push({ key: "kpiManagement", label: t("menu_manage_kpi") });
   }
   if (settingsItems.length) groups.push({ name: "MySettings", items: settingsItems });
+
+  if (user.isSuperAdmin) {
+    groups.push({ name: "DevTools", items: [
+      { key: "devTools", label: "🛠️ Dev Tools (Superadmin)" },
+    ]});
+  }
 
   return groups;
 }
@@ -2077,6 +2113,88 @@ function kpiCoverageSummary(res) {
       ${detailsBlock(`🔄 Covered via Department Fallback (${coveredByFallback.length})`, "linear-gradient(90deg, var(--teal), var(--teal-dark))", coveredByFallback, "None.")}
       ${detailsBlock(`🚨 Needs Attention (${realGaps.length})`, "linear-gradient(90deg, var(--red), #8a2318)", realGaps, "No gaps — every position that needs KPI already has coverage (dedicated or fallback).")}
     </div>`;
+}
+
+/** Superadmin-only (NIK 9999) — Health Check + one-click maintenance actions that used to
+ *  require opening the Apps Script editor directly. See runSystemHealthCheck and
+ *  runMaintenanceAction on the backend; both independently re-check isSuperAdmin
+ *  server-side too, so this screen being reachable is not itself the only gate. */
+async function renderDevTools() {
+  if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
+  const showMenuLink = availableScreens(state.user).length > 1;
+  app.innerHTML = topbar("🛠️ Dev Tools") + `
+    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    <div class="card">
+      <h2>System Health Check</h2>
+      <div class="hint" style="margin-bottom:10px;">Scan read-only — cuma melaporkan, tidak mengubah data apapun.</div>
+      <button class="secondary" id="health-check-btn" onclick="doRunHealthCheck()">🩺 Jalankan Health Check</button>
+      <div id="health-check-results" style="margin-top:12px;"></div>
+    </div>
+    <div class="card">
+      <h2>Maintenance Actions</h2>
+      <div class="hint" style="margin-bottom:10px;">Sebelumnya hanya bisa dijalankan lewat Apps Script editor.</div>
+      <button class="secondary" id="maint-dedupeKpiSheet-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('dedupeKpiSheet', this)">Bersihkan Duplikat KPI</button>
+      <button class="secondary" id="maint-migratePhotosToLinks-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('migratePhotosToLinks', this)">Migrasi Foto ke Link</button>
+      <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">Clear All Caches</button>
+      <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <div class="hint">Versi backend: ${state.user._debugVersion || "-"}</div>
+    </div>`;
+}
+
+async function doRunHealthCheck() {
+  const btn = document.getElementById("health-check-btn");
+  const resultsEl = document.getElementById("health-check-results");
+  const originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="btn-spinner dark"></span>Memindai...`;
+  resultsEl.innerHTML = "";
+  try {
+    const res = await apiGet("runSystemHealthCheck", { requesterId: state.user.staffId });
+    if (!res.found) {
+      resultsEl.innerHTML = `<div class="error">${friendlyError(res.error)}</div>`;
+      return;
+    }
+    if (res.issueCount === 0) {
+      resultsEl.innerHTML = `<div class="hint" style="color:var(--green); font-weight:600;">✅ Tidak ada masalah ditemukan.</div>`;
+      return;
+    }
+    const severityColor = { error: "var(--red)", warning: "var(--amber)", info: "var(--text-muted)" };
+    const severityBg = { error: "var(--red-bg)", warning: "var(--amber-bg)", info: "var(--sand)" };
+    resultsEl.innerHTML = `
+      <div class="hint" style="margin-bottom:8px;">${res.issueCount} temuan — dicek ${new Date(res.checkedAt).toLocaleString("id-ID")}</div>
+      ${res.issues.map(issue => `
+        <div style="background:${severityBg[issue.severity]}; border-radius:10px; padding:10px 12px; margin-bottom:8px;">
+          <div style="font-weight:700; color:${severityColor[issue.severity]}; font-size:13px;">${issue.area} — ${issue.title}</div>
+          ${issue.detail ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${issue.detail}</div>` : ""}
+          ${issue.action ? `<div style="font-size:12px; margin-top:4px;"><strong>Tindakan:</strong> ${issue.action}</div>` : ""}
+        </div>`).join("")}`;
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="error">Gagal memindai, coba lagi.</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+
+async function doRunMaintenanceAction(action, btnEl) {
+  const noteEl = document.getElementById("maintenance-result-note");
+  const originalLabel = btnEl.textContent;
+  document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = true);
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Memproses...`;
+  noteEl.textContent = "";
+  try {
+    const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action });
+    noteEl.textContent = (res.error || res.success === false)
+      ? `Gagal: ${friendlyError(res.error)}`
+      : `✅ Selesai (${action}).`;
+  } catch (e) {
+    noteEl.textContent = "Gagal, koneksi bermasalah.";
+  } finally {
+    document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = false);
+    btnEl.textContent = originalLabel;
+  }
 }
 
 async function renderKpiManagement() {

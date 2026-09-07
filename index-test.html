@@ -45,6 +45,22 @@
     animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px;
   }
   .btn-spinner.dark { border-color: rgba(32,48,47,0.25); border-top-color: var(--text); }
+  /* iOS-style sliding switch — used for Access Override so the ON/OFF state is shown by
+     the thumb's POSITION (unambiguous), not by a button label that can look like it's
+     restating whatever status text sits next to it. */
+  .toggle-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: var(--border); border-radius: 26px; transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: ""; position: absolute; width: 20px; height: 20px; left: 3px; bottom: 3px;
+    background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--coral); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+  .toggle-switch input:disabled + .toggle-slider { opacity: 0.5; cursor: not-allowed; }
   .topbar, .card { animation: fadeSlideIn 0.28s ease-out; }
   body {
     margin: 0;
@@ -300,7 +316,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-188-superadmin-name-and-clean-menu — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-189-toggle-switch-access-override — TEST</div>
 
 <script>
 // =================================================================
@@ -836,6 +852,7 @@ const translations = {
     dt_reason_required: "Alasan wajib diisi.",
     dt_override_off_toast: "Override dimatikan.",
     dt_override_on_toast: "Override dinyalain — orang ini sekarang bisa akses.",
+    dt_toggle_hint: "Geser ON kalau mau paksa buka akses untuk bulan ini, terlepas dari status di atas. Otomatis gak berlaku lagi begitu masuk bulan berikutnya.",
     dt_health_check_title: "System Health Check",
     dt_health_check_desc: "Scan read-only — cuma melaporkan, tidak mengubah data apapun.",
     dt_run_health_check_btn: "🩺 Jalankan Health Check",
@@ -1322,6 +1339,7 @@ const translations = {
     dt_reason_required: "A reason is required.",
     dt_override_off_toast: "Override turned off.",
     dt_override_on_toast: "Override turned on — this person can now access it.",
+    dt_toggle_hint: "Switch ON to force access open for this month, regardless of the status above. Automatically no longer applies once next month starts.",
     dt_health_check_title: "System Health Check",
     dt_health_check_desc: "Read-only scan — only reports, never changes any data.",
     dt_run_health_check_btn: "🩺 Run Health Check",
@@ -3043,32 +3061,33 @@ async function doLoadAccessOverrideStatus() {
       <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
         <div>
           <div style="font-weight:600; font-size:13px;">${accessOverrideTypeLabel(s.evaluatorType)}</div>
-          <div class="hint" style="font-size:12px;">${s.currentAccess.allowed ? t("dt_access_ok") : `⛔ ${accessOverrideReasonLabel(s.currentAccess.reason)}`}${s.overrideActive ? t("dt_override_on_badge") : ""}</div>
+          <div class="hint" style="font-size:12px;">${s.currentAccess.allowed ? t("dt_access_ok") : `⛔ ${accessOverrideReasonLabel(s.currentAccess.reason)}`}</div>
         </div>
-        <button class="${s.overrideActive ? "secondary" : "primary"}" style="width:auto; padding:6px 14px; font-size:12px;" onclick="doToggleAccessOverride('${staffId}', '${s.evaluatorType}', '${res.monthKey}', ${s.overrideActive}, this)">${s.overrideActive ? t("dt_turn_off_btn") : t("dt_turn_on_btn")}</button>
+        <label class="toggle-switch">
+          <input type="checkbox" ${s.overrideActive ? "checked" : ""} onchange="doToggleAccessOverride('${staffId}', '${s.evaluatorType}', '${res.monthKey}', ${s.overrideActive}, this)" />
+          <span class="toggle-slider"></span>
+        </label>
       </div>`).join("")}
+    <div class="hint" style="margin-top:10px; font-size:11px;">${t("dt_toggle_hint")}</div>
   `;
 }
 
-async function doToggleAccessOverride(staffId, evaluatorType, monthKey, currentlyActive, btnEl) {
-  btnEl.disabled = true;
-  const originalLabel = btnEl.textContent;
-  btnEl.innerHTML = `<span class="btn-spinner dark"></span>...`;
+async function doToggleAccessOverride(staffId, evaluatorType, monthKey, currentlyActive, inputEl) {
+  inputEl.disabled = true;
   try {
     let reason = "";
     if (!currentlyActive) {
       reason = prompt(t("dt_reason_prompt")) || "";
-      if (!reason.trim()) { showToast(t("dt_reason_required"), "error"); return; }
+      if (!reason.trim()) { showToast(t("dt_reason_required"), "error"); inputEl.checked = false; return; }
     }
     const res = currentlyActive
       ? await apiPost("revokeAccessOverride", { requesterId: state.user.staffId, staffId, evaluatorType, monthKey })
       : await apiPost("grantAccessOverride", { requesterId: state.user.staffId, staffId, evaluatorType, monthKey, reason });
-    if (res.error || res.success === false) { showToast(friendlyError(res.error), "error"); return; }
+    if (res.error || res.success === false) { showToast(friendlyError(res.error), "error"); inputEl.checked = currentlyActive; return; }
     showToast(currentlyActive ? t("dt_override_off_toast") : t("dt_override_on_toast"));
     doLoadAccessOverrideStatus();
   } finally {
-    btnEl.disabled = false;
-    btnEl.textContent = originalLabel;
+    inputEl.disabled = false;
   }
 }
 

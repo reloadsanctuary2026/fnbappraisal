@@ -300,7 +300,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-186-manual-access-override-toggle — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-188-superadmin-name-and-clean-menu — TEST</div>
 
 <script>
 // =================================================================
@@ -812,6 +812,48 @@ const translations = {
     gm_calibration_confirm_points: "poin?",
     gm_calibration_confirm_reason_label: "Alasan:",
     gm_calibration_confirm_note: "Skor Self, Leader, dan HR tidak berubah — hanya Final Score resmi yang disesuaikan.",
+    dt_title: "🛠️ Dev Tools",
+    dt_override_title: "Access Override",
+    dt_override_desc: "Katup darurat per-orang — buat kasus kayak \"kontrak baru diperpanjang telat, window normalnya udah kelewat\". Cari orangnya, lihat status akses tiap evaluator type bulan ini, nyalain override kalau perlu. Ini gak ngubah aturan window buat siapapun yang lain.",
+    dt_nik_label: "NIK",
+    dt_nik_placeholder: "Contoh: 1267",
+    dt_search_btn: "Cari",
+    dt_nik_required: "Isi NIK dulu.",
+    dt_override_type_self: "Self",
+    dt_override_type_leader: "Leader/Management",
+    dt_override_type_hr: "HR",
+    dt_override_type_executive: "Executive",
+    dt_reason_new_hire: "Karyawan baru bulan ini (dikecualikan otomatis)",
+    dt_reason_deferred: "Kontrak berakhir terlalu awal bulan ini (deferred)",
+    dt_reason_too_late: "Window sudah ditutup",
+    dt_reason_too_early: "Window belum dibuka",
+    dt_reason_already_submitted: "Sudah pernah submit bulan ini",
+    dt_access_ok: "✅ Bisa akses normal",
+    dt_override_on_badge: " · 🔓 Override aktif",
+    dt_turn_off_btn: "Matikan",
+    dt_turn_on_btn: "Nyalain",
+    dt_reason_prompt: "Alasan singkat (buat catatan, wajib diisi):",
+    dt_reason_required: "Alasan wajib diisi.",
+    dt_override_off_toast: "Override dimatikan.",
+    dt_override_on_toast: "Override dinyalain — orang ini sekarang bisa akses.",
+    dt_health_check_title: "System Health Check",
+    dt_health_check_desc: "Scan read-only — cuma melaporkan, tidak mengubah data apapun.",
+    dt_run_health_check_btn: "🩺 Jalankan Health Check",
+    dt_no_issues_found: "✅ Tidak ada masalah ditemukan.",
+    dt_findings_prefix: "temuan — dicek",
+    dt_action_label: "Tindakan:",
+    dt_scanning: "Memindai...",
+    dt_scan_failed: "Gagal memindai, coba lagi.",
+    dt_maintenance_title: "Maintenance Actions",
+    dt_maintenance_desc: "Sebelumnya hanya bisa dijalankan lewat Apps Script editor.",
+    dt_dedupe_kpi_btn: "Bersihkan Duplikat KPI",
+    dt_migrate_photos_btn: "Migrasi Foto ke Link",
+    dt_clear_caches_btn: "Clear All Caches",
+    dt_processing: "Memproses...",
+    dt_maintenance_failed_prefix: "Gagal:",
+    dt_maintenance_done_prefix: "✅ Selesai",
+    dt_maintenance_conn_error: "Gagal, koneksi bermasalah.",
+    dt_backend_version_label: "Versi backend:",
     faq_general_flow_title: "Alur Umum (Siklus Bulanan)",
     faq_day_1_7: "Tanggal 1–7",
     faq_day_1_7_desc: "Appraise Yourself (semua tier)",
@@ -1256,6 +1298,48 @@ const translations = {
     gm_calibration_confirm_points: "points?",
     gm_calibration_confirm_reason_label: "Reason:",
     gm_calibration_confirm_note: "Self, Leader, and HR scores don't change — only the official Final Score is adjusted.",
+    dt_title: "🛠️ Dev Tools",
+    dt_override_title: "Access Override",
+    dt_override_desc: "A per-person emergency valve — for cases like \"contract was extended late, the normal window already passed\". Look up the person, see their access status for every evaluator type this month, flip an override on if needed. This doesn't change window rules for anyone else.",
+    dt_nik_label: "Employee ID",
+    dt_nik_placeholder: "Example: 1267",
+    dt_search_btn: "Search",
+    dt_nik_required: "Enter an Employee ID first.",
+    dt_override_type_self: "Self",
+    dt_override_type_leader: "Leader/Management",
+    dt_override_type_hr: "HR",
+    dt_override_type_executive: "Executive",
+    dt_reason_new_hire: "New hire this month (automatically excluded)",
+    dt_reason_deferred: "Contract ends too early this month (deferred)",
+    dt_reason_too_late: "Window already closed",
+    dt_reason_too_early: "Window not open yet",
+    dt_reason_already_submitted: "Already submitted this month",
+    dt_access_ok: "✅ Normal access available",
+    dt_override_on_badge: " · 🔓 Override active",
+    dt_turn_off_btn: "Turn Off",
+    dt_turn_on_btn: "Turn On",
+    dt_reason_prompt: "Brief reason (for the record, required):",
+    dt_reason_required: "A reason is required.",
+    dt_override_off_toast: "Override turned off.",
+    dt_override_on_toast: "Override turned on — this person can now access it.",
+    dt_health_check_title: "System Health Check",
+    dt_health_check_desc: "Read-only scan — only reports, never changes any data.",
+    dt_run_health_check_btn: "🩺 Run Health Check",
+    dt_no_issues_found: "✅ No issues found.",
+    dt_findings_prefix: "findings — checked",
+    dt_action_label: "Action:",
+    dt_scanning: "Scanning...",
+    dt_scan_failed: "Scan failed, try again.",
+    dt_maintenance_title: "Maintenance Actions",
+    dt_maintenance_desc: "Previously only runnable from the Apps Script editor.",
+    dt_dedupe_kpi_btn: "Clean Up Duplicate KPIs",
+    dt_migrate_photos_btn: "Migrate Photos to Links",
+    dt_clear_caches_btn: "Clear All Caches",
+    dt_processing: "Processing...",
+    dt_maintenance_failed_prefix: "Failed:",
+    dt_maintenance_done_prefix: "✅ Done",
+    dt_maintenance_conn_error: "Failed, connection issue.",
+    dt_backend_version_label: "Backend version:",
     faq_general_flow_title: "General Flow (Monthly Cycle)",
     faq_day_1_7: "Days 1–7",
     faq_day_1_7_desc: "Appraise Yourself (every tier)",
@@ -2059,7 +2143,37 @@ async function completeLogin(nik, pin) {
 function availableScreensGrouped(user) {
   const groups = [];
 
-  if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1) {
+  // Superadmin has every capability flag at once (by design, so it can reach anything for
+  // testing/admin work), which would otherwise repeat the SAME screen (review,
+  // myEvaluations, trainingNeeds...) under 3-4 different group headers below — something
+  // that never happens for a real person, since nobody is simultaneously Leader+Executive+
+  // HR+Admin Operational. One deduplicated list here keeps the superadmin menu genuinely
+  // lean instead of showing the same button 3 times under different headings.
+  if (user.isSuperAdmin) {
+    const seen = new Set();
+    const items = [];
+    const add = (key, label) => { if (!seen.has(key)) { seen.add(key); items.push({ key, label }); } };
+    add("myEvaluations", user.appraiseLabel || t("menu_appraise_all"));
+    add("review", t("menu_review_all"));
+    add("gm", t("menu_approve_final"));
+    add("trainingNeeds", t("menu_training_needs"));
+    add("feedback", t("menu_read_feedback"));
+    add("sc", t("menu_calc_sc"));
+    add("historical", t("menu_input_historical"));
+    if (user.hasStaffMappingAccess) add("staffMapping", t("menu_staff_mapping"));
+    add("kpiManagement", t("menu_manage_kpi"));
+    return [
+      { name: "MyTeams", items },
+      { name: "DevTools", items: [{ key: "devTools", label: "🛠️ Dev Tools (Superadmin)" }] },
+    ];
+  }
+
+  // Superadmin's tier is a synthetic 'Staff' (needed so its Self Appraisal capability
+  // resolves to a real KPI set for testing), but it has no genuine personal appraisal
+  // history at all — showing "My Appraisal" (Self/History/Development Plan) here would just
+  // be empty/misleading noise on an account that exists purely for administration, not to
+  // be evaluated itself.
+  if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1 && !user.isSuperAdmin) {
     groups.push({ name: "MyAppraisal", items: [
       { key: "self", label: t("menu_self") },
       { key: "history", label: t("menu_history") },
@@ -2181,7 +2295,10 @@ function renderRoleMenu() {
 
 async function renderDashboard() {
   app.innerHTML = topbar("Dashboard Saya") + `<div class="loading">Memuat...</div>`;
-  const hasSelfCapability = ["Staff", "Leader", "Management"].indexOf(state.user.tier) !== -1;
+  // Superadmin never has real personal appraisal history (synthetic account, not a real
+  // person being evaluated) — skip the chart fetch/render entirely rather than showing an
+  // always-empty "no history yet" card that never resolves into anything useful.
+  const hasSelfCapability = ["Staff", "Leader", "Management"].indexOf(state.user.tier) !== -1 && !state.user.isSuperAdmin;
   const groups = availableScreensGrouped(state.user);
 
   let chartBlock = "";
@@ -2864,50 +2981,56 @@ function kpiCoverageSummary(res) {
 async function renderDevTools() {
   if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
   const showMenuLink = availableScreens(state.user).length > 1;
-  app.innerHTML = topbar("🛠️ Dev Tools") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+  app.innerHTML = topbar(t("dt_title")) + `
+    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
-      <h2>Access Override</h2>
-      <div class="hint" style="margin-bottom:10px;">Katup darurat per-orang — buat kasus kayak "kontrak baru diperpanjang telat, window normalnya udah kelewat". Cari orangnya, lihat status akses tiap evaluator type bulan ini, nyalain override kalau perlu. Ini gak ngubah aturan window buat siapapun yang lain.</div>
-      <label>NIK</label>
+      <h2>${t("dt_override_title")}</h2>
+      <div class="hint" style="margin-bottom:10px;">${t("dt_override_desc")}</div>
+      <label>${t("dt_nik_label")}</label>
       <div class="row-flex">
-        <input type="text" id="override-nik-input" placeholder="Contoh: 1267" style="flex:1;" />
-        <button class="secondary" style="flex:0 0 auto;" onclick="doLoadAccessOverrideStatus()">Cari</button>
+        <input type="text" id="override-nik-input" placeholder="${t("dt_nik_placeholder")}" style="flex:1;" />
+        <button class="secondary" style="flex:0 0 auto;" onclick="doLoadAccessOverrideStatus()">${t("dt_search_btn")}</button>
       </div>
       <div id="access-override-results" style="margin-top:12px;"></div>
     </div>
     <div class="card">
-      <h2>System Health Check</h2>
-      <div class="hint" style="margin-bottom:10px;">Scan read-only — cuma melaporkan, tidak mengubah data apapun.</div>
-      <button class="secondary" id="health-check-btn" onclick="doRunHealthCheck()">🩺 Jalankan Health Check</button>
+      <h2>${t("dt_health_check_title")}</h2>
+      <div class="hint" style="margin-bottom:10px;">${t("dt_health_check_desc")}</div>
+      <button class="secondary" id="health-check-btn" onclick="doRunHealthCheck()">${t("dt_run_health_check_btn")}</button>
       <div id="health-check-results" style="margin-top:12px;"></div>
     </div>
     <div class="card">
-      <h2>Maintenance Actions</h2>
-      <div class="hint" style="margin-bottom:10px;">Sebelumnya hanya bisa dijalankan lewat Apps Script editor.</div>
-      <button class="secondary" id="maint-dedupeKpiSheet-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('dedupeKpiSheet', this)">Bersihkan Duplikat KPI</button>
-      <button class="secondary" id="maint-migratePhotosToLinks-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('migratePhotosToLinks', this)">Migrasi Foto ke Link</button>
-      <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">Clear All Caches</button>
+      <h2>${t("dt_maintenance_title")}</h2>
+      <div class="hint" style="margin-bottom:10px;">${t("dt_maintenance_desc")}</div>
+      <button class="secondary" id="maint-dedupeKpiSheet-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('dedupeKpiSheet', this)">${t("dt_dedupe_kpi_btn")}</button>
+      <button class="secondary" id="maint-migratePhotosToLinks-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('migratePhotosToLinks', this)">${t("dt_migrate_photos_btn")}</button>
+      <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
-      <div class="hint">Versi backend: ${state.user._debugVersion || "-"}</div>
+      <div class="hint">${t("dt_backend_version_label")} ${state.user._debugVersion || "-"}</div>
     </div>`;
 }
 
-const ACCESS_OVERRIDE_TYPE_LABEL = { self: "Self", leader: "Leader/Management", hr: "HR", executive: "Executive" };
-const ACCESS_OVERRIDE_REASON_LABEL = {
-  new_hire_this_month: "Karyawan baru bulan ini (dikecualikan otomatis)",
-  deferred_to_previous_cycle: "Kontrak berakhir terlalu awal bulan ini (deferred)",
-  too_late: "Window sudah ditutup",
-  too_early: "Window belum dibuka",
-  already_submitted: "Sudah pernah submit bulan ini",
-};
+function accessOverrideTypeLabel(evaluatorType) {
+  const map = { self: "dt_override_type_self", leader: "dt_override_type_leader", hr: "dt_override_type_hr", executive: "dt_override_type_executive" };
+  return map[evaluatorType] ? t(map[evaluatorType]) : evaluatorType;
+}
+function accessOverrideReasonLabel(reason) {
+  const map = {
+    new_hire_this_month: "dt_reason_new_hire",
+    deferred_to_previous_cycle: "dt_reason_deferred",
+    too_late: "dt_reason_too_late",
+    too_early: "dt_reason_too_early",
+    already_submitted: "dt_reason_already_submitted",
+  };
+  return map[reason] ? t(map[reason]) : reason;
+}
 
 async function doLoadAccessOverrideStatus() {
   const staffId = document.getElementById("override-nik-input").value.trim();
   const resultsEl = document.getElementById("access-override-results");
-  if (!staffId) { resultsEl.innerHTML = `<div class="error">Isi NIK dulu.</div>`; return; }
+  if (!staffId) { resultsEl.innerHTML = `<div class="error">${t("dt_nik_required")}</div>`; return; }
   resultsEl.innerHTML = `<div class="loading">${t("form_loading")}</div>`;
 
   const res = await apiGet("getAccessOverrideStatus", { requesterId: state.user.staffId, staffId });
@@ -2919,10 +3042,10 @@ async function doLoadAccessOverrideStatus() {
     ${res.status.map(s => `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
         <div>
-          <div style="font-weight:600; font-size:13px;">${ACCESS_OVERRIDE_TYPE_LABEL[s.evaluatorType]}</div>
-          <div class="hint" style="font-size:12px;">${s.currentAccess.allowed ? "✅ Bisa akses normal" : `⛔ ${ACCESS_OVERRIDE_REASON_LABEL[s.currentAccess.reason] || s.currentAccess.reason}`}${s.overrideActive ? " · 🔓 Override aktif" : ""}</div>
+          <div style="font-weight:600; font-size:13px;">${accessOverrideTypeLabel(s.evaluatorType)}</div>
+          <div class="hint" style="font-size:12px;">${s.currentAccess.allowed ? t("dt_access_ok") : `⛔ ${accessOverrideReasonLabel(s.currentAccess.reason)}`}${s.overrideActive ? t("dt_override_on_badge") : ""}</div>
         </div>
-        <button class="${s.overrideActive ? "secondary" : "primary"}" style="width:auto; padding:6px 14px; font-size:12px;" onclick="doToggleAccessOverride('${staffId}', '${s.evaluatorType}', '${res.monthKey}', ${s.overrideActive}, this)">${s.overrideActive ? "Matikan" : "Nyalain"}</button>
+        <button class="${s.overrideActive ? "secondary" : "primary"}" style="width:auto; padding:6px 14px; font-size:12px;" onclick="doToggleAccessOverride('${staffId}', '${s.evaluatorType}', '${res.monthKey}', ${s.overrideActive}, this)">${s.overrideActive ? t("dt_turn_off_btn") : t("dt_turn_on_btn")}</button>
       </div>`).join("")}
   `;
 }
@@ -2934,14 +3057,14 @@ async function doToggleAccessOverride(staffId, evaluatorType, monthKey, currentl
   try {
     let reason = "";
     if (!currentlyActive) {
-      reason = prompt("Alasan singkat (buat catatan, wajib diisi):") || "";
-      if (!reason.trim()) { showToast("Alasan wajib diisi.", "error"); return; }
+      reason = prompt(t("dt_reason_prompt")) || "";
+      if (!reason.trim()) { showToast(t("dt_reason_required"), "error"); return; }
     }
     const res = currentlyActive
       ? await apiPost("revokeAccessOverride", { requesterId: state.user.staffId, staffId, evaluatorType, monthKey })
       : await apiPost("grantAccessOverride", { requesterId: state.user.staffId, staffId, evaluatorType, monthKey, reason });
     if (res.error || res.success === false) { showToast(friendlyError(res.error), "error"); return; }
-    showToast(currentlyActive ? "Override dimatikan." : "Override dinyalain — orang ini sekarang bisa akses.");
+    showToast(currentlyActive ? t("dt_override_off_toast") : t("dt_override_on_toast"));
     doLoadAccessOverrideStatus();
   } finally {
     btnEl.disabled = false;
@@ -2954,7 +3077,7 @@ async function doRunHealthCheck() {
   const resultsEl = document.getElementById("health-check-results");
   const originalLabel = btn.textContent;
   btn.disabled = true;
-  btn.innerHTML = `<span class="btn-spinner dark"></span>Memindai...`;
+  btn.innerHTML = `<span class="btn-spinner dark"></span>${t("dt_scanning")}`;
   resultsEl.innerHTML = "";
   try {
     const res = await apiGet("runSystemHealthCheck", { requesterId: state.user.staffId });
@@ -2963,21 +3086,21 @@ async function doRunHealthCheck() {
       return;
     }
     if (res.issueCount === 0) {
-      resultsEl.innerHTML = `<div class="hint" style="color:var(--green); font-weight:600;">✅ Tidak ada masalah ditemukan.</div>`;
+      resultsEl.innerHTML = `<div class="hint" style="color:var(--green); font-weight:600;">${t("dt_no_issues_found")}</div>`;
       return;
     }
     const severityColor = { error: "var(--red)", warning: "var(--amber)", info: "var(--text-muted)" };
     const severityBg = { error: "var(--red-bg)", warning: "var(--amber-bg)", info: "var(--sand)" };
     resultsEl.innerHTML = `
-      <div class="hint" style="margin-bottom:8px;">${res.issueCount} temuan — dicek ${new Date(res.checkedAt).toLocaleString("id-ID")}</div>
+      <div class="hint" style="margin-bottom:8px;">${res.issueCount} ${t("dt_findings_prefix")} ${new Date(res.checkedAt).toLocaleString(state.lang === "en" ? "en-US" : "id-ID")}</div>
       ${res.issues.map(issue => `
         <div style="background:${severityBg[issue.severity]}; border-radius:10px; padding:10px 12px; margin-bottom:8px;">
           <div style="font-weight:700; color:${severityColor[issue.severity]}; font-size:13px;">${issue.area} — ${issue.title}</div>
           ${issue.detail ? `<div style="font-size:12px; color:var(--text-muted); margin-top:4px;">${issue.detail}</div>` : ""}
-          ${issue.action ? `<div style="font-size:12px; margin-top:4px;"><strong>Tindakan:</strong> ${issue.action}</div>` : ""}
+          ${issue.action ? `<div style="font-size:12px; margin-top:4px;"><strong>${t("dt_action_label")}</strong> ${issue.action}</div>` : ""}
         </div>`).join("")}`;
   } catch (e) {
-    resultsEl.innerHTML = `<div class="error">Gagal memindai, coba lagi.</div>`;
+    resultsEl.innerHTML = `<div class="error">${t("dt_scan_failed")}</div>`;
   } finally {
     btn.disabled = false;
     btn.textContent = originalLabel;
@@ -2988,15 +3111,15 @@ async function doRunMaintenanceAction(action, btnEl) {
   const noteEl = document.getElementById("maintenance-result-note");
   const originalLabel = btnEl.textContent;
   document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = true);
-  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Memproses...`;
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>${t("dt_processing")}`;
   noteEl.textContent = "";
   try {
     const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action });
     noteEl.textContent = (res.error || res.success === false)
-      ? `Gagal: ${friendlyError(res.error)}`
-      : `✅ Selesai (${action}).`;
+      ? `${t("dt_maintenance_failed_prefix")} ${friendlyError(res.error)}`
+      : `${t("dt_maintenance_done_prefix")} (${action}).`;
   } catch (e) {
-    noteEl.textContent = "Gagal, koneksi bermasalah.";
+    noteEl.textContent = t("dt_maintenance_conn_error");
   } finally {
     document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = false);
     btnEl.textContent = originalLabel;

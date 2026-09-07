@@ -299,7 +299,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-06-182-i18n-training-needs — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-06-185-i18n-faq-and-guide — LIVE</div>
 
 <script>
 // =================================================================
@@ -678,6 +678,147 @@ const translations = {
     tn_status_done: "Selesai",
     tn_dev_plan_desc: "Area pengembangan yang dicatat oleh atasan/HR untuk kamu — read only.",
     tn_no_dev_plan: "Belum ada development plan tercatat untuk kamu.",
+    sc_month_label: "Bulan",
+    sc_total_title_prefix: "Total Service Charge —",
+    sc_total_input_label: "Total SC bulan ini (Rp, sebelum potongan apapun)",
+    sc_save_total_btn: "Simpan Total SC",
+    sc_table_total_net: "Total SC (Net)",
+    sc_table_staff_pool: "Staff Bonus Pool (tetap)",
+    sc_table_distributable: "Distributable Amount",
+    sc_table_base_share: "Base Share / staff",
+    sc_table_deduction_pool: "Deduction Pool (dari Underperform)",
+    sc_table_performer_count: "# Performer",
+    sc_table_pool_share: "Pool Share / performer",
+    sc_export_finance_btn: "📊 Export ke Excel (buat Finance)",
+    sc_role_bonus_title_prefix: "Monthly Role-Based Bonus —",
+    sc_role_bonus_per_person: "/orang",
+    sc_role_bonus_hint: "Pilih staff yang dapat bonus tambahan bulan ini, sesuai kuota tiap role (Memo 122/HR-IM/VIII/2026). Dikonsolidasikan dari usulan Leader/Department Head masing-masing.",
+    sc_role_bonus_qty_suffix: "orang)",
+    sc_role_bonus_save_btn: "Simpan Role-Based Bonus",
+    sc_leave_blank_option: "— kosongkan —",
+    sc_export_generating: "Membuat sheet export...",
+    sc_export_failed_prefix: "Gagal export:",
+    sc_export_ready: "Sheet siap!",
+    sc_export_open_link: "Buka di Google Sheets",
+    sc_export_next_step: "— lalu File → Download → Microsoft Excel (.xlsx).",
+    sc_total_save_failed_prefix: "Gagal simpan Total SC:",
+    sc_total_saved_toast: "Total SC tersimpan!",
+    sc_duplicate_selection_prefix: "dipilih dobel untuk",
+    sc_duplicate_selection_suffix: "— cek lagi.",
+    sc_quota_exceeded_prefix: "Gagal simpan: kuota",
+    sc_quota_exceeded_suffix: "kelebihan.",
+    sc_role_bonus_saved_toast: "Role-Based Bonus tersimpan!",
+    gm_edit_mode_warning: "✏️ Mode Edit — mengubah Decision yang udah di-approve sebelumnya.",
+    gm_decision_label: "Decision (wajib)",
+    gm_select_placeholder: "— pilih —",
+    gm_extend_duration_label: "Berapa lama extend probation/kontrak-nya? (wajib)",
+    gm_amount_placeholder: "Jumlah",
+    gm_unit_day: "Hari",
+    gm_unit_week: "Minggu",
+    gm_unit_month: "Bulan",
+    gm_from_position_label: "Dari Posisi",
+    gm_to_position_label: "Ke Posisi (wajib — cuma level sama/di bawah)",
+    gm_oneonone_label: "1-on-1 Status (wajib)",
+    gm_notes_label: "Catatan (wajib)",
+    gm_save_changes_btn: "Simpan Perubahan",
+    gm_confirm_approval_btn: "Konfirmasi Approval",
+    gm_month_label: "Bulan appraisal",
+    gm_approval_window_hint: "Approval cuma bisa dilakukan tanggal 28 sampai tanggal 4 bulan depan.",
+    gm_appraisal_title_suffix: "staff",
+    gm_approve_all_btn: "Approve Semua yang Layak",
+    gm_approve_all_hint: "\"Approve Semua\" otomatis approve yang Performer (skip yang di bawah standar), Decision default \"Approved — Lanjut\".",
+    gm_export_decision_log_btn: "📊 Export Decision Log (semua bulan)",
+    gm_search_placeholder: "Cari nama...",
+    gm_sort_placeholder: "Urutkan...",
+    gm_sort_name_asc: "Nama (A-Z)",
+    gm_sort_name_desc: "Nama (Z-A)",
+    gm_sort_score_desc: "Skor Tertinggi",
+    gm_sort_score_asc: "Skor Terendah",
+    gm_all_department: "Semua Department",
+    gm_underperform_only_btn: "Underperform Saja",
+    gm_not_approved_only_btn: "Belum Diputuskan Saja",
+    gm_appraised_by_prefix: "(Dinilai oleh",
+    gm_decision_label_inline: "Decision:",
+    gm_approved_badge: "Disetujui",
+    gm_edit_btn: "Edit",
+    gm_approve_btn: "Approve",
+    gm_no_appraisal_this_month: "Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.",
+    gm_modal_loading: "Memuat...",
+    gm_trend_points_suffix: "poin",
+    gm_trend_from_last_month: "dari bulan lalu",
+    gm_trend_score_of_month_prefix: "Skor bulan",
+    gm_trend_no_previous: "Belum ada data bulan sebelumnya buat dibandingin.",
+    gm_trend_no_history: "Belum ada riwayat appraisal yang di-approve.",
+    gm_criterion_detail_title: "Detail per Kriteria (Leader/Mgmt)",
+    gm_criterion_header: "Kriteria",
+    gm_still_weak_prefix: "⚠️",
+    gm_still_weak_suffix: "kriteria masih rendah (≤3) bulan ini:",
+    gm_historical_input_note: "Kolom bulan sebelumnya kosong (\"-\") kalau bulan itu diinput lewat \"Input Data Historis\" — data itu cuma nyimpen total per section, bukan per kriteria.",
+    gm_no_criterion_data: "Belum ada data per kriteria buat dibandingkan bulan ini — kemungkinan bulan ini diinput lewat \"Input Data Historis\" (cuma nyimpen total per section, bukan per kriteria), atau Leader/Mgmt belum submit appraisal bulan ini.",
+    gm_decision_title: "Decision",
+    gm_mutation_label: "Mutasi:",
+    gm_extension_label: "Perpanjangan:",
+    gm_oneonone_inline_label: "1-on-1:",
+    gm_notes_inline_label: "Catatan:",
+    gm_contract_end_label: "Kontrak berakhir:",
+    gm_close_btn: "Tutup",
+    gm_change_photo_btn: "📷 Ganti Foto",
+    gm_calibration_loading: "Memuat saran kalibrasi...",
+    gm_calibration_insufficient: "Belum tersedia cukup data historis untuk memberikan saran kalibrasi pada evaluator bulan ini.",
+    gm_calibration_suggestion_label: "SARAN KALIBRASI",
+    gm_calibration_evaluator_label: "Evaluator:",
+    gm_calibration_evaluator_avg_label: "Rata-rata skor evaluator ini:",
+    gm_calibration_company_avg_label: "Rata-rata skor perusahaan:",
+    gm_calibration_sample_suffix: "data historis)",
+    gm_calibration_suggested_adj_label: "Saran penyesuaian:",
+    gm_calibration_points_suffix: "poin",
+    gm_calibration_use_btn: "Gunakan Saran",
+    gm_calibration_applied_reason_prefix: "Penyesuaian berdasarkan pola historis evaluator",
+    gm_calibration_applied_reason_avg: "rata-rata",
+    gm_calibration_applied_reason_vs_company: "dibanding rata-rata perusahaan",
+    gm_decision_required: "Decision wajib dipilih dulu.",
+    gm_oneonone_required: "1-on-1 Status wajib dipilih dulu.",
+    gm_notes_required: "Catatan wajib diisi.",
+    gm_extend_duration_required: "Durasi extend wajib diisi (angka lebih dari 0).",
+    gm_mutation_position_required: "Posisi tujuan mutasi wajib dipilih.",
+    gm_save_edit_failed_prefix: "Gagal simpan perubahan:",
+    gm_edit_success_toast: "Decision berhasil diperbarui! Notifikasi [DIEDIT] terkirim ke pihak terkait.",
+    gm_calibration_reason_required: "Alasan Calibration Adjustment wajib diisi kalau ada penyesuaian.",
+    gm_approve_failed_prefix: "Gagal approve:",
+    gm_approve_success_toast: "Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.",
+    gm_export_decision_generating: "Membuat sheet export...",
+    gm_export_decision_failed_prefix: "Gagal export:",
+    gm_export_decision_ready_prefix: "Sheet siap",
+    gm_export_decision_ready_suffix: "record)!",
+    gm_export_open_link: "Buka di Google Sheets",
+    gm_export_next_step: "— lalu File → Download → Excel.",
+    gm_approve_all_failed_prefix: "Gagal approve semua:",
+    gm_approve_all_success_suffix: "appraisal ter-approve! Notifikasi terkirim.",
+    gm_calibration_title: "Kalibrasi Skor",
+    gm_calibration_desc: "Skor Self, Leader, dan HR tidak berubah. Penyesuaian ini hanya memengaruhi Final Score dan Status resmi, dan alasannya akan tercatat secara permanen.",
+    gm_calibration_adj_label: "Penyesuaian (poin)",
+    gm_calibration_adj_placeholder: "Contoh: 8 atau -5",
+    gm_calibration_reason_label: "Alasan Penyesuaian (wajib jika ada penyesuaian)",
+    gm_calibration_reason_placeholder: "Contoh: Evaluator secara konsisten memberikan skor lebih rendah dibanding rata-rata",
+    gm_calibration_confirm_prefix: "Terapkan penyesuaian kalibrasi sebesar",
+    gm_calibration_confirm_points: "poin?",
+    gm_calibration_confirm_reason_label: "Alasan:",
+    gm_calibration_confirm_note: "Skor Self, Leader, dan HR tidak berubah — hanya Final Score resmi yang disesuaikan.",
+    faq_general_flow_title: "Alur Umum (Siklus Bulanan)",
+    faq_day_1_7: "Tanggal 1–7",
+    faq_day_1_7_desc: "Appraise Yourself (semua tier)",
+    faq_day_8_17: "Tanggal 8–17",
+    faq_day_8_17_desc: "Leader/Management/Executive menilai tim-nya",
+    faq_day_18_27: "Tanggal 18–27",
+    faq_day_18_27_desc: "HR menilai semua tier",
+    faq_day_28_4: "Tanggal 28 - 4 (bulan depan)",
+    faq_day_28_4_desc: "Executive Approval + Decision final",
+    faq_general_flow_note: "Kalau fase sebelumnya diisi lebih awal, fase berikutnya bisa dibuka lebih cepat juga — tenggat waktunya tetap sama.",
+    faq_menu_functions_title: "Fungsi Tiap Menu Kamu",
+    faq_role_flow_title: "Alur per Role",
+    faq_you_suffix: "(kamu)",
+    faq_qa_title: "Pertanyaan Umum",
+    faq_page_title: "FAQ & Panduan",
     form_too_early: "Belum waktunya. Coba lagi mulai",
     form_too_late_full: "Waktu untuk mengisi appraisal ini sudah lewat.",
     form_max_attempts: "Appraisal ini sudah diisi",
@@ -981,6 +1122,147 @@ const translations = {
     tn_status_done: "Done",
     tn_dev_plan_desc: "Development areas recorded by your manager/HR for you — read only.",
     tn_no_dev_plan: "No development plan recorded for you yet.",
+    sc_month_label: "Month",
+    sc_total_title_prefix: "Total Service Charge —",
+    sc_total_input_label: "Total SC this month (Rp, before any deductions)",
+    sc_save_total_btn: "Save Total SC",
+    sc_table_total_net: "Total SC (Net)",
+    sc_table_staff_pool: "Staff Bonus Pool (fixed)",
+    sc_table_distributable: "Distributable Amount",
+    sc_table_base_share: "Base Share / staff",
+    sc_table_deduction_pool: "Deduction Pool (from Underperform)",
+    sc_table_performer_count: "# Performer",
+    sc_table_pool_share: "Pool Share / performer",
+    sc_export_finance_btn: "📊 Export to Excel (for Finance)",
+    sc_role_bonus_title_prefix: "Monthly Role-Based Bonus —",
+    sc_role_bonus_per_person: "/person",
+    sc_role_bonus_hint: "Select staff who receive an additional bonus this month, per each role's quota (Memo 122/HR-IM/VIII/2026). Consolidated from each Leader/Department Head's proposal.",
+    sc_role_bonus_qty_suffix: "people)",
+    sc_role_bonus_save_btn: "Save Role-Based Bonus",
+    sc_leave_blank_option: "— leave blank —",
+    sc_export_generating: "Generating export sheet...",
+    sc_export_failed_prefix: "Export failed:",
+    sc_export_ready: "Sheet ready!",
+    sc_export_open_link: "Open in Google Sheets",
+    sc_export_next_step: "— then File → Download → Microsoft Excel (.xlsx).",
+    sc_total_save_failed_prefix: "Failed to save Total SC:",
+    sc_total_saved_toast: "Total SC saved!",
+    sc_duplicate_selection_prefix: "was picked twice for",
+    sc_duplicate_selection_suffix: "— please check again.",
+    sc_quota_exceeded_prefix: "Save failed: quota for",
+    sc_quota_exceeded_suffix: "exceeded.",
+    sc_role_bonus_saved_toast: "Role-Based Bonus saved!",
+    gm_edit_mode_warning: "✏️ Edit Mode — changing a Decision that was already approved before.",
+    gm_decision_label: "Decision (required)",
+    gm_select_placeholder: "— select —",
+    gm_extend_duration_label: "How long is the probation/contract extension? (required)",
+    gm_amount_placeholder: "Amount",
+    gm_unit_day: "Day(s)",
+    gm_unit_week: "Week(s)",
+    gm_unit_month: "Month(s)",
+    gm_from_position_label: "From Position",
+    gm_to_position_label: "To Position (required — same level or below only)",
+    gm_oneonone_label: "1-on-1 Status (required)",
+    gm_notes_label: "Notes (required)",
+    gm_save_changes_btn: "Save Changes",
+    gm_confirm_approval_btn: "Confirm Approval",
+    gm_month_label: "Appraisal month",
+    gm_approval_window_hint: "Approval can only be done from the 28th to the 4th of the following month.",
+    gm_appraisal_title_suffix: "staff",
+    gm_approve_all_btn: "Approve All Eligible",
+    gm_approve_all_hint: "\"Approve All\" automatically approves Performers (skips those below standard), with default Decision \"Approved — Continue\".",
+    gm_export_decision_log_btn: "📊 Export Decision Log (all months)",
+    gm_search_placeholder: "Search name...",
+    gm_sort_placeholder: "Sort...",
+    gm_sort_name_asc: "Name (A-Z)",
+    gm_sort_name_desc: "Name (Z-A)",
+    gm_sort_score_desc: "Highest Score",
+    gm_sort_score_asc: "Lowest Score",
+    gm_all_department: "All Departments",
+    gm_underperform_only_btn: "Underperform Only",
+    gm_not_approved_only_btn: "Not Decided Yet Only",
+    gm_appraised_by_prefix: "(Appraised by",
+    gm_decision_label_inline: "Decision:",
+    gm_approved_badge: "Approved",
+    gm_edit_btn: "Edit",
+    gm_approve_btn: "Approve",
+    gm_no_appraisal_this_month: "No appraisals submitted yet for this month — try switching the month above.",
+    gm_modal_loading: "Loading...",
+    gm_trend_points_suffix: "points",
+    gm_trend_from_last_month: "from last month",
+    gm_trend_score_of_month_prefix: "Score for",
+    gm_trend_no_previous: "No previous month's data to compare against yet.",
+    gm_trend_no_history: "No approved appraisal history yet.",
+    gm_criterion_detail_title: "Per-Criterion Detail (Leader/Mgmt)",
+    gm_criterion_header: "Criterion",
+    gm_still_weak_prefix: "⚠️",
+    gm_still_weak_suffix: "criteria still low (≤3) this month:",
+    gm_historical_input_note: "The previous month's column shows \"-\" if that month was entered via \"Enter Historical Data\" — that data only saves totals per section, not per criterion.",
+    gm_no_criterion_data: "No per-criterion data to compare for this month yet — this month may have been entered via \"Enter Historical Data\" (only saves totals per section, not per criterion), or Leader/Mgmt hasn't submitted this month's appraisal yet.",
+    gm_decision_title: "Decision",
+    gm_mutation_label: "Mutation:",
+    gm_extension_label: "Extension:",
+    gm_oneonone_inline_label: "1-on-1:",
+    gm_notes_inline_label: "Notes:",
+    gm_contract_end_label: "Contract ends:",
+    gm_close_btn: "Close",
+    gm_change_photo_btn: "📷 Change Photo",
+    gm_calibration_loading: "Loading calibration suggestion...",
+    gm_calibration_insufficient: "Not enough historical data yet to give a calibration suggestion for this month's evaluator.",
+    gm_calibration_suggestion_label: "CALIBRATION SUGGESTION",
+    gm_calibration_evaluator_label: "Evaluator:",
+    gm_calibration_evaluator_avg_label: "This evaluator's average score:",
+    gm_calibration_company_avg_label: "Company average score:",
+    gm_calibration_sample_suffix: "historical records)",
+    gm_calibration_suggested_adj_label: "Suggested adjustment:",
+    gm_calibration_points_suffix: "points",
+    gm_calibration_use_btn: "Use Suggestion",
+    gm_calibration_applied_reason_prefix: "Adjustment based on the evaluator's historical pattern",
+    gm_calibration_applied_reason_avg: "average",
+    gm_calibration_applied_reason_vs_company: "versus the company average",
+    gm_decision_required: "Decision must be selected first.",
+    gm_oneonone_required: "1-on-1 Status must be selected first.",
+    gm_notes_required: "Notes are required.",
+    gm_extend_duration_required: "Extension duration is required (a number greater than 0).",
+    gm_mutation_position_required: "A mutation destination position must be selected.",
+    gm_save_edit_failed_prefix: "Failed to save changes:",
+    gm_edit_success_toast: "Decision updated successfully! An [EDITED] notification was sent to those involved.",
+    gm_calibration_reason_required: "A Calibration Adjustment reason is required if there's an adjustment.",
+    gm_approve_failed_prefix: "Approval failed:",
+    gm_approve_success_toast: "Approved! Notifications sent to the staff, leader, management, and HR involved.",
+    gm_export_decision_generating: "Generating export sheet...",
+    gm_export_decision_failed_prefix: "Export failed:",
+    gm_export_decision_ready_prefix: "Sheet ready",
+    gm_export_decision_ready_suffix: "records)!",
+    gm_export_open_link: "Open in Google Sheets",
+    gm_export_next_step: "— then File → Download → Excel.",
+    gm_approve_all_failed_prefix: "Failed to approve all:",
+    gm_approve_all_success_suffix: "appraisals approved! Notifications sent.",
+    gm_calibration_title: "Calibration Score Adjustment",
+    gm_calibration_desc: "Self, Leader, and HR scores don't change. This adjustment only affects the Final Score and official Status, and the reason will be permanently recorded.",
+    gm_calibration_adj_label: "Adjustment (points)",
+    gm_calibration_adj_placeholder: "Example: 8 or -5",
+    gm_calibration_reason_label: "Adjustment Reason (required if there's an adjustment)",
+    gm_calibration_reason_placeholder: "Example: The evaluator consistently gives lower scores than average",
+    gm_calibration_confirm_prefix: "Apply a calibration adjustment of",
+    gm_calibration_confirm_points: "points?",
+    gm_calibration_confirm_reason_label: "Reason:",
+    gm_calibration_confirm_note: "Self, Leader, and HR scores don't change — only the official Final Score is adjusted.",
+    faq_general_flow_title: "General Flow (Monthly Cycle)",
+    faq_day_1_7: "Days 1–7",
+    faq_day_1_7_desc: "Appraise Yourself (every tier)",
+    faq_day_8_17: "Days 8–17",
+    faq_day_8_17_desc: "Leader/Management/Executive rates their team",
+    faq_day_18_27: "Days 18–27",
+    faq_day_18_27_desc: "HR rates every tier",
+    faq_day_28_4: "Day 28 to the 4th (next month)",
+    faq_day_28_4_desc: "Executive Approval + final Decision",
+    faq_general_flow_note: "If an earlier phase is filled in ahead of time, the next phase can open sooner too — the deadline itself stays the same.",
+    faq_menu_functions_title: "What Each of Your Menus Does",
+    faq_role_flow_title: "Flow per Role",
+    faq_you_suffix: "(you)",
+    faq_qa_title: "Frequently Asked Questions",
+    faq_page_title: "FAQ & Guide",
     form_too_early: "Not open yet. Try again starting",
     form_too_late_full: "The window to fill out this appraisal has closed.",
     form_max_attempts: "This appraisal has already been submitted",
@@ -1176,75 +1458,133 @@ function goBackFromFaq() {
 }
 
 function renderFaq() {
-  const MENU_DESCRIPTIONS = {
-    self: "Isi appraisal buat diri sendiri — cuma bisa disubmit 1x per bulan, gak bisa direvisi setelah terkirim.",
-    history: "Lihat riwayat skor & Decision dari bulan-bulan yang udah di-approve Executive, plus grafik tren skor dari waktu ke waktu.",
-    myEvaluations: "Isi appraisal buat orang-orang yang jadi tanggung jawab kamu. Kalau orangnya udah isi Self duluan, skornya muncul sebagai referensi.",
-    review: "Lihat hasil appraisal orang-orang di scope kamu — read-only, gak ada tombol isi/ubah, cuma buat monitoring/lihat-lihat. Bisa geser bulan.",
-    company: "Ringkasan rata-rata skor per department/tier — buat lihat gambaran besar performa. Gak nampilin skor personal individu, cuma agregat.",
-    gm: "Approve hasil akhir semua tier + wajib pilih Decision, 1-on-1 Status, dan Catatan. Bisa juga geser bulan buat sekedar lihat-lihat skor bulan lain.",
-    progress: "Pantau siapa aja Leader/Management/HR yang UDAH vs BELUM ngerjain tugas appraisal-nya bulan ini — soal kepatuhan/compliance, bukan soal skor bagus/jelek.",
-    feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal, lengkap dengan Issue Summary & Action Tracker — Executive, HR, dan Admin Operational bisa lihat halaman ini.",
-    historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan buat perhitungan Service Charge.",
-    settings: "Ganti PIN sendiri dan lihat profil kamu — Nama, NIK, Job Title, Department, Tier.",
-    staffMapping: "Lihat siapa dinilai siapa untuk semua Staff/Leader/Management — dihitung otomatis dari Config_PositionMap, bukan diketik manual.",
-    sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
+  const MENU_DESCRIPTIONS_BY_LANG = {
+    id: {
+      self: "Isi appraisal buat diri sendiri — cuma bisa disubmit 1x per bulan, gak bisa direvisi setelah terkirim.",
+      history: "Lihat riwayat skor & Decision dari bulan-bulan yang udah di-approve Executive, plus grafik tren skor dari waktu ke waktu.",
+      myEvaluations: "Isi appraisal buat orang-orang yang jadi tanggung jawab kamu. Kalau orangnya udah isi Self duluan, skornya muncul sebagai referensi.",
+      review: "Lihat hasil appraisal orang-orang di scope kamu — read-only, gak ada tombol isi/ubah, cuma buat monitoring/lihat-lihat. Bisa geser bulan.",
+      company: "Ringkasan rata-rata skor per department/tier — buat lihat gambaran besar performa. Gak nampilin skor personal individu, cuma agregat.",
+      gm: "Approve hasil akhir semua tier + wajib pilih Decision, 1-on-1 Status, dan Catatan. Bisa juga geser bulan buat sekedar lihat-lihat skor bulan lain.",
+      progress: "Pantau siapa aja Leader/Management/HR yang UDAH vs BELUM ngerjain tugas appraisal-nya bulan ini — soal kepatuhan/compliance, bukan soal skor bagus/jelek.",
+      feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal, lengkap dengan Issue Summary & Action Tracker — Executive, HR, dan Admin Operational bisa lihat halaman ini.",
+      historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan buat perhitungan Service Charge.",
+      settings: "Ganti PIN sendiri dan lihat profil kamu — Nama, NIK, Job Title, Department, Tier.",
+      staffMapping: "Lihat siapa dinilai siapa untuk semua Staff/Leader/Management — dihitung otomatis dari Config_PositionMap, bukan diketik manual.",
+      sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
+    },
+    en: {
+      self: "Fill in your own appraisal — can only be submitted once a month, and can't be revised after submitting.",
+      history: "View your score & Decision history from months already approved by Executive, plus a score trend chart over time.",
+      myEvaluations: "Fill in appraisals for the people you're responsible for. If they already filled in their Self Appraisal first, their score shows up as a reference.",
+      review: "View appraisal results for people in your scope — read-only, no fill-in/edit buttons, just for monitoring/browsing. You can switch months.",
+      company: "Average score summary per department/tier — for a big-picture view of performance. Doesn't show any individual's personal score, only aggregates.",
+      gm: "Approve final results for every tier + must select a Decision, 1-on-1 Status, and Notes. You can also switch months just to browse other months' scores.",
+      progress: "Monitor which Leaders/Management/HR HAVE vs HAVEN'T done their appraisal task this month — about compliance, not about good/bad scores.",
+      feedback: "Read confidential feedback staff wrote via the 'Feedback to Management' field during Self Appraisal, complete with an Issue Summary & Action Tracker — Executive, HR, and Admin Operational can view this page.",
+      historical: "Enter Leader appraisal scores from BEFORE this system existed — for historical performance tracking, not for Service Charge calculations.",
+      settings: "Change your own PIN and view your profile — Name, Employee ID, Job Title, Department, Tier.",
+      staffMapping: "See who evaluates whom for every Staff/Leader/Management — calculated automatically from Config_PositionMap, not typed in manually.",
+      sc: "Enter the monthly Total Service Charge — once entered, the system automatically calculates deductions from Underperformers and distributes the pool evenly to Performers.",
+    },
   };
+  const MENU_DESCRIPTIONS = MENU_DESCRIPTIONS_BY_LANG[state.lang] || MENU_DESCRIPTIONS_BY_LANG.id;
 
-  const tierFlow = {
-    Staff: `
-      <p><strong>1.</strong> Tanggal 1–7: isi <strong>Appraise Yourself</strong> — nilai diri sendiri, cuma bisa 1x submit.</p>
-      <p><strong>2.</strong> Tanggal 8–17: Leader/Management kamu menilai kamu.</p>
-      <p><strong>3.</strong> Tanggal 18–27: HR menilai kamu.</p>
-      <p><strong>4.</strong> Tanggal 28 - 4 (bulan depan): Executive approve hasil final + kasih Decision.</p>
-      <p>Cek progress kapan aja lewat <strong>Track Your Progress</strong> di Dashboard. Notifikasi (🔔) masuk begitu Decision keluar.</p>`,
-    Leader: `
-      <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (kamu juga dinilai, oleh Management).</p>
-      <p><strong>2.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Staff yang jadi tanggung jawabmu. Kalau Staff-nya udah isi Self duluan, skornya muncul sebagai referensi.</p>
-      <p><strong>3.</strong> Lewat <strong>Review Your Team</strong>, kamu bisa lihat hasil appraisal Staff-mu (read-only, gak bisa isi ulang).</p>
-      <p>Kalau lupa isi sampai window ketutup, skor Leader buat Staff itu dianggap 0 (bobot 60%) — jadi usahain tepat waktu.</p>`,
-    Management: `
-      <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (dinilai oleh Executive).</p>
-      <p><strong>2.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Leader di scope-mu. Kalau ada Staff yang Leader-nya belum sempat isi, kamu bisa isi sebagai pengganti.</p>
-      <p><strong>3.</strong> <strong>Review Your Team</strong> — lihat hasil Leader & Staff di scope-mu (read-only).</p>
-      <p><strong>4.</strong> <strong>Compare Departments</strong> — bandingin rata-rata skor department-mu vs department lain (cuma rata-rata, gak ada data personal orang lain).</p>`,
-    Executive: `
-      <p><strong>1.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Management.</p>
-      <p><strong>2.</strong> Tanggal 28 - 4 (bulan depan): <strong>Approve Final Decisions</strong> — approve SEMUA tier (Staff/Leader/Management), wajib pilih Decision + 1-on-1 Status + Catatan buat tiap orang yang di-flag. Bisa juga geser bulan buat sekedar liat-liat skor bulan lain.</p>
-      <p><strong>3.</strong> <strong>Track Team Compliance</strong> — pantau siapa aja Leader/Management/HR yang belum ngerjain tugas appraisal-nya (compliance, bukan skor).</p>
-      <p><strong>4.</strong> <strong>Compare Departments</strong> — ringkasan performa seluruh perusahaan bulan ini: rata-rata skor, jumlah Performer/Underperform, breakdown per department.</p>`,
-    HR: `
-      <p><strong>1.</strong> Tanggal 18–27: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department. Tombol "Samakan dgn Leader/Mgmt" muncul kalau Leader/Management-nya udah isi duluan.</p>
-      <p><strong>2.</strong> <strong>Review Everyone's Records</strong> — lihat semua hasil appraisal, lintas department & tier (read-only).</p>
-      <p><strong>3.</strong> <strong>Calculate Service Charge</strong> — input Total SC bulanan, sistem otomatis hitung deduction & pool distribution.</p>
-      <p><strong>4.</strong> <strong>Track Pending Follow-Ups</strong> — reminder buat kasus "Extend Probation/Kontrak" yang udah jatuh tempo, perlu ditindaklanjuti.</p>`,
+  const tierFlowByLang = {
+    id: {
+      Staff: `
+        <p><strong>1.</strong> Tanggal 1–7: isi <strong>Appraise Yourself</strong> — nilai diri sendiri, cuma bisa 1x submit.</p>
+        <p><strong>2.</strong> Tanggal 8–17: Leader/Management kamu menilai kamu.</p>
+        <p><strong>3.</strong> Tanggal 18–27: HR menilai kamu.</p>
+        <p><strong>4.</strong> Tanggal 28 - 4 (bulan depan): Executive approve hasil final + kasih Decision.</p>
+        <p>Cek progress kapan aja lewat <strong>Track Your Progress</strong> di Dashboard. Notifikasi (🔔) masuk begitu Decision keluar.</p>`,
+      Leader: `
+        <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (kamu juga dinilai, oleh Management).</p>
+        <p><strong>2.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Staff yang jadi tanggung jawabmu. Kalau Staff-nya udah isi Self duluan, skornya muncul sebagai referensi.</p>
+        <p><strong>3.</strong> Lewat <strong>Review Your Team</strong>, kamu bisa lihat hasil appraisal Staff-mu (read-only, gak bisa isi ulang).</p>
+        <p>Kalau lupa isi sampai window ketutup, skor Leader buat Staff itu dianggap 0 (bobot 60%) — jadi usahain tepat waktu.</p>`,
+      Management: `
+        <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (dinilai oleh Executive).</p>
+        <p><strong>2.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Leader di scope-mu. Kalau ada Staff yang Leader-nya belum sempat isi, kamu bisa isi sebagai pengganti.</p>
+        <p><strong>3.</strong> <strong>Review Your Team</strong> — lihat hasil Leader & Staff di scope-mu (read-only).</p>
+        <p><strong>4.</strong> <strong>Compare Departments</strong> — bandingin rata-rata skor department-mu vs department lain (cuma rata-rata, gak ada data personal orang lain).</p>`,
+      Executive: `
+        <p><strong>1.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Management.</p>
+        <p><strong>2.</strong> Tanggal 28 - 4 (bulan depan): <strong>Approve Final Decisions</strong> — approve SEMUA tier (Staff/Leader/Management), wajib pilih Decision + 1-on-1 Status + Catatan buat tiap orang yang di-flag. Bisa juga geser bulan buat sekedar liat-liat skor bulan lain.</p>
+        <p><strong>3.</strong> <strong>Track Team Compliance</strong> — pantau siapa aja Leader/Management/HR yang belum ngerjain tugas appraisal-nya (compliance, bukan skor).</p>
+        <p><strong>4.</strong> <strong>Compare Departments</strong> — ringkasan performa seluruh perusahaan bulan ini: rata-rata skor, jumlah Performer/Underperform, breakdown per department.</p>`,
+      HR: `
+        <p><strong>1.</strong> Tanggal 18–27: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department. Tombol "Samakan dgn Leader/Mgmt" muncul kalau Leader/Management-nya udah isi duluan.</p>
+        <p><strong>2.</strong> <strong>Review Everyone's Records</strong> — lihat semua hasil appraisal, lintas department & tier (read-only).</p>
+        <p><strong>3.</strong> <strong>Calculate Service Charge</strong> — input Total SC bulanan, sistem otomatis hitung deduction & pool distribution.</p>
+        <p><strong>4.</strong> <strong>Track Pending Follow-Ups</strong> — reminder buat kasus "Extend Probation/Kontrak" yang udah jatuh tempo, perlu ditindaklanjuti.</p>`,
+    },
+    en: {
+      Staff: `
+        <p><strong>1.</strong> Days 1–7: fill in <strong>Appraise Yourself</strong> — rate yourself, can only submit once.</p>
+        <p><strong>2.</strong> Days 8–17: your Leader/Management rates you.</p>
+        <p><strong>3.</strong> Days 18–27: HR rates you.</p>
+        <p><strong>4.</strong> Day 28 to the 4th (next month): Executive approves the final result + gives a Decision.</p>
+        <p>Check your progress anytime via <strong>Track Your Progress</strong> on the Dashboard. A notification (🔔) arrives once the Decision is out.</p>`,
+      Leader: `
+        <p><strong>1.</strong> Days 1–7: fill in your own Self Appraisal (you're also rated, by Management).</p>
+        <p><strong>2.</strong> Days 8–17: fill in <strong>Team Appraisal</strong> for the Staff you're responsible for. If a Staff member already filled in their Self first, their score shows up as a reference.</p>
+        <p><strong>3.</strong> Via <strong>Review Your Team</strong>, you can view your Staff's appraisal results (read-only, can't be re-filled).</p>
+        <p>If you forget to fill it in before the window closes, that Staff member's Leader score counts as 0 (60% weight) — so try to be on time.</p>`,
+      Management: `
+        <p><strong>1.</strong> Days 1–7: fill in your own Self Appraisal (rated by Executive).</p>
+        <p><strong>2.</strong> Days 8–17: fill in <strong>Team Appraisal</strong> for the Leaders in your scope. If a Staff member's Leader hasn't had a chance to fill it in, you can fill it in as a substitute.</p>
+        <p><strong>3.</strong> <strong>Review Your Team</strong> — view the Leader & Staff results in your scope (read-only).</p>
+        <p><strong>4.</strong> <strong>Compare Departments</strong> — compare your department's average score against other departments (averages only, no other individual's personal data).</p>`,
+      Executive: `
+        <p><strong>1.</strong> Days 8–17: fill in <strong>Team Appraisal</strong> for Management.</p>
+        <p><strong>2.</strong> Day 28 to the 4th (next month): <strong>Approve Final Decisions</strong> — approve EVERY tier (Staff/Leader/Management), must select a Decision + 1-on-1 Status + Notes for each flagged person. You can also switch months just to browse other months' scores.</p>
+        <p><strong>3.</strong> <strong>Track Team Compliance</strong> — monitor which Leaders/Management/HR haven't done their appraisal task (compliance, not scores).</p>
+        <p><strong>4.</strong> <strong>Compare Departments</strong> — a company-wide performance summary for this month: average score, Performer/Underperform counts, breakdown per department.</p>`,
+      HR: `
+        <p><strong>1.</strong> Days 18–27: fill in <strong>HR Appraisal</strong> for EVERY tier (Staff/Leader/Management), across every department. A "Match Leader/Mgmt" button appears if the Leader/Management already filled theirs in first.</p>
+        <p><strong>2.</strong> <strong>Review Everyone's Records</strong> — view every appraisal result, across every department & tier (read-only).</p>
+        <p><strong>3.</strong> <strong>Calculate Service Charge</strong> — enter the monthly Total SC, the system automatically calculates deductions & pool distribution.</p>
+        <p><strong>4.</strong> <strong>Track Pending Follow-Ups</strong> — reminders for "Extend Probation/Contract" cases that are due and need follow-up.</p>`,
+    },
   };
+  const tierFlow = tierFlowByLang[state.lang] || tierFlowByLang.id;
 
-  const qa = [
-    { q: "Kenapa saya gak bisa isi appraisal lagi?", a: "Appraisal cuma bisa disubmit 1 kali per bulan. Kalau udah submit, tombolnya otomatis terkunci sampai bulan berikutnya. Hubungi HR kalau butuh koreksi." },
-    { q: "Kapan saya tahu hasil appraisal saya?", a: "Setelah Executive approve (tanggal 28 - 4 bulan depan), kamu dapat notifikasi (🔔) dan bisa lihat detail lengkapnya di Track Your Progress." },
-    { q: "Kalau Leader/HR saya belum isi appraisal, gimana?", a: "Kalau sampai window waktunya tutup mereka belum isi, skor mereka dianggap 0 (bukan diskip) — ini konsekuensi bawaan sistem, bukan bug." },
-    { q: "Skor saya turun karena apa?", a: "Cek Track Your Progress — ada breakdown per Section (Attitude/Discipline/KPI/Bonus) biar tau bagian mana yang lemah." },
-    { q: "Siapa yang bisa lihat data appraisal saya?", a: "Leader/Management/Executive/HR yang berwenang di scope kamu. Orang di department lain gak bisa lihat data personal kamu." },
-  ];
+  const qaByLang = {
+    id: [
+      { q: "Kenapa saya gak bisa isi appraisal lagi?", a: "Appraisal cuma bisa disubmit 1 kali per bulan. Kalau udah submit, tombolnya otomatis terkunci sampai bulan berikutnya. Hubungi HR kalau butuh koreksi." },
+      { q: "Kapan saya tahu hasil appraisal saya?", a: "Setelah Executive approve (tanggal 28 - 4 bulan depan), kamu dapat notifikasi (🔔) dan bisa lihat detail lengkapnya di Track Your Progress." },
+      { q: "Kalau Leader/HR saya belum isi appraisal, gimana?", a: "Kalau sampai window waktunya tutup mereka belum isi, skor mereka dianggap 0 (bukan diskip) — ini konsekuensi bawaan sistem, bukan bug." },
+      { q: "Skor saya turun karena apa?", a: "Cek Track Your Progress — ada breakdown per Section (Attitude/Discipline/KPI/Bonus) biar tau bagian mana yang lemah." },
+      { q: "Siapa yang bisa lihat data appraisal saya?", a: "Leader/Management/Executive/HR yang berwenang di scope kamu. Orang di department lain gak bisa lihat data personal kamu." },
+    ],
+    en: [
+      { q: "Why can't I fill in my appraisal anymore?", a: "An appraisal can only be submitted once a month. Once submitted, the button automatically locks until next month. Contact HR if you need a correction." },
+      { q: "When will I know my appraisal result?", a: "After Executive approves it (the 28th to the 4th of the following month), you'll get a notification (🔔) and can see the full details in Track Your Progress." },
+      { q: "What if my Leader/HR hasn't filled in my appraisal?", a: "If the window closes before they fill it in, their score counts as 0 (not skipped) — this is a built-in system consequence, not a bug." },
+      { q: "Why did my score go down?", a: "Check Track Your Progress — there's a breakdown per Section (Attitude/Discipline/KPI/Bonus) so you can see which part is weak." },
+      { q: "Who can see my appraisal data?", a: "The Leader/Management/Executive/HR authorized within your scope. People in other departments can't see your personal data." },
+    ],
+  };
+  const qa = qaByLang[state.lang] || qaByLang.id;
 
   const showMenuLink = availableScreens(state.user).length > 1;
-  app.innerHTML = topbar("FAQ & Panduan") + `
-    <button class="ghost" onclick="goBackFromFaq()">&larr; Kembali</button>
+  app.innerHTML = topbar(t("faq_page_title")) + `
+    <button class="ghost" onclick="goBackFromFaq()">&larr; ${t("form_back")}</button>
 
     <div class="card">
-      <h2>Alur Umum (Siklus Bulanan)</h2>
+      <h2>${t("faq_general_flow_title")}</h2>
       <table class="mini">
-        <tr><td>Tanggal 1–7</td><td>Appraise Yourself (semua tier)</td></tr>
-        <tr><td>Tanggal 8–17</td><td>Leader/Management/Executive menilai tim-nya</td></tr>
-        <tr><td>Tanggal 18–27</td><td>HR menilai semua tier</td></tr>
-        <tr><td>Tanggal 28 - 4 (bulan depan)</td><td>Executive Approval + Decision final</td></tr>
+        <tr><td>${t("faq_day_1_7")}</td><td>${t("faq_day_1_7_desc")}</td></tr>
+        <tr><td>${t("faq_day_8_17")}</td><td>${t("faq_day_8_17_desc")}</td></tr>
+        <tr><td>${t("faq_day_18_27")}</td><td>${t("faq_day_18_27_desc")}</td></tr>
+        <tr><td>${t("faq_day_28_4")}</td><td>${t("faq_day_28_4_desc")}</td></tr>
       </table>
-      <div class="hint" style="margin-top:8px;">Kalau fase sebelumnya diisi lebih awal, fase berikutnya bisa dibuka lebih cepat juga — tenggat waktunya tetap sama.</div>
+      <div class="hint" style="margin-top:8px;">${t("faq_general_flow_note")}</div>
     </div>
 
     <div class="card">
-      <h2>Fungsi Tiap Menu Kamu</h2>
+      <h2>${t("faq_menu_functions_title")}</h2>
       ${availableScreensGrouped(state.user).map(g => `
         <div class="hint" style="font-weight:700; color:var(--teal); margin:10px 0 6px; text-transform:uppercase; font-size:12px; letter-spacing:0.05em;">${g.name}</div>
         ${g.items.map(item => `
@@ -1256,16 +1596,16 @@ function renderFaq() {
     </div>
 
     <div class="card">
-      <h2>Alur per Role</h2>
+      <h2>${t("faq_role_flow_title")}</h2>
       ${Object.keys(tierFlow).map(tier => `
         <details ${tier === state.user.tier || (tier === "HR" && state.user.isHR) || (tier === "Executive" && state.user.isExecutive) ? "open" : ""} style="margin-bottom:10px;">
-          <summary style="cursor:pointer; font-weight:700; color:var(--teal); padding:8px 0;">${tier}${tier === state.user.tier ? " (kamu)" : ""}</summary>
+          <summary style="cursor:pointer; font-weight:700; color:var(--teal); padding:8px 0;">${tier}${tier === state.user.tier ? ` ${t("faq_you_suffix")}` : ""}</summary>
           <div style="padding:4px 8px 8px;">${tierFlow[tier]}</div>
         </details>`).join("<hr style='border:none; border-top:1px solid var(--border); margin:4px 0;'>")}
     </div>
 
     <div class="card">
-      <h2>Pertanyaan Umum</h2>
+      <h2>${t("faq_qa_title")}</h2>
       ${qa.map(item => `
         <details style="margin-bottom:8px;">
           <summary style="cursor:pointer; font-weight:600; padding:6px 0;">${item.q}</summary>
@@ -3992,13 +4332,13 @@ function updateReviewFilter(key, value) {
 
 async function doExportDecisionLog() {
   const noteEl = document.getElementById("decision-log-export-note");
-  noteEl.textContent = "Membuat sheet export...";
+  noteEl.textContent = t("gm_export_decision_generating");
   const res = await apiPost("exportDecisionLog", {});
   if (res.error || res.success === false) {
-    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    noteEl.textContent = t("gm_export_decision_failed_prefix") + " " + friendlyError(res.error);
     return;
   }
-  noteEl.innerHTML = `Sheet siap (${res.rowCount} record)! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel.`;
+  noteEl.innerHTML = `${t("gm_export_decision_ready_prefix")} (${res.rowCount} ${t("gm_export_decision_ready_suffix")} <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">${t("gm_export_open_link")}</a> ${t("gm_export_next_step")}`;
 }
 
 /** Downloads a single xlsx covering Section C and Section D for EVERY position at once —
@@ -4693,89 +5033,89 @@ async function renderGm() {
     const opts = state.decisionOptionsByTier[s.tier] || [];
     return `
       <div id="decision-form-${s.staffId}" style="display:none; padding:12px; margin-top:8px; background:var(--sand); border-radius:12px;">
-        ${isEdit ? '<div class="hint" style="font-weight:700; color:var(--coral); margin-bottom:8px;">✏️ Mode Edit — mengubah Decision yang udah di-approve sebelumnya.</div>' : ""}
-        <label>Decision (wajib)</label>
+        ${isEdit ? `<div class="hint" style="font-weight:700; color:var(--coral); margin-bottom:8px;">${t("gm_edit_mode_warning")}</div>` : ""}
+        <label>${t("gm_decision_label")}</label>
         <select id="decision-select-${s.staffId}" onchange="toggleDecisionExtras('${s.staffId}')">
-          <option value="">— pilih —</option>
+          <option value="">${t("gm_select_placeholder")}</option>
           ${opts.map(o => `<option value="${o.value}" ${isEdit && o.value === s.decision ? "selected" : ""}>${o.label}</option>`).join("")}
         </select>
 
         <div id="extend-fields-${s.staffId}" style="display:none;">
-          <label>Berapa lama extend probation/kontrak-nya? (wajib)</label>
+          <label>${t("gm_extend_duration_label")}</label>
           <div class="row-flex">
-            <input type="number" min="1" id="extension-value-${s.staffId}" placeholder="Jumlah" style="flex:0 0 100px;" />
+            <input type="number" min="1" id="extension-value-${s.staffId}" placeholder="${t("gm_amount_placeholder")}" style="flex:0 0 100px;" />
             <select id="extension-unit-${s.staffId}">
-              <option value="Hari">Hari</option>
-              <option value="Minggu">Minggu</option>
-              <option value="Bulan" selected>Bulan</option>
+              <option value="Hari">${t("gm_unit_day")}</option>
+              <option value="Minggu">${t("gm_unit_week")}</option>
+              <option value="Bulan" selected>${t("gm_unit_month")}</option>
             </select>
           </div>
         </div>
 
         <div id="mutation-fields-${s.staffId}" style="display:none;">
-          <label>Dari Posisi</label>
+          <label>${t("gm_from_position_label")}</label>
           <input type="text" value="${s.jobTitle || s.department || s.tier}" disabled style="background:var(--border); opacity:0.7;" />
-          <label>Ke Posisi (wajib — cuma level sama/di bawah)</label>
+          <label>${t("gm_to_position_label")}</label>
           <select id="mutation-to-${s.staffId}">
-            <option value="">— pilih —</option>
+            <option value="">${t("gm_select_placeholder")}</option>
             ${(state.positionTitlesByTier[s.tier] || []).filter(t => t !== s.jobTitle).map(t => `<option value="${t}">${t}</option>`).join("")}
           </select>
         </div>
 
-        <label>1-on-1 Status (wajib)</label>
+        <label>${t("gm_oneonone_label")}</label>
         <select id="oneonone-select-${s.staffId}">
-          <option value="">— pilih —</option>
+          <option value="">${t("gm_select_placeholder")}</option>
           ${state.oneOnOneOptions.map(o => `<option value="${o.value}" ${isEdit && o.value === s.oneOnOneStatus ? "selected" : ""}>${o.label}</option>`).join("")}
         </select>
-        <label>Catatan (wajib)</label>
+        <label>${t("gm_notes_label")}</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
         ${!isEdit ? `
         <div style="margin-top:14px; padding:14px; background:#fff; border:1.5px solid var(--border); border-radius:12px;">
-          <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:4px;">Kalibrasi Skor</div>
-          <div class="hint" style="margin-bottom:10px;">Skor Self, Leader, dan HR tidak berubah. Penyesuaian ini hanya memengaruhi Final Score dan Status resmi, dan alasannya akan tercatat secara permanen.</div>
+          <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:4px;">${t("gm_calibration_title")}</div>
+          <div class="hint" style="margin-bottom:10px;">${t("gm_calibration_desc")}</div>
           <div id="calibration-suggestion-${s.staffId}" style="margin-bottom:12px;"></div>
-          <label>Penyesuaian (poin)</label>
-          <input type="number" id="calibration-adj-${s.staffId}" placeholder="Contoh: 8 atau -5" />
-          <label>Alasan Penyesuaian (wajib jika ada penyesuaian)</label>
-          <input type="text" id="calibration-reason-${s.staffId}" placeholder="Contoh: Evaluator secara konsisten memberikan skor lebih rendah dibanding rata-rata" />
+          <label>${t("gm_calibration_adj_label")}</label>
+          <input type="number" id="calibration-adj-${s.staffId}" placeholder="${t("gm_calibration_adj_placeholder")}" />
+          <label>${t("gm_calibration_reason_label")}</label>
+          <input type="text" id="calibration-reason-${s.staffId}" placeholder="${t("gm_calibration_reason_placeholder")}" />
         </div>` : ""}
-        <button class="primary" style="margin-top:10px;" onclick="${isEdit ? `submitDecisionEdit('${s.staffId}')` : `submitDecision('${s.staffId}')`}">${isEdit ? "Simpan Perubahan" : "Konfirmasi Approval"}</button>
+        <button class="primary" style="margin-top:10px;" onclick="${isEdit ? `submitDecisionEdit('${s.staffId}')` : `submitDecision('${s.staffId}')`}">${isEdit ? t("gm_save_changes_btn") : t("gm_confirm_approval_btn")}</button>
       </div>`;
   };
 
   app.innerHTML = topbar("Approve Final Decisions") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
-      <label>Bulan appraisal</label>
+      <label>${t("gm_month_label")}</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
-      <div class="hint">Approval cuma bisa dilakukan tanggal 28 sampai tanggal 4 bulan depan.</div>
+      <div class="hint">${t("gm_approval_window_hint")}</div>
     </div>
 
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-        <h2 style="margin:0;">Appraisal — ${list.length} staff</h2>
-        <button class="secondary" onclick="approveAll()">Approve Semua yang Layak</button>
+        <h2 style="margin:0;">Appraisal — ${list.length} ${t("gm_appraisal_title_suffix")}</h2>
+        <button class="secondary" onclick="approveAll()">${t("gm_approve_all_btn")}</button>
       </div>
-      <div class="hint" style="margin-bottom:10px;">"Approve Semua" otomatis approve yang Performer (skip yang di bawah standar), Decision default "Approved — Lanjut".</div>
-      <button class="secondary" onclick="doExportDecisionLog()" style="margin-bottom:10px;">📊 Export Decision Log (semua bulan)</button>
+      <div class="hint" style="margin-bottom:10px;">${t("gm_approve_all_hint")}</div>
+      <button class="secondary" onclick="doExportDecisionLog()" style="margin-bottom:10px;">${t("gm_export_decision_log_btn")}</button>
       <div class="hint" id="decision-log-export-note" style="margin-bottom:10px;"></div>
-      <input type="text" placeholder="Cari nama..." oninput="updateGmFilter('search', this.value)" style="margin-bottom:10px;" />
+      <input type="text" placeholder="${t("gm_search_placeholder")}" oninput="updateGmFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:10px;">
         <select onchange="sortGmList(this.value)">
-          <option value="">Urutkan...</option>
-          <option value="name-asc">Nama (A-Z)</option>
-          <option value="name-desc">Nama (Z-A)</option>
-          <option value="score-desc">Skor Tertinggi</option>
-          <option value="score-asc">Skor Terendah</option>
+          <option value="">${t("gm_sort_placeholder")}</option>
+          <option value="name-asc">${t("gm_sort_name_asc")}</option>
+          <option value="name-desc">${t("gm_sort_name_desc")}</option>
+          <option value="score-desc">${t("gm_sort_score_desc")}</option>
+          <option value="score-asc">${t("gm_sort_score_asc")}</option>
         </select>
         <select onchange="updateGmFilter('department', this.value)">
-          <option value="">Semua Department</option>
+          <option value="">${t("gm_all_department")}</option>
           ${[...new Set(list.map(s => s.department !== "-" ? s.department : s.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
         </select>
       </div>
       <div class="row-flex" style="margin-bottom:10px;">
-        <button class="secondary" id="underperform-filter-btn" onclick="toggleGmFilterBtn('underperformOnly', 'underperform-filter-btn')">Underperform Saja</button>
-        <button class="secondary" id="not-approved-filter-btn" onclick="toggleGmFilterBtn('notApprovedOnly', 'not-approved-filter-btn')">Belum Diputuskan Saja</button>
+        <button class="secondary" id="underperform-filter-btn" onclick="toggleGmFilterBtn('underperformOnly', 'underperform-filter-btn')">${t("gm_underperform_only_btn")}</button>
+        <button class="secondary" id="not-approved-filter-btn" onclick="toggleGmFilterBtn('notApprovedOnly', 'not-approved-filter-btn')">${t("gm_not_approved_only_btn")}</button>
       </div>
       <div id="gm-list-container">
       ${list.map(s => `
@@ -4788,22 +5128,22 @@ async function renderGm() {
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
                 <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
-                <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">(Appraised by ${s.leaderEvaluatorName || "-"})</span></div>
-                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">(Appraised by ${s.hrEvaluatorName || "-"})</span></div>
-                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">Decision: <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
+                <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.leaderEvaluatorName || "-"})</span></div>
+                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span></div>
+                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">${t("gm_decision_label_inline")} <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
               ${statusBadge(s.status === 'Performer', s.status)}
               ${s.approvalStatus === 'Approved'
-                ? `<span class="badge done">Disetujui</span><button class="ghost" style="font-size:12px;" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Edit</button>`
-                : `<button class="secondary" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">Approve</button>`}
+                ? `<span class="badge done">${t("gm_approved_badge")}</span><button class="ghost" style="font-size:12px;" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">${t("gm_edit_btn")}</button>`
+                : `<button class="secondary" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">${t("gm_approve_btn")}</button>`}
             </div>
           </div>
           <div onclick="event.stopPropagation();">${decisionForm(s, s.approvalStatus === 'Approved')}</div>
         </div>`).join("")}
       </div>
-      ${!list.length ? '<div class="hint">Belum ada appraisal masuk untuk bulan ini — coba geser bulan di atas.</div>' : ""}
+      ${!list.length ? `<div class="hint">${t("gm_no_appraisal_this_month")}</div>` : ""}
     </div>`;
 
   state._gmFilters = { search: "", department: "", underperformOnly: false, notApprovedOnly: false };
@@ -4872,7 +5212,7 @@ async function showComparisonModal(staffId, name) {
   loadingOverlay.id = "comparison-modal";
   loadingOverlay.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; display:flex; align-items:center; justify-content:center; padding:24px;";
   loadingOverlay.onclick = (e) => { if (e.target === loadingOverlay) loadingOverlay.remove(); };
-  loadingOverlay.innerHTML = `<div class="card" style="background:#fff; padding:24px 32px;">Memuat...</div>`;
+  loadingOverlay.innerHTML = `<div class="card" style="background:#fff; padding:24px 32px;">${t("gm_modal_loading")}</div>`;
   document.body.appendChild(loadingOverlay);
 
   const s = (state._currentGmList || []).find(x => String(x.staffId) === String(staffId)) || {};
@@ -4898,11 +5238,11 @@ async function showComparisonModal(staffId, name) {
     const prev = last3[last3.length - 2], curr = last3[last3.length - 1];
     const diff = Number(curr.finalScore) - Number(prev.finalScore);
     const pct = Number(prev.finalScore) !== 0 ? (diff / Number(prev.finalScore) * 100) : 0;
-    trendBlock += `<div class="hint" style="text-align:center; margin-bottom:12px; font-weight:700; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)} poin (${Math.abs(pct).toFixed(1)}%) dari bulan lalu</div>`;
+    trendBlock += `<div class="hint" style="text-align:center; margin-bottom:12px; font-weight:700; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)} ${t("gm_trend_points_suffix")} (${Math.abs(pct).toFixed(1)}%) ${t("gm_trend_from_last_month")}</div>`;
   } else if (last3.length === 1) {
-    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Skor bulan ${monthLabelID(last3[0].month)}: <strong style="font-size:20px;">${Number(last3[0].finalScore).toFixed(1)}</strong><br/>Belum ada data bulan sebelumnya buat dibandingin.</div>`;
+    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">${t("gm_trend_score_of_month_prefix")} ${monthLabelID(last3[0].month)}: <strong style="font-size:20px;">${Number(last3[0].finalScore).toFixed(1)}</strong><br/>${t("gm_trend_no_previous")}</div>`;
   } else {
-    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">Belum ada riwayat appraisal yang di-approve.</div>`;
+    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">${t("gm_trend_no_history")}</div>`;
   }
   if (history.length > 1) trendBlock += buildScoreChartSvg(history);
 
@@ -4912,9 +5252,9 @@ async function showComparisonModal(staffId, name) {
   if (critRes.found && critRes.rows.length) {
     const stillWeak = critRes.rows.filter(r => r.current !== null && r.current <= 3);
     criterionBlock = `
-      <div class="section-title" style="margin:16px -18px 8px;">Detail per Kriteria (Leader/Mgmt)</div>
+      <div class="section-title" style="margin:16px -18px 8px;">${t("gm_criterion_detail_title")}</div>
       <table class="mini">
-        <tr><th>Kriteria</th><th>${monthLabelID(critRes.prevMonth)}</th><th>${monthLabelID(critRes.currentMonth)}</th></tr>
+        <tr><th>${t("gm_criterion_header")}</th><th>${monthLabelID(critRes.prevMonth)}</th><th>${monthLabelID(critRes.currentMonth)}</th></tr>
         ${critRes.rows.map(r => {
           const isStillWeak = r.current !== null && r.current <= 3;
           const improved = r.previous !== null && r.current !== null && r.current > r.previous;
@@ -4926,23 +5266,23 @@ async function showComparisonModal(staffId, name) {
           </tr>`;
         }).join("")}
       </table>
-      ${stillWeak.length ? `<div class="hint" style="color:var(--red); font-weight:600; margin-top:6px;">⚠️ ${stillWeak.length} kriteria masih rendah (≤3) bulan ini: ${stillWeak.map(r => r.criterion).join(", ")}.</div>` : ""}
-      ${critRes.rows.some(r => r.previous === null) ? `<div class="hint" style="margin-top:6px; font-style:italic;">Kolom bulan sebelumnya kosong ("-") kalau bulan itu diinput lewat "Input Data Historis" — data itu cuma nyimpen total per section, bukan per kriteria.</div>` : ""}
+      ${stillWeak.length ? `<div class="hint" style="color:var(--red); font-weight:600; margin-top:6px;">${t("gm_still_weak_prefix")} ${stillWeak.length} ${t("gm_still_weak_suffix")} ${stillWeak.map(r => r.criterion).join(", ")}.</div>` : ""}
+      ${critRes.rows.some(r => r.previous === null) ? `<div class="hint" style="margin-top:6px; font-style:italic;">${t("gm_historical_input_note")}</div>` : ""}
     `;
   } else {
     criterionBlock = `
-      <div class="section-title" style="margin:16px -18px 8px;">Detail per Kriteria (Leader/Mgmt)</div>
-      <div class="hint" style="font-style:italic;">Belum ada data per kriteria buat dibandingkan bulan ini — kemungkinan bulan ini diinput lewat "Input Data Historis" (cuma nyimpen total per section, bukan per kriteria), atau Leader/Mgmt belum submit appraisal bulan ini.</div>
+      <div class="section-title" style="margin:16px -18px 8px;">${t("gm_criterion_detail_title")}</div>
+      <div class="hint" style="font-style:italic;">${t("gm_no_criterion_data")}</div>
     `;
   }
 
   const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
-    <div class="section-title" style="margin:16px -18px 8px;">Decision</div>
+    <div class="section-title" style="margin:16px -18px 8px;">${t("gm_decision_title")}</div>
     <div style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
-    ${s.mutationToPosition ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Mutasi: ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
-    ${s.extensionDuration ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Perpanjangan: ${s.extensionDuration}</div>` : ""}
-    <div style="font-size:13px; color:var(--text); margin-top:8px;">1-on-1: <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
-    ${s.decisionNotes ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">Catatan:<br/>"${s.decisionNotes}"</div>` : ""}
+    ${s.mutationToPosition ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_mutation_label")} ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
+    ${s.extensionDuration ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_extension_label")} ${s.extensionDuration}</div>` : ""}
+    <div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_oneonone_inline_label")} <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
+    ${s.decisionNotes ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_notes_inline_label")}<br/>"${s.decisionNotes}"</div>` : ""}
   ` : "";
 
   const overlay = document.createElement("div");
@@ -4956,12 +5296,12 @@ async function showComparisonModal(staffId, name) {
           ? `<img src="${photoRes.dataUri || photoRes.url}" style="width:110px; height:110px; border-radius:16px; object-fit:cover; background:var(--sand); margin:0 auto 10px; display:block; cursor:pointer;" onclick="event.stopPropagation(); showPhotoModal('${photoRes.dataUri || photoRes.url}', '${escapeAttr(name)}')" />`
           : `<div style="width:110px; height:110px; border-radius:16px; background:var(--sand); margin:0 auto 10px; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:42px;">${name.charAt(0)}</div>`}
         <h2 style="margin:0;">${name}</h2>
-        <div class="hint" style="font-size:12px; margin-top:2px;">${s.department !== "-" ? s.department : s.tier} · Kontrak berakhir: ${s.contractEndDate ? fullDateLabelID(s.contractEndDate) : "-"}</div>
+        <div class="hint" style="font-size:12px; margin-top:2px;">${s.department !== "-" ? s.department : s.tier} · ${t("gm_contract_end_label")} ${s.contractEndDate ? fullDateLabelID(s.contractEndDate) : "-"}</div>
       </div>
       ${trendBlock}
       ${criterionBlock}
       ${decisionBlock}
-      <button class="secondary" style="width:100%; margin-top:12px;" onclick="document.getElementById('comparison-modal').remove()">Tutup</button>
+      <button class="secondary" style="width:100%; margin-top:12px;" onclick="document.getElementById('comparison-modal').remove()">${t("gm_close_btn")}</button>
     </div>`;
   document.body.appendChild(overlay);
 }
@@ -4977,7 +5317,7 @@ function showPhotoModal(src, name, showChangeButton) {
     <div style="max-width:90%; max-height:90%; text-align:center;">
       <img src="${src}" alt="${name}" style="max-width:100%; max-height:80vh; border-radius:16px; box-shadow:0 10px 40px rgba(0,0,0,0.5);" />
       <div style="color:#fff; margin-top:12px; font-weight:700;">${name}</div>
-      ${showChangeButton ? `<button class="primary" style="margin-top:12px;" onclick="event.stopPropagation(); document.getElementById('photo-modal').remove(); document.getElementById('photo-file-input').click();">📷 Ganti Foto</button>` : ""}
+      ${showChangeButton ? `<button class="primary" style="margin-top:12px;" onclick="event.stopPropagation(); document.getElementById('photo-modal').remove(); document.getElementById('photo-file-input').click();">${t("gm_change_photo_btn")}</button>` : ""}
     </div>`;
   document.body.appendChild(overlay);
 }
@@ -5000,23 +5340,23 @@ async function loadCalibrationSuggestion(staffId) {
   const container = document.getElementById(`calibration-suggestion-${staffId}`);
   if (!container || container.dataset.loaded) return;
   container.dataset.loaded = "true";
-  container.innerHTML = `<div class="hint">Memuat saran kalibrasi...</div>`;
+  container.innerHTML = `<div class="hint">${t("gm_calibration_loading")}</div>`;
 
   const res = await apiGet("getCalibrationSuggestion", { staffId, month: state.month });
   if (!res.found) {
-    container.innerHTML = `<div class="hint">Belum tersedia cukup data historis untuk memberikan saran kalibrasi pada evaluator bulan ini.</div>`;
+    container.innerHTML = `<div class="hint">${t("gm_calibration_insufficient")}</div>`;
     return;
   }
   const positive = res.suggestedAdjustment >= 0;
   container.innerHTML = `
     <div style="background:var(--sand); border-radius:10px; padding:12px;">
-      <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; margin-bottom:6px;">SARAN KALIBRASI</div>
-      <div style="font-size:13px; margin-bottom:2px;">Evaluator: <strong>${res.evaluatorName}</strong></div>
-      <div style="font-size:13px; margin-bottom:2px;">Rata-rata skor evaluator ini: <strong>${res.evaluatorAverage}</strong></div>
-      <div style="font-size:13px; margin-bottom:10px;">Rata-rata skor perusahaan: <strong>${res.companyAverage}</strong> (${res.sampleSize} data historis)</div>
+      <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; margin-bottom:6px;">${t("gm_calibration_suggestion_label")}</div>
+      <div style="font-size:13px; margin-bottom:2px;">${t("gm_calibration_evaluator_label")} <strong>${res.evaluatorName}</strong></div>
+      <div style="font-size:13px; margin-bottom:2px;">${t("gm_calibration_evaluator_avg_label")} <strong>${res.evaluatorAverage}</strong></div>
+      <div style="font-size:13px; margin-bottom:10px;">${t("gm_calibration_company_avg_label")} <strong>${res.companyAverage}</strong> (${res.sampleSize} ${t("gm_calibration_sample_suffix")}</div>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
-        <div style="font-weight:700; color:${positive ? "var(--green)" : "var(--red)"};">Saran penyesuaian: ${positive ? "+" : ""}${res.suggestedAdjustment} poin</div>
-        <button type="button" class="secondary" style="padding:6px 12px; font-size:12px; width:auto;" onclick="applyCalibrationSuggestion('${staffId}', ${res.suggestedAdjustment}, '${escapeAttr(res.evaluatorName)}', ${res.evaluatorAverage}, ${res.companyAverage})">Gunakan Saran</button>
+        <div style="font-weight:700; color:${positive ? "var(--green)" : "var(--red)"};">${t("gm_calibration_suggested_adj_label")} ${positive ? "+" : ""}${res.suggestedAdjustment} ${t("gm_calibration_points_suffix")}</div>
+        <button type="button" class="secondary" style="padding:6px 12px; font-size:12px; width:auto;" onclick="applyCalibrationSuggestion('${staffId}', ${res.suggestedAdjustment}, '${escapeAttr(res.evaluatorName)}', ${res.evaluatorAverage}, ${res.companyAverage})">${t("gm_calibration_use_btn")}</button>
       </div>
     </div>`;
 }
@@ -5025,7 +5365,7 @@ function applyCalibrationSuggestion(staffId, adjustment, evaluatorName, evaluato
   const adjEl = document.getElementById(`calibration-adj-${staffId}`);
   const reasonEl = document.getElementById(`calibration-reason-${staffId}`);
   if (adjEl) adjEl.value = adjustment;
-  if (reasonEl) reasonEl.value = `Penyesuaian berdasarkan pola historis evaluator (${evaluatorName}): rata-rata ${evaluatorAverage}, dibanding rata-rata perusahaan ${companyAverage}.`;
+  if (reasonEl) reasonEl.value = `${t("gm_calibration_applied_reason_prefix")} (${evaluatorName}): ${t("gm_calibration_applied_reason_avg")} ${evaluatorAverage}, ${t("gm_calibration_applied_reason_vs_company")} ${companyAverage}.`;
 }
 
 function toggleDecisionExtras(staffId) {
@@ -5040,28 +5380,28 @@ async function submitDecisionEdit(staffId) {
   const decision = document.getElementById(`decision-select-${staffId}`).value;
   const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
-  if (!decision) { showToast("Decision wajib dipilih dulu.", "error"); return; }
-  if (!oneOnOneStatus) { showToast("1-on-1 Status wajib dipilih dulu.", "error"); return; }
-  if (!notes || !notes.trim()) { showToast("Catatan wajib diisi.", "error"); return; }
+  if (!decision) { showToast(t("gm_decision_required"), "error"); return; }
+  if (!oneOnOneStatus) { showToast(t("gm_oneonone_required"), "error"); return; }
+  if (!notes || !notes.trim()) { showToast(t("gm_notes_required"), "error"); return; }
 
   const payload = { editedById: state.user.staffId, month: state.month, staffId, decision, oneOnOneStatus, notes };
 
   if (decision === "extend_probation") {
     const extensionValue = document.getElementById(`extension-value-${staffId}`).value;
     const extensionUnit = document.getElementById(`extension-unit-${staffId}`).value;
-    if (!extensionValue || Number(extensionValue) <= 0) { showToast("Durasi extend wajib diisi (angka lebih dari 0).", "error"); return; }
+    if (!extensionValue || Number(extensionValue) <= 0) { showToast(t("gm_extend_duration_required"), "error"); return; }
     payload.extensionValue = extensionValue;
     payload.extensionUnit = extensionUnit;
   }
   if (decision === "demotion_mutation") {
     const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
-    if (!mutationToPosition) { showToast("Posisi tujuan mutasi wajib dipilih.", "error"); return; }
+    if (!mutationToPosition) { showToast(t("gm_mutation_position_required"), "error"); return; }
     payload.mutationToPosition = mutationToPosition;
   }
 
   const res = await apiPost("editDecision", payload);
-  if (res.error || res.success === false) { showToast("Gagal simpan perubahan: " + friendlyError(res.error), "error"); return; }
-  showToast("Decision berhasil diperbarui! Notifikasi [DIEDIT] terkirim ke pihak terkait.");
+  if (res.error || res.success === false) { showToast(t("gm_save_edit_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  showToast(t("gm_edit_success_toast"));
   renderGm();
 }
 
@@ -5069,22 +5409,22 @@ async function submitDecision(staffId) {
   const decision = document.getElementById(`decision-select-${staffId}`).value;
   const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
-  if (!decision) { showToast("Decision wajib dipilih dulu.", "error"); return; }
-  if (!oneOnOneStatus) { showToast("1-on-1 Status wajib dipilih dulu.", "error"); return; }
-  if (!notes || !notes.trim()) { showToast("Catatan wajib diisi.", "error"); return; }
+  if (!decision) { showToast(t("gm_decision_required"), "error"); return; }
+  if (!oneOnOneStatus) { showToast(t("gm_oneonone_required"), "error"); return; }
+  if (!notes || !notes.trim()) { showToast(t("gm_notes_required"), "error"); return; }
 
   const payload = { month: state.month, staffId, approvedBy: state.user.name, decision, oneOnOneStatus, notes };
 
   if (decision === "extend_probation") {
     const extensionValue = document.getElementById(`extension-value-${staffId}`).value;
     const extensionUnit = document.getElementById(`extension-unit-${staffId}`).value;
-    if (!extensionValue || Number(extensionValue) <= 0) { showToast("Durasi extend wajib diisi (angka lebih dari 0).", "error"); return; }
+    if (!extensionValue || Number(extensionValue) <= 0) { showToast(t("gm_extend_duration_required"), "error"); return; }
     payload.extensionValue = extensionValue;
     payload.extensionUnit = extensionUnit;
   }
   if (decision === "demotion_mutation") {
     const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
-    if (!mutationToPosition) { showToast("Posisi tujuan mutasi wajib dipilih.", "error"); return; }
+    if (!mutationToPosition) { showToast(t("gm_mutation_position_required"), "error"); return; }
     payload.mutationToPosition = mutationToPosition;
   }
 
@@ -5093,15 +5433,15 @@ async function submitDecision(staffId) {
   const calibrationAdjustment = calibrationAdjEl ? Number(calibrationAdjEl.value) || 0 : 0;
   if (calibrationAdjustment !== 0) {
     const calibrationReason = calibrationReasonEl ? calibrationReasonEl.value.trim() : "";
-    if (!calibrationReason) { showToast("Alasan Calibration Adjustment wajib diisi kalau ada penyesuaian.", "error"); return; }
-    if (!confirm(`Terapkan penyesuaian kalibrasi sebesar ${calibrationAdjustment > 0 ? "+" : ""}${calibrationAdjustment} poin?\n\nAlasan: ${calibrationReason}\n\nSkor Self, Leader, dan HR tidak berubah — hanya Final Score resmi yang disesuaikan.`)) return;
+    if (!calibrationReason) { showToast(t("gm_calibration_reason_required"), "error"); return; }
+    if (!confirm(`${t("gm_calibration_confirm_prefix")} ${calibrationAdjustment > 0 ? "+" : ""}${calibrationAdjustment} ${t("gm_calibration_confirm_points")}\n\n${t("gm_calibration_confirm_reason_label")} ${calibrationReason}\n\n${t("gm_calibration_confirm_note")}`)) return;
     payload.calibrationAdjustment = calibrationAdjustment;
     payload.calibrationReason = calibrationReason;
   }
 
   const res = await apiPost("approveStaff", payload);
-  if (res.error || res.success === false) { showToast("Gagal approve: " + friendlyError(res.error), "error"); return; }
-  showToast("Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.");
+  if (res.error || res.success === false) { showToast(t("gm_approve_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  showToast(t("gm_approve_success_toast"));
   renderGm();
 }
 
@@ -5110,7 +5450,7 @@ async function submitDecision(staffId) {
 // =================================================================
 
 async function renderScInput() {
-  app.innerHTML = topbar("Calculate Service Charge") + `<div class="loading">Memuat data...</div>`;
+  app.innerHTML = topbar("Calculate Service Charge") + `<div class="loading">${t("form_loading")}</div>`;
   const pool = await apiGet("getScPool", { requesterId: state.user.staffId, month: state.month });
   if (pool.error) {
     app.innerHTML = topbar("Calculate Service Charge") + `<div class="card"><div class="error">${friendlyError(pool.error)}</div></div>`;
@@ -5139,7 +5479,7 @@ async function renderScInput() {
       const currentPick = picked[i] || "";
       rows += `
         <select class="role-bonus-select" data-dept="${dept}" style="margin-bottom:6px;">
-          <option value="">— kosongkan —</option>
+          <option value="">${t("sc_leave_blank_option")}</option>
           ${options.map(o => `<option value="${o.staffId}" ${o.staffId === currentPick ? "selected" : ""}>${o.name}</option>`).join("")}
         </select>`;
     }
@@ -5147,38 +5487,38 @@ async function renderScInput() {
   };
 
   app.innerHTML = topbar("Calculate Service Charge") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
-      <label>Bulan</label>
+      <label>${t("sc_month_label")}</label>
       <input type="month" id="month-picker" value="${state.month}" onchange="changeGmMonth(this.value)" />
     </div>
     <div class="card">
-      <h2>Total Service Charge — ${monthLabelID(state.month)}</h2>
-      <label>Total SC bulan ini (Rp, sebelum potongan apapun)</label>
+      <h2>${t("sc_total_title_prefix")} ${monthLabelID(state.month)}</h2>
+      <label>${t("sc_total_input_label")}</label>
       <input type="number" id="sc-input" value="${pool.found ? pool.totalSC : ""}" placeholder="150000000" />
-      <button class="secondary" onclick="saveTotalSC()">Simpan Total SC</button>
+      <button class="secondary" onclick="saveTotalSC()">${t("sc_save_total_btn")}</button>
       ${pool.found ? `
         <table class="mini" style="margin-top:12px;">
-          <tr><td>Total SC (Net)</td><td>${idr(pool.totalSC)}</td></tr>
-          <tr><td>Staff Bonus Pool (tetap)</td><td>− ${idr(pool.staffBonusPoolAmount)}</td></tr>
-          <tr><td><strong>Distributable Amount</strong></td><td><strong>${idr(pool.distributableAmount)}</strong></td></tr>
-          <tr><td>Base Share / staff</td><td>${idr(pool.baseShare)}</td></tr>
-          <tr><td>Deduction Pool (dari Underperform)</td><td>${idr(pool.poolTotal)}</td></tr>
-          <tr><td># Performer</td><td>${pool.performerCount}</td></tr>
-          <tr><td>Pool Share / performer</td><td>${idr(pool.poolShare)}</td></tr>
+          <tr><td>${t("sc_table_total_net")}</td><td>${idr(pool.totalSC)}</td></tr>
+          <tr><td>${t("sc_table_staff_pool")}</td><td>− ${idr(pool.staffBonusPoolAmount)}</td></tr>
+          <tr><td><strong>${t("sc_table_distributable")}</strong></td><td><strong>${idr(pool.distributableAmount)}</strong></td></tr>
+          <tr><td>${t("sc_table_base_share")}</td><td>${idr(pool.baseShare)}</td></tr>
+          <tr><td>${t("sc_table_deduction_pool")}</td><td>${idr(pool.poolTotal)}</td></tr>
+          <tr><td>${t("sc_table_performer_count")}</td><td>${pool.performerCount}</td></tr>
+          <tr><td>${t("sc_table_pool_share")}</td><td>${idr(pool.poolShare)}</td></tr>
         </table>
-        <button class="secondary" style="margin-top:10px;" onclick="doExportSc()">📊 Export ke Excel (buat Finance)</button>
+        <button class="secondary" style="margin-top:10px;" onclick="doExportSc()">${t("sc_export_finance_btn")}</button>
         <div class="hint" id="sc-export-note" style="margin-top:6px;"></div>` : ""}
     </div>
     <div class="card">
-      <h2>Monthly Role-Based Bonus — ${idr(pool.roleBonusPerPerson || 300000)}/orang</h2>
-      <div class="hint" style="margin-bottom:10px;">Pilih staff yang dapat bonus tambahan bulan ini, sesuai kuota tiap role (Memo 122/HR-IM/VIII/2026). Dikonsolidasikan dari usulan Leader/Department Head masing-masing.</div>
+      <h2>${t("sc_role_bonus_title_prefix")} ${idr(pool.roleBonusPerPerson || 300000)}${t("sc_role_bonus_per_person")}</h2>
+      <div class="hint" style="margin-bottom:10px;">${t("sc_role_bonus_hint")}</div>
       ${Object.entries(quota).map(([dept, qty]) => `
         <div style="margin-bottom:14px;">
-          <label style="font-weight:700;">${dept} (${qty} orang)</label>
+          <label style="font-weight:700;">${dept} (${qty} ${t("sc_role_bonus_qty_suffix")}</label>
           ${roleBonusRows(dept, qty)}
         </div>`).join("")}
-      <button class="primary" onclick="saveRoleBonusSelections()">Simpan Role-Based Bonus</button>
+      <button class="primary" onclick="saveRoleBonusSelections()">${t("sc_role_bonus_save_btn")}</button>
     </div>`;
 }
 
@@ -5190,21 +5530,21 @@ function changeGmMonth(value) {
 
 async function doExportSc() {
   const noteEl = document.getElementById("sc-export-note");
-  noteEl.textContent = "Membuat sheet export...";
+  noteEl.textContent = t("sc_export_generating");
   const res = await apiPost("exportScBreakdown", { requesterId: state.user.staffId, month: state.month });
   if (res.error || res.success === false) {
-    noteEl.textContent = "Gagal export: " + friendlyError(res.error);
+    noteEl.textContent = t("sc_export_failed_prefix") + " " + friendlyError(res.error);
     return;
   }
-  noteEl.innerHTML = `Sheet siap! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Microsoft Excel (.xlsx).`;
+  noteEl.innerHTML = `${t("sc_export_ready")} <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">${t("sc_export_open_link")}</a> ${t("sc_export_next_step")}`;
 }
 
 async function saveTotalSC() {
   const val = document.getElementById("sc-input").value;
   if (!val) return;
   const res = await apiPost("setTotalSC", { month: state.month, totalSC: Number(val), inputBy: state.user.name });
-  if (res.error) { showToast("Gagal simpan Total SC: " + friendlyError(res.error), "error"); return; }
-  showToast("Total SC tersimpan!");
+  if (res.error) { showToast(t("sc_total_save_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  showToast(t("sc_total_saved_toast"));
   renderScInput();
 }
 
@@ -5217,23 +5557,23 @@ async function saveRoleBonusSelections() {
     const staffId = el.value;
     if (!staffId) continue;
     const key = dept + "|" + staffId;
-    if (seen[key]) { showToast(`${staffId} dipilih dobel untuk ${dept} — cek lagi.`, "error"); return; }
+    if (seen[key]) { showToast(`${staffId} ${t("sc_duplicate_selection_prefix")} ${dept} ${t("sc_duplicate_selection_suffix")}`, "error"); return; }
     seen[key] = true;
     selections.push({ department: dept, staffId });
   }
   const res = await apiPost("setRoleBonusSelections", { month: state.month, selections });
   if (res.error || res.success === false) {
-    showToast(`Gagal simpan: kuota ${res.department || ""} kelebihan.`, "error");
+    showToast(`${t("sc_quota_exceeded_prefix")} ${res.department || ""} ${t("sc_quota_exceeded_suffix")}`, "error");
     return;
   }
-  showToast("Role-Based Bonus tersimpan!");
+  showToast(t("sc_role_bonus_saved_toast"));
   renderScInput();
 }
 
 async function approveAll() {
   const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
-  if (res.error) { showToast("Gagal approve semua: " + friendlyError(res.error), "error"); return; }
-  showToast(`${res.approvedCount || 0} appraisal ter-approve! Notifikasi terkirim.`);
+  if (res.error) { showToast(t("gm_approve_all_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  showToast(`${res.approvedCount || 0} ${t("gm_approve_all_success_suffix")}`);
   renderGm();
 }
 

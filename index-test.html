@@ -300,7 +300,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-06-180-i18n-staff-mapping-and-kpi-management — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-06-182-i18n-training-needs — TEST</div>
 
 <script>
 // =================================================================
@@ -612,6 +612,80 @@ const translations = {
     km_audit_conn_error: "Gagal membuat audit: koneksi bermasalah, coba lagi.",
     km_audit_ready: "berhasil diunduh.",
     km_audit_position_suffix: "posisi)",
+    hi_intro: "Buat data appraisal SEBELUM sistem ini ada — cuma skor 1 evaluator yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan untuk perhitungan Service Charge.",
+    hi_month_label: "Bulan historis",
+    hi_progress_title_prefix: "Progress",
+    hi_progress_done_of: "dari",
+    hi_progress_done_suffix: "sudah diisi",
+    hi_search_label: "Cari nama",
+    hi_search_placeholder: "Ketik nama...",
+    hi_filter_tier_label: "Filter Tier",
+    hi_all_tiers: "Semua Tier (Staff, Leader, Management)",
+    hi_staff_only: "Staff aja",
+    hi_leader_only: "Leader aja",
+    hi_management_only: "Management aja",
+    hi_done_badge: "✅ Sudah Diisi",
+    hi_pending_badge: "⭕ Belum Diisi",
+    hi_no_match: "Gak ada yang cocok.",
+    hi_loading_criteria: "Memuat kriteria...",
+    hi_existing_normal_warning: "⚠️ Bulan ini sudah punya data Self/HR (siklus normal) — hati-hati kalau ditimpa.",
+    hi_existing_editable_prefix: "✏️ Bulan ini udah ada data historis (Final Score:",
+    hi_existing_editable_suffix: ") — form di bawah udah ke-isi otomatis, tinggal koreksi yang perlu terus Simpan ulang.",
+    hi_existing_no_detail_prefix: "Sudah ada data historis bulan ini (Final Score:",
+    hi_existing_no_detail_suffix: "), tapi detail per-kriterianya gak ke-simpen (data lama sebelum fitur ini ada) — isi ulang semua kriteria dari awal.",
+    hi_calibration_warning_title: "Bulan ini telah menerima Penyesuaian Kalibrasi dari Executive:",
+    hi_calibration_reason_label: "Alasan Executive:",
+    hi_calibration_confirm_note: "Konfirmasi dengan Executive terlebih dahulu sebelum menimpa data ini.",
+    hi_calibration_none: "Bulan ini belum pernah menerima Penyesuaian Kalibrasi.",
+    hi_preview_title: "📊 Preview Final Score (update otomatis tiap klik — cocokkan sama kertas SEBELUM simpan)",
+    hi_section_bonus_deduction: "Section D — Bonus / Deduction",
+    hi_per_occurrence_suffix: "/kejadian)",
+    hi_bonus_count_placeholder: "Jumlah kejadian (kosongkan jika 0)",
+    hi_save_btn: "Simpan Data Historis",
+    hi_no_criteria_filled: "Belum ada kriteria yang diisi.",
+    hi_partial_warning_prefix: "⚠️ Baru",
+    hi_partial_warning_suffix: "kriteria diisi — angka ini masih PARSIAL, belum final.",
+    hi_saved_formula_note: "Ini yang DISIMPAN sistem (formula 25/25/50).",
+    hi_table_section_header: "Section",
+    hi_table_raw_header: "Raw",
+    hi_table_weighted_header: "Weighted (25/25/50)",
+    hi_paper_check_note: "📋 Cuma buat cocokin ke kertas (formula LAMA 30/30/40, TIDAK disimpan):",
+    hi_select_month_first: "Pilih bulan dulu.",
+    hi_fill_section_a_first: "Isi semua kriteria Section A dulu.",
+    hi_fill_section_b_first: "Isi semua kriteria Section B dulu.",
+    hi_fill_section_c_first: "Isi semua kriteria Section C dulu.",
+    hi_save_failed_prefix: "Gagal simpan:",
+    hi_saved_toast_prefix: "Data historis",
+    hi_saved_toast_middle: "bulan",
+    hi_saved_toast_suffix: "tersimpan! Final Score:",
+    tn_add_title: "Tambah Kebutuhan Training",
+    tn_for_who_label: "Untuk Siapa",
+    tn_select_person_placeholder: "— pilih orang —",
+    tn_topic_label: "Topik Training",
+    tn_topic_placeholder: "Contoh: Cara handle komplain tamu",
+    tn_priority_label: "Prioritas",
+    tn_priority_low: "Rendah",
+    tn_priority_medium: "Sedang",
+    tn_priority_high: "Tinggi",
+    tn_notes_label: "Catatan (opsional)",
+    tn_notes_placeholder: "Catatan tambahan",
+    tn_save_btn: "Simpan",
+    tn_list_title_prefix: "Daftar Training Needs —",
+    tn_list_title_suffix: "entri",
+    tn_priority_prefix: "Prioritas:",
+    tn_recorded_by_prefix: "Dicatat oleh:",
+    tn_notes_prefix: "Catatan:",
+    tn_no_items: "Belum ada training needs tercatat.",
+    tn_select_person_first: "Pilih orangnya dulu.",
+    tn_topic_required: "Topik training wajib diisi.",
+    tn_saved_toast: "Training need tersimpan!",
+    tn_status_update_failed_prefix: "Gagal update status:",
+    tn_status_updated_toast: "Status diperbarui!",
+    tn_status_not_started: "Belum Dimulai",
+    tn_status_in_progress: "Sedang Berjalan",
+    tn_status_done: "Selesai",
+    tn_dev_plan_desc: "Area pengembangan yang dicatat oleh atasan/HR untuk kamu — read only.",
+    tn_no_dev_plan: "Belum ada development plan tercatat untuk kamu.",
     form_too_early: "Belum waktunya. Coba lagi mulai",
     form_too_late_full: "Waktu untuk mengisi appraisal ini sudah lewat.",
     form_max_attempts: "Appraisal ini sudah diisi",
@@ -841,6 +915,80 @@ const translations = {
     km_audit_conn_error: "Failed to generate audit: connection issue, try again.",
     km_audit_ready: "downloaded successfully.",
     km_audit_position_suffix: "positions)",
+    hi_intro: "Records appraisal data from BEFORE this system existed — only 1 evaluator score is available (there's no Self or HR appraisal for this period). Used purely as historical performance tracking data, not for Service Charge calculations.",
+    hi_month_label: "Historical month",
+    hi_progress_title_prefix: "Progress",
+    hi_progress_done_of: "of",
+    hi_progress_done_suffix: "filled in",
+    hi_search_label: "Search name",
+    hi_search_placeholder: "Type a name...",
+    hi_filter_tier_label: "Filter by Tier",
+    hi_all_tiers: "All Tiers (Staff, Leader, Management)",
+    hi_staff_only: "Staff only",
+    hi_leader_only: "Leader only",
+    hi_management_only: "Management only",
+    hi_done_badge: "✅ Filled In",
+    hi_pending_badge: "⭕ Not Filled In",
+    hi_no_match: "Nothing matches.",
+    hi_loading_criteria: "Loading criteria...",
+    hi_existing_normal_warning: "⚠️ This month already has Self/HR data (normal cycle) — be careful about overwriting it.",
+    hi_existing_editable_prefix: "✏️ Historical data already exists for this month (Final Score:",
+    hi_existing_editable_suffix: ") — the form below has been auto-filled, just correct what's needed and Save again.",
+    hi_existing_no_detail_prefix: "Historical data already exists for this month (Final Score:",
+    hi_existing_no_detail_suffix: "), but the per-criterion detail wasn't saved (old data from before this feature existed) — re-fill in every criterion from scratch.",
+    hi_calibration_warning_title: "This month already received a Calibration Adjustment from Executive:",
+    hi_calibration_reason_label: "Executive's reason:",
+    hi_calibration_confirm_note: "Confirm with Executive first before overwriting this data.",
+    hi_calibration_none: "This month has never received a Calibration Adjustment.",
+    hi_preview_title: "📊 Final Score Preview (updates automatically on every click — match it against the paper record BEFORE saving)",
+    hi_section_bonus_deduction: "Section D — Bonus / Deduction",
+    hi_per_occurrence_suffix: "/occurrence)",
+    hi_bonus_count_placeholder: "Number of occurrences (leave blank if 0)",
+    hi_save_btn: "Save Historical Data",
+    hi_no_criteria_filled: "No criteria filled in yet.",
+    hi_partial_warning_prefix: "⚠️ Only",
+    hi_partial_warning_suffix: "criteria filled in — this number is still PARTIAL, not final.",
+    hi_saved_formula_note: "This is what the system SAVES (25/25/50 formula).",
+    hi_table_section_header: "Section",
+    hi_table_raw_header: "Raw",
+    hi_table_weighted_header: "Weighted (25/25/50)",
+    hi_paper_check_note: "📋 Just for matching against paper records (OLD 30/30/40 formula, NOT saved):",
+    hi_select_month_first: "Select a month first.",
+    hi_fill_section_a_first: "Fill in all Section A criteria first.",
+    hi_fill_section_b_first: "Fill in all Section B criteria first.",
+    hi_fill_section_c_first: "Fill in all Section C criteria first.",
+    hi_save_failed_prefix: "Save failed:",
+    hi_saved_toast_prefix: "Historical data for",
+    hi_saved_toast_middle: "for",
+    hi_saved_toast_suffix: "saved! Final Score:",
+    tn_add_title: "Add Training Need",
+    tn_for_who_label: "For Whom",
+    tn_select_person_placeholder: "— select a person —",
+    tn_topic_label: "Training Topic",
+    tn_topic_placeholder: "Example: How to handle guest complaints",
+    tn_priority_label: "Priority",
+    tn_priority_low: "Low",
+    tn_priority_medium: "Medium",
+    tn_priority_high: "High",
+    tn_notes_label: "Notes (optional)",
+    tn_notes_placeholder: "Additional notes",
+    tn_save_btn: "Save",
+    tn_list_title_prefix: "Training Needs List —",
+    tn_list_title_suffix: "entries",
+    tn_priority_prefix: "Priority:",
+    tn_recorded_by_prefix: "Recorded by:",
+    tn_notes_prefix: "Notes:",
+    tn_no_items: "No training needs recorded yet.",
+    tn_select_person_first: "Select a person first.",
+    tn_topic_required: "Training topic is required.",
+    tn_saved_toast: "Training need saved!",
+    tn_status_update_failed_prefix: "Failed to update status:",
+    tn_status_updated_toast: "Status updated!",
+    tn_status_not_started: "Not Started",
+    tn_status_in_progress: "In Progress",
+    tn_status_done: "Done",
+    tn_dev_plan_desc: "Development areas recorded by your manager/HR for you — read only.",
+    tn_no_dev_plan: "No development plan recorded for you yet.",
     form_too_early: "Not open yet. Try again starting",
     form_too_late_full: "The window to fill out this appraisal has closed.",
     form_max_attempts: "This appraisal has already been submitted",
@@ -2184,11 +2332,25 @@ async function doChangeOwnPin() {
 }
 
 let _isLoadingTrainingNeeds = false;
+/** Status/Priority values are stored in the Sheet as fixed Indonesian strings ("Belum
+ *  Dimulai", "Rendah", etc.) regardless of UI language — same principle as the "Skor N ="
+ *  rubric data format elsewhere: the STORED value never changes with language settings
+ *  (so statusColor lookups and the dropdown's selected= matching stay reliable either way),
+ *  only what's DISPLAYED to the person translates. */
+function trainingStatusLabel(status) {
+  const map = { "Belum Dimulai": "tn_status_not_started", "Sedang Berjalan": "tn_status_in_progress", "Selesai": "tn_status_done" };
+  return map[status] ? t(map[status]) : status;
+}
+function trainingPriorityLabel(priority) {
+  const map = { "Rendah": "tn_priority_low", "Sedang": "tn_priority_medium", "Tinggi": "tn_priority_high" };
+  return map[priority] ? t(map[priority]) : priority;
+}
+
 async function renderTrainingNeeds() {
   if (_isLoadingTrainingNeeds) return;
   _isLoadingTrainingNeeds = true;
   try {
-    app.innerHTML = topbar("Training Needs") + `<div class="loading">Memuat...</div>`;
+    app.innerHTML = topbar("Training Needs") + `<div class="loading">${t("form_loading")}</div>`;
     const [res, staffRes] = await Promise.all([
       apiGet("getTrainingNeeds", { requesterId: state.user.staffId }),
       apiGet("getReviewableEmployees", { requesterId: state.user.staffId }),
@@ -2205,45 +2367,45 @@ async function renderTrainingNeeds() {
     const statusColor = { "Belum Dimulai": "underperform", "Sedang Berjalan": "pending", "Selesai": "performer" };
 
     app.innerHTML = topbar("Training Needs") + `
-      ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+      ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
       <div class="card">
-        <h2>Tambah Kebutuhan Training</h2>
-        <label>Untuk Siapa</label>
+        <h2>${t("tn_add_title")}</h2>
+        <label>${t("tn_for_who_label")}</label>
         <select id="training-staff-select">
-          <option value="">— pilih orang —</option>
+          <option value="">${t("tn_select_person_placeholder")}</option>
           ${staffOptions.map(s => `<option value="${s.staffId}">${s.name} (${s.tier} — ${s.department})</option>`).join("")}
         </select>
-        <label>Topik Training</label>
-        <input type="text" id="training-topic-input" placeholder="Contoh: Cara handle komplain tamu" />
-        <label>Prioritas</label>
+        <label>${t("tn_topic_label")}</label>
+        <input type="text" id="training-topic-input" placeholder="${t("tn_topic_placeholder")}" />
+        <label>${t("tn_priority_label")}</label>
         <select id="training-priority-select">
-          <option value="Rendah">Rendah</option>
-          <option value="Sedang" selected>Sedang</option>
-          <option value="Tinggi">Tinggi</option>
+          <option value="Rendah">${t("tn_priority_low")}</option>
+          <option value="Sedang" selected>${t("tn_priority_medium")}</option>
+          <option value="Tinggi">${t("tn_priority_high")}</option>
         </select>
-        <label>Catatan (opsional)</label>
-        <input type="text" id="training-notes-input" placeholder="Catatan tambahan" />
+        <label>${t("tn_notes_label")}</label>
+        <input type="text" id="training-notes-input" placeholder="${t("tn_notes_placeholder")}" />
         <div class="hint" id="training-save-note" style="margin-top:8px;"></div>
-        <button class="primary" onclick="doSaveTrainingNeed()" style="margin-top:10px;">Simpan</button>
+        <button class="primary" onclick="doSaveTrainingNeed()" style="margin-top:10px;">${t("tn_save_btn")}</button>
       </div>
       <div class="card">
-        <h2>Daftar Training Needs — ${items.length} entri</h2>
-        ${items.map(t => `
+        <h2>${t("tn_list_title_prefix")} ${items.length} ${t("tn_list_title_suffix")}</h2>
+        ${items.map(t2 => `
           <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:baseline;">
-              <div class="name">${t.staffName}</div>
-              <span class="badge ${statusColor[t.status] || "pending"}">${t.status}</span>
+              <div class="name">${t2.staffName}</div>
+              <span class="badge ${statusColor[t2.status] || "pending"}">${trainingStatusLabel(t2.status)}</span>
             </div>
-            <div style="font-size:14px; margin:6px 0;">${t.topic}</div>
-            <div class="hint">Prioritas: ${t.priority} · Dicatat oleh: ${t.recordedBy} · ${fullDateLabelID(t.recordedDate)}</div>
-            ${t.notes ? `<div class="hint">Catatan: ${t.notes}</div>` : ""}
-            <select onchange="doUpdateTrainingStatus('${t.trainingId}', '${t.staffId}', this.value)" style="margin-top:6px; max-width:200px;">
-              <option value="Belum Dimulai" ${t.status === "Belum Dimulai" ? "selected" : ""}>Belum Dimulai</option>
-              <option value="Sedang Berjalan" ${t.status === "Sedang Berjalan" ? "selected" : ""}>Sedang Berjalan</option>
-              <option value="Selesai" ${t.status === "Selesai" ? "selected" : ""}>Selesai</option>
+            <div style="font-size:14px; margin:6px 0;">${t2.topic}</div>
+            <div class="hint">${t("tn_priority_prefix")} ${trainingPriorityLabel(t2.priority)} · ${t("tn_recorded_by_prefix")} ${t2.recordedBy} · ${fullDateLabelID(t2.recordedDate)}</div>
+            ${t2.notes ? `<div class="hint">${t("tn_notes_prefix")} ${t2.notes}</div>` : ""}
+            <select onchange="doUpdateTrainingStatus('${t2.trainingId}', '${t2.staffId}', this.value)" style="margin-top:6px; max-width:200px;">
+              <option value="Belum Dimulai" ${t2.status === "Belum Dimulai" ? "selected" : ""}>${t("tn_status_not_started")}</option>
+              <option value="Sedang Berjalan" ${t2.status === "Sedang Berjalan" ? "selected" : ""}>${t("tn_status_in_progress")}</option>
+              <option value="Selesai" ${t2.status === "Selesai" ? "selected" : ""}>${t("tn_status_done")}</option>
             </select>
           </div>`).join("")}
-        ${!items.length ? '<div class="hint">Belum ada training needs tercatat.</div>' : ""}
+        ${!items.length ? `<div class="hint">${t("tn_no_items")}</div>` : ""}
       </div>
     `;
   } finally {
@@ -2258,25 +2420,25 @@ async function doSaveTrainingNeed() {
   const notes = document.getElementById("training-notes-input").value.trim();
   const noteEl = document.getElementById("training-save-note");
 
-  if (!staffId) { noteEl.textContent = "Pilih orangnya dulu."; noteEl.style.color = "var(--red)"; return; }
-  if (!topic) { noteEl.textContent = "Topik training wajib diisi."; noteEl.style.color = "var(--red)"; return; }
+  if (!staffId) { noteEl.textContent = t("tn_select_person_first"); noteEl.style.color = "var(--red)"; return; }
+  if (!topic) { noteEl.textContent = t("tn_topic_required"); noteEl.style.color = "var(--red)"; return; }
 
-  noteEl.textContent = "Menyimpan...";
+  noteEl.textContent = t("sm_saving");
   noteEl.style.color = "var(--text-muted)";
   const res = await apiPost("saveTrainingNeed", { requesterId: state.user.staffId, staffId, topic, priority, notes });
   if (res.error || res.success === false) {
-    noteEl.textContent = "Gagal simpan: " + friendlyError(res.error);
+    noteEl.textContent = t("sm_save_failed_prefix") + " " + friendlyError(res.error);
     noteEl.style.color = "var(--red)";
     return;
   }
-  showToast("Training need tersimpan!");
+  showToast(t("tn_saved_toast"));
   renderTrainingNeeds();
 }
 
 async function doUpdateTrainingStatus(trainingId, staffId, status) {
   const res = await apiPost("saveTrainingNeed", { requesterId: state.user.staffId, trainingId, staffId, status });
-  if (res.error || res.success === false) { showToast("Gagal update status: " + friendlyError(res.error), "error"); return; }
-  showToast("Status diperbarui!");
+  if (res.error || res.success === false) { showToast(t("tn_status_update_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  showToast(t("tn_status_updated_toast"));
   renderTrainingNeeds();
 }
 
@@ -2285,26 +2447,26 @@ async function renderMyDevelopmentPlan() {
   if (_isLoadingMyDevelopmentPlan) return;
   _isLoadingMyDevelopmentPlan = true;
   try {
-    app.innerHTML = topbar("My Development Plan") + `<div class="loading">Memuat...</div>`;
+    app.innerHTML = topbar(t("menu_dev_plan")) + `<div class="loading">${t("form_loading")}</div>`;
     const res = await apiGet("getMyTrainingNeeds", { staffId: state.user.staffId });
     const showMenuLink = availableScreens(state.user).length > 1;
     const items = res.items || [];
     const statusColor = { "Belum Dimulai": "underperform", "Sedang Berjalan": "pending", "Selesai": "performer" };
 
-    app.innerHTML = topbar("My Development Plan") + `
-      ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+    app.innerHTML = topbar(t("menu_dev_plan")) + `
+      ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
       <div class="card">
-        <div class="hint" style="margin-bottom:10px;">Area pengembangan yang dicatat oleh atasan/HR untuk kamu — read only.</div>
-        ${items.map(t => `
+        <div class="hint" style="margin-bottom:10px;">${t("tn_dev_plan_desc")}</div>
+        ${items.map(t2 => `
           <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
             <div style="display:flex; justify-content:space-between; align-items:baseline;">
-              <div class="name">${t.topic}</div>
-              <span class="badge ${statusColor[t.status] || "pending"}">${t.status}</span>
+              <div class="name">${t2.topic}</div>
+              <span class="badge ${statusColor[t2.status] || "pending"}">${trainingStatusLabel(t2.status)}</span>
             </div>
-            <div class="hint">Prioritas: ${t.priority} · ${fullDateLabelID(t.recordedDate)}</div>
-            ${t.notes ? `<div class="hint">Catatan: ${t.notes}</div>` : ""}
+            <div class="hint">${t("tn_priority_prefix")} ${trainingPriorityLabel(t2.priority)} · ${fullDateLabelID(t2.recordedDate)}</div>
+            ${t2.notes ? `<div class="hint">${t("tn_notes_prefix")} ${t2.notes}</div>` : ""}
           </div>`).join("")}
-        ${!items.length ? '<div class="hint">Belum ada development plan tercatat untuk kamu.</div>' : ""}
+        ${!items.length ? `<div class="hint">${t("tn_no_dev_plan")}</div>` : ""}
       </div>
     `;
   } finally {
@@ -3111,7 +3273,7 @@ async function doSetStaffSuperior(staffId) {
 }
 
 async function renderHistoricalInput() {
-  app.innerHTML = topbar("Input Data Historis") + `<div class="loading">Memuat data...</div>`;
+  app.innerHTML = topbar(t("menu_input_historical")) + `<div class="loading">${t("form_loading")}</div>`;
   if (!state._historicalMonth) state._historicalMonth = "2026-06"; // default starting point: June
   await loadHistoricalStaffList(state._historicalMonth);
 }
@@ -3124,26 +3286,26 @@ async function loadHistoricalStaffList(month) {
   const doneCount = staffList.filter(s => s.hasData).length;
   const showMenuLink = availableScreens(state.user).length > 1;
 
-  app.innerHTML = topbar("Input Data Historis") + `
-    ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
+  app.innerHTML = topbar(t("menu_input_historical")) + `
+    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
-      <div class="hint" style="margin-bottom:8px;">Buat data appraisal SEBELUM sistem ini ada — cuma skor 1 evaluator yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan untuk perhitungan Service Charge.</div>
-      <label>Bulan historis</label>
+      <div class="hint" style="margin-bottom:8px;">${t("hi_intro")}</div>
+      <label>${t("hi_month_label")}</label>
       <input type="month" id="historical-month-picker" value="${month}" onchange="loadHistoricalStaffList(this.value)" />
     </div>
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
-        <h2 style="margin:0;">Progress ${monthLabelID(month)}</h2>
-        <div class="hint" style="font-weight:700; color:${doneCount === staffList.length ? "var(--green)" : "var(--coral)"};">${doneCount} dari ${staffList.length} sudah diisi</div>
+        <h2 style="margin:0;">${t("hi_progress_title_prefix")} ${monthLabelID(month)}</h2>
+        <div class="hint" style="font-weight:700; color:${doneCount === staffList.length ? "var(--green)" : "var(--coral)"};">${doneCount} ${t("hi_progress_done_of")} ${staffList.length} ${t("hi_progress_done_suffix")}</div>
       </div>
-      <label>Cari nama</label>
-      <input type="text" id="historical-search" placeholder="Ketik nama..." oninput="filterHistoricalStaffList()" />
-      <label>Filter Tier</label>
+      <label>${t("hi_search_label")}</label>
+      <input type="text" id="historical-search" placeholder="${t("hi_search_placeholder")}" oninput="filterHistoricalStaffList()" />
+      <label>${t("hi_filter_tier_label")}</label>
       <select id="historical-tier-filter" onchange="filterHistoricalStaffList()">
-        <option value="">Semua Tier (Staff, Leader, Management)</option>
-        <option value="Staff">Staff aja</option>
-        <option value="Leader">Leader aja</option>
-        <option value="Management">Management aja</option>
+        <option value="">${t("hi_all_tiers")}</option>
+        <option value="Staff">${t("hi_staff_only")}</option>
+        <option value="Leader">${t("hi_leader_only")}</option>
+        <option value="Management">${t("hi_management_only")}</option>
       </select>
       <div id="historical-staff-list" style="max-height:340px; overflow-y:auto; margin-top:8px;"></div>
     </div>
@@ -3165,8 +3327,8 @@ function filterHistoricalStaffList() {
   listContainer.innerHTML = filtered.map(s => `
     <div class="staff-row" onclick="selectHistoricalStaff('${s.staffId}', '${escapeAttr(s.name)}')">
       <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.tier} — ${s.department})</span></div>
-      <span class="badge ${s.hasData ? "done" : "pending"}">${s.hasData ? "✅ Sudah Diisi" : "⭕ Belum Diisi"}</span>
-    </div>`).join("") || '<div class="hint" style="padding:12px;">Gak ada yang cocok.</div>';
+      <span class="badge ${s.hasData ? "done" : "pending"}">${s.hasData ? t("hi_done_badge") : t("hi_pending_badge")}</span>
+    </div>`).join("") || `<div class="hint" style="padding:12px;">${t("hi_no_match")}</div>`;
 }
 
 async function selectHistoricalStaff(staffId, name) {
@@ -3182,7 +3344,7 @@ async function loadHistoricalForm() {
   if (!month || !state._historicalStaffId) return;
 
   const detailContainer = document.getElementById("historical-detail-form");
-  detailContainer.innerHTML = `<div class="loading">Memuat kriteria...</div>`;
+  detailContainer.innerHTML = `<div class="loading">${t("hi_loading_criteria")}</div>`;
 
   const [existing, cfg] = await Promise.all([
     apiGet("getHistoricalAppraisal", { staffId: state._historicalStaffId, month }),
@@ -3194,10 +3356,10 @@ async function loadHistoricalForm() {
 
   const noteEl = document.getElementById("historical-existing-note");
   const baseNote = !existing.found ? "" : (existing.selfTotal || existing.hrTotal)
-    ? "⚠️ Bulan ini sudah punya data Self/HR (siklus normal) — hati-hati kalau ditimpa."
+    ? t("hi_existing_normal_warning")
     : hasDetailScores
-      ? `✏️ Bulan ini udah ada data historis (Final Score: ${Number(existing.finalScore).toFixed(1)}) — form di bawah udah ke-isi otomatis, tinggal koreksi yang perlu terus Simpan ulang.`
-      : `Sudah ada data historis bulan ini (Final Score: ${Number(existing.finalScore).toFixed(1)}), tapi detail per-kriterianya gak ke-simpen (data lama sebelum fitur ini ada) — isi ulang semua kriteria dari awal.`;
+      ? `${t("hi_existing_editable_prefix")} ${Number(existing.finalScore).toFixed(1)}${t("hi_existing_editable_suffix")}`
+      : `${t("hi_existing_no_detail_prefix")} ${Number(existing.finalScore).toFixed(1)}${t("hi_existing_no_detail_suffix")}`;
 
   // Executive already applying a manual Calibration Adjustment means someone deliberately
   // reasoned through "this number needs correcting" — overwriting it via Historical Input
@@ -3206,12 +3368,12 @@ async function loadHistoricalForm() {
   // process decision, not a hard block — Admin decides, but only AFTER seeing this plainly.
   const calibrationWarning = existing.found && Number(existing.calibrationAdjustment)
     ? `<div style="background:var(--red-bg); color:var(--red); padding:12px 14px; border-radius:10px; font-weight:700; margin-bottom:10px;">
-        Bulan ini telah menerima Penyesuaian Kalibrasi dari Executive: ${Number(existing.calibrationAdjustment) > 0 ? "+" : ""}${existing.calibrationAdjustment} poin.<br/>
-        <span style="font-weight:500; font-size:13px;">Alasan Executive: "${existing.calibrationReason || "-"}"</span><br/>
-        <span style="font-weight:500; font-size:13px;">Konfirmasi dengan Executive terlebih dahulu sebelum menimpa data ini.</span>
+        ${t("hi_calibration_warning_title")} ${Number(existing.calibrationAdjustment) > 0 ? "+" : ""}${existing.calibrationAdjustment} poin.<br/>
+        <span style="font-weight:500; font-size:13px;">${t("hi_calibration_reason_label")} "${existing.calibrationReason || "-"}"</span><br/>
+        <span style="font-weight:500; font-size:13px;">${t("hi_calibration_confirm_note")}</span>
       </div>`
     : existing.found
-      ? `<div style="background:var(--green-bg); color:var(--green); padding:10px 14px; border-radius:10px; font-weight:600; margin-bottom:10px;">Bulan ini belum pernah menerima Penyesuaian Kalibrasi.</div>`
+      ? `<div style="background:var(--green-bg); color:var(--green); padding:10px 14px; border-radius:10px; font-weight:600; margin-bottom:10px;">${t("hi_calibration_none")}</div>`
       : "";
 
   noteEl.innerHTML = calibrationWarning + (baseNote ? `<div>${baseNote}</div>` : "");
@@ -3227,7 +3389,7 @@ async function loadHistoricalForm() {
 
   detailContainer.innerHTML = `
     <div class="card" style="position:sticky; top:0; z-index:5; background:var(--sand); border:2px solid var(--teal);">
-      <div class="hint" style="font-weight:700; margin-bottom:4px;">📊 Preview Final Score (update otomatis tiap klik — cocokkan sama kertas SEBELUM simpan)</div>
+      <div class="hint" style="font-weight:700; margin-bottom:4px;">${t("hi_preview_title")}</div>
       <div id="historical-live-preview" style="font-size:28px; font-weight:800; color:var(--teal);">–</div>
       <div class="hint" id="historical-live-preview-detail" style="font-size:11px;"></div>
       <div id="historical-section-breakdown"></div>
@@ -3241,13 +3403,13 @@ async function loadHistoricalForm() {
         <div class="section-title">Section C — Performance KPI</div>
         ${cfg.kpi.map((c, i) => scoreRow(c.name, `${c.howToMeasure} — Target: ${c.target}`, "C" + i, existingScores.kpi[c.name])).join("")}
       `}
-      <div class="section-title">Section D — Bonus / Deduction</div>
+      <div class="section-title">${t("hi_section_bonus_deduction")}</div>
       ${cfg.bonus.map((b, i) => `
         <div class="criterion-row">
-          <div class="name">${b.item} (${b.points > 0 ? "+" : ""}${b.points}/kejadian)</div>
-          <input type="number" id="historical-bonus-${i}" min="0" placeholder="Jumlah kejadian (kosongkan jika 0)" oninput="updateHistoricalPreview()" style="max-width:200px;" />
+          <div class="name">${b.item} (${b.points > 0 ? "+" : ""}${b.points}${t("hi_per_occurrence_suffix")}</div>
+          <input type="number" id="historical-bonus-${i}" min="0" placeholder="${t("hi_bonus_count_placeholder")}" oninput="updateHistoricalPreview()" style="max-width:200px;" />
         </div>`).join("")}
-      <button class="primary" onclick="saveHistoricalAppraisal()" style="margin-top:16px;">Simpan Data Historis</button>
+      <button class="primary" onclick="saveHistoricalAppraisal()" style="margin-top:16px;">${t("hi_save_btn")}</button>
     </div>`;
 
   if (hasDetailScores) updateHistoricalPreview(); // reflect the pre-filled values immediately, not just after a click
@@ -3310,33 +3472,33 @@ function updateHistoricalPreview() {
 
   if (totalFilled === 0) {
     previewEl.textContent = "–";
-    detailEl.textContent = "Belum ada kriteria yang diisi.";
+    detailEl.textContent = t("hi_no_criteria_filled");
     if (sectionBreakdownEl) sectionBreakdownEl.innerHTML = "";
     return;
   }
   previewEl.textContent = finalScore.toFixed(1);
   detailEl.textContent = totalFilled < totalCriteria
-    ? `⚠️ Baru ${totalFilled}/${totalCriteria} kriteria diisi — angka ini masih PARSIAL, belum final.`
-    : `Ini yang DISIMPAN sistem (formula 25/25/50).`;
+    ? `${t("hi_partial_warning_prefix")} ${totalFilled}/${totalCriteria} ${t("hi_partial_warning_suffix")}`
+    : t("hi_saved_formula_note");
 
   if (sectionBreakdownEl) {
     sectionBreakdownEl.innerHTML = `
       <table class="mini" style="margin-top:8px;">
-        <tr><th>Section</th><th>Raw</th><th>Weighted (25/25/50)</th></tr>
+        <tr><th>${t("hi_table_section_header")}</th><th>${t("hi_table_raw_header")}</th><th>${t("hi_table_weighted_header")}</th></tr>
         <tr><td>A — Attitude</td><td>${a.sum} / ${a.total * 5}</td><td>${sectionAWeighted.toFixed(1)}</td></tr>
         <tr><td>B — Discipline</td><td>${b.sum} / ${b.total * 5}</td><td>${sectionBWeighted.toFixed(1)}</td></tr>
         <tr><td>C — KPI</td><td>${c.sum} / ${kpiMaxRaw}</td><td>${sectionCWeighted.toFixed(1)}</td></tr>
         <tr><td>D — Bonus</td><td colspan="2">${bonusTotal >= 0 ? "+" : ""}${bonusTotal}</td></tr>
       </table>
       <div class="hint" style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">
-        📋 <strong>Cuma buat cocokin ke kertas</strong> (formula LAMA 30/30/40, TIDAK disimpan): <strong>${oldFormulaScore.toFixed(1)}</strong>
+        ${t("hi_paper_check_note")} <strong>${oldFormulaScore.toFixed(1)}</strong>
       </div>`;
   }
 }
 
 async function saveHistoricalAppraisal() {
   const month = state._historicalMonth;
-  if (!month) { showToast("Pilih bulan dulu.", "error"); return; }
+  if (!month) { showToast(t("hi_select_month_first"), "error"); return; }
   const cfg = state._historicalCfg;
 
   const collectScores = (list, prefix) => {
@@ -3350,13 +3512,13 @@ async function saveHistoricalAppraisal() {
   };
 
   const attitudeScores = collectScores(cfg.attitude, "A");
-  if (!attitudeScores) { showToast("Isi semua kriteria Section A dulu.", "error"); return; }
+  if (!attitudeScores) { showToast(t("hi_fill_section_a_first"), "error"); return; }
   const disciplineScores = collectScores(cfg.discipline, "B");
-  if (!disciplineScores) { showToast("Isi semua kriteria Section B dulu.", "error"); return; }
+  if (!disciplineScores) { showToast(t("hi_fill_section_b_first"), "error"); return; }
   let kpiScores = {};
   if (!cfg.placeholder) {
     kpiScores = collectScores(cfg.kpi, "C");
-    if (!kpiScores) { showToast("Isi semua kriteria Section C dulu.", "error"); return; }
+    if (!kpiScores) { showToast(t("hi_fill_section_c_first"), "error"); return; }
   }
   const bonusEntries = cfg.bonus.map((b, i) => ({
     item: b.item, count: Number(document.getElementById(`historical-bonus-${i}`).value || 0),
@@ -3366,8 +3528,8 @@ async function saveHistoricalAppraisal() {
     enteredById: state.user.staffId, staffId: state._historicalStaffId, month,
     attitudeScores, disciplineScores, kpiScores, bonusEntries,
   });
-  if (res.error || res.success === false) { showToast("Gagal simpan: " + friendlyError(res.error), "error"); return; }
-  showToast(`Data historis ${state._historicalStaffName} bulan ${monthLabelID(month)} tersimpan! Final Score: ${res.finalScore.toFixed(1)}`);
+  if (res.error || res.success === false) { showToast(t("hi_save_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  showToast(`${t("hi_saved_toast_prefix")} ${state._historicalStaffName} ${t("hi_saved_toast_middle")} ${monthLabelID(month)} ${t("hi_saved_toast_suffix")} ${res.finalScore.toFixed(1)}`);
   loadHistoricalStaffList(month); // refresh list so the ✅ indicator updates immediately
 }
 

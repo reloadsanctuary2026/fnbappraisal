@@ -316,7 +316,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-193-dynamic-form-rendering — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-194-wizard-loads-existing-structure — TEST</div>
 
 <script>
 // =================================================================
@@ -3115,6 +3115,7 @@ function wizardStep2() {
     <h2>Pilih Job Title</h2>
     <div class="hint" style="margin-bottom:10px;">Daftar ini dibaca langsung dari HR Sheet setiap kali halaman ini dibuka — Job Title yang baru aja diketik HR langsung muncul di sini, gak perlu clear cache.</div>
     <div id="wizard-job-title-list">${w.jobTitleOptions.length ? "" : `<div class="loading">${t("form_loading")}</div>`}</div>
+    <div class="hint" id="wizard-existing-note" style="margin-top:8px;"></div>
     <div class="row-flex" style="margin-top:14px;">
       <button class="ghost" onclick="wizardGoToStep(1)">&larr; Kembali</button>
       <button class="primary" id="wizard-step2-next-btn" ${!w.jobTitle ? "disabled" : ""} onclick="wizardGoToStep(3)">Lanjut &rarr;</button>
@@ -3135,10 +3136,26 @@ async function wizardLoadJobTitles() {
       ${w.jobTitleOptions.map(jt => `<option value="${escapeAttr(jt)}" ${w.jobTitle === jt ? "selected" : ""}>${jt}</option>`).join("")}
     </select>`;
 }
-function wizardSetJobTitle(jt) {
+async function wizardSetJobTitle(jt) {
   state._wizard.jobTitle = jt || null;
   const btn = document.getElementById("wizard-step2-next-btn");
   if (btn) btn.disabled = !jt;
+  state._wizard.sections = []; // clear any previously-loaded structure before checking this new Job Title
+
+  if (!jt) return;
+  const noteEl = document.getElementById("wizard-existing-note");
+  if (noteEl) noteEl.textContent = t("form_loading");
+  const res = await apiGet("getEvaluationStructureStatus", { requesterId: state.user.staffId, jobTitle: jt });
+  if (res.found && res.isCustomStructure && res.sections) {
+    // Existing structure found — load it into the wizard so re-opening an already-
+    // configured Job Title lets someone EDIT it, instead of unknowingly starting from
+    // zero and silently overwriting what was there (exactly what happened before this
+    // fix: saving again after "Head Butcher" looked empty would have wiped it clean).
+    state._wizard.sections = res.sections;
+    if (noteEl) noteEl.innerHTML = `<span style="color:var(--amber); font-weight:600;">⚠️ Struktur custom sudah ada buat "${jt}" — akan dibuka buat DIEDIT, bukan dibuat baru.</span>`;
+  } else if (noteEl) {
+    noteEl.textContent = `Belum ada struktur custom buat "${jt}" — akan bikin baru dari nol.`;
+  }
 }
 
 function wizardStep3() {

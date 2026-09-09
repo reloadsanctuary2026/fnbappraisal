@@ -316,7 +316,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-194-wizard-loads-existing-structure — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-195-wizard-step4-ux-and-rubric-fields — TEST</div>
 
 <script>
 // =================================================================
@@ -3196,28 +3196,59 @@ function wizardUpdateSection(i, field, value) {
 
 function wizardStep4() {
   const w = state._wizard;
+  const sectionWeightTotal = (sec) => {
+    const scored = sec.criteria.filter(c => c.inputType !== "text");
+    if (!scored.length) return null;
+    const filled = scored.filter(c => c.weightPct !== null && c.weightPct !== "");
+    if (filled.length === 0) return { mode: "auto", total: 0 }; // all blank — will split evenly, valid
+    if (filled.length < scored.length) return { mode: "partial", total: filled.reduce((s, c) => s + Number(c.weightPct), 0) };
+    return { mode: "full", total: filled.reduce((s, c) => s + Number(c.weightPct), 0) };
+  };
   return `
     <h2>Kriteria per Section</h2>
-    <div class="hint" style="margin-bottom:10px;">Isi kriteria buat tiap section. Bobot per kriteria opsional — kalau diisi SEMUA di 1 section, totalnya harus 100%. Kalau dikosongin semua, poin dibagi rata otomatis.</div>
-    ${w.sections.map((sec, si) => `
+    <div class="hint" style="margin-bottom:14px; background:var(--sand); padding:10px 12px; border-radius:10px;">
+      <strong>Cara kerja bobot:</strong> Section KPI 60% × total bobot kriteria di dalamnya 100% = proporsional ke 60% itu. Jadi bobot kriteria DALAM 1 section harus total <strong>persis 100%</strong> (atau dikosongin SEMUA biar dibagi rata otomatis) — gak bisa setengah-setengah, misal cuma 80%.
+    </div>
+    ${w.sections.map((sec, si) => {
+      const wt = sectionWeightTotal(sec);
+      return `
       <div style="margin-bottom:18px;">
-        <div style="font-weight:700; color:var(--teal); margin-bottom:8px;">${sec.labelId || "(belum dikasih nama)"} — ${sec.weightPct}%</div>
-        ${sec.criteria.map((c, ci) => `
-          <div style="border:1px solid var(--border); border-radius:10px; padding:10px; margin-bottom:8px;">
-            <input type="text" placeholder="Nama Kriteria" value="${escapeAttr(c.name)}" oninput="wizardUpdateCriterion(${si}, ${ci}, 'name', this.value)" style="margin-bottom:6px;" />
-            <input type="text" placeholder="Target" value="${escapeAttr(c.target)}" oninput="wizardUpdateCriterion(${si}, ${ci}, 'target', this.value)" style="margin-bottom:6px;" />
-            <input type="text" placeholder="Rubrik (opsional)" value="${escapeAttr(c.rubric)}" oninput="wizardUpdateCriterion(${si}, ${ci}, 'rubric', this.value)" style="margin-bottom:6px;" />
+        <div style="font-weight:700; color:var(--teal); margin-bottom:4px;">${sec.labelId || "(belum dikasih nama)"} — ${sec.weightPct}% dari total nilai</div>
+        ${wt ? `<div class="hint" style="margin-bottom:8px; font-weight:600; color:${wt.mode === "auto" ? "var(--text-muted)" : wt.mode === "full" && Math.abs(wt.total - 100) < 0.01 ? "var(--green)" : "var(--red)"};">
+          ${wt.mode === "auto" ? "⚪ Semua kriteria dikosongin bobotnya — otomatis dibagi rata." : wt.mode === "partial" ? `🔴 Baru sebagian diisi bobot (${wt.total}%) — isi SEMUA kriteria atau kosongin SEMUA.` : Math.abs(wt.total - 100) < 0.01 ? `🟢 Total bobot kriteria: ${wt.total}% ✅` : `🔴 Total bobot kriteria: ${wt.total}% — harus tepat 100%.`}
+        </div>` : ""}
+        ${sec.criteria.map((c, ci) => {
+          const rubricParts = parseRubricText(c.rubric);
+          return `
+          <div style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px;">
+            <label style="font-size:12px; font-weight:700;">Nama Kriteria</label>
+            <input type="text" placeholder="Contoh: Kebersihan area kerja" value="${escapeAttr(c.name)}" oninput="wizardUpdateCriterion(${si}, ${ci}, 'name', this.value)" style="margin-bottom:8px;" />
+            <label style="font-size:12px; font-weight:700;">Target</label>
+            <input type="text" placeholder="Contoh: 0 komplain kebersihan per bulan" value="${escapeAttr(c.target)}" oninput="wizardUpdateCriterion(${si}, ${ci}, 'target', this.value)" style="margin-bottom:8px;" />
+            <label style="font-size:12px; font-weight:700;">Rubrik Skor (opsional, tapi disarankan)</label>
+            <div class="hint" style="margin-bottom:6px;">Cukup isi kondisi tiap level — Skor 2 & 4 otomatis dianggap "di antara", gak perlu diisi.</div>
+            <input type="text" placeholder="Skor 1 (paling lemah)" value="${escapeAttr(rubricParts[1])}" oninput="wizardUpdateCriterionRubric(${si}, ${ci}, 1, this.value)" style="margin-bottom:4px; border-left:3px solid var(--red);" />
+            <input type="text" placeholder="Skor 3 (standar/cukup)" value="${escapeAttr(rubricParts[3])}" oninput="wizardUpdateCriterionRubric(${si}, ${ci}, 3, this.value)" style="margin-bottom:4px; border-left:3px solid var(--gold);" />
+            <input type="text" placeholder="Skor 5 (paling kuat)" value="${escapeAttr(rubricParts[5])}" oninput="wizardUpdateCriterionRubric(${si}, ${ci}, 5, this.value)" style="margin-bottom:8px; border-left:3px solid var(--green);" />
             <div class="row-flex">
-              <input type="number" placeholder="Bobot % (opsional)" value="${c.weightPct === null ? "" : c.weightPct}" oninput="wizardUpdateCriterion(${si}, ${ci}, 'weightPct', this.value)" />
-              <select onchange="wizardUpdateCriterion(${si}, ${ci}, 'inputType', this.value)">
-                <option value="score_1_5" ${c.inputType === "score_1_5" ? "selected" : ""}>Skor 1-5</option>
-                <option value="text" ${c.inputType === "text" ? "selected" : ""}>Isian Teks</option>
-              </select>
-              <button class="ghost" style="flex:0 0 auto; color:var(--red);" onclick="wizardRemoveCriterion(${si}, ${ci})">✕</button>
+              <div style="flex:1;">
+                <label style="font-size:12px; font-weight:700;">Bobot % (opsional)</label>
+                <input type="number" placeholder="Kosongin = rata otomatis" value="${c.weightPct === null ? "" : c.weightPct}" onchange="wizardUpdateCriterion(${si}, ${ci}, 'weightPct', this.value); render();" />
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:12px; font-weight:700;">Tipe Input</label>
+                <select onchange="wizardUpdateCriterion(${si}, ${ci}, 'inputType', this.value); render();">
+                  <option value="score_1_5" ${c.inputType === "score_1_5" ? "selected" : ""}>Skor 1-5</option>
+                  <option value="text" ${c.inputType === "text" ? "selected" : ""}>Isian Teks (gak dinilai)</option>
+                </select>
+              </div>
+              <button class="ghost" style="flex:0 0 auto; color:var(--red); align-self:flex-end;" onclick="wizardRemoveCriterion(${si}, ${ci})">✕</button>
             </div>
-          </div>`).join("")}
+          </div>`;
+        }).join("")}
         <button class="secondary" onclick="wizardAddCriterion(${si})">+ Tambah Kriteria di ${sec.labelId || "section ini"}</button>
-      </div>`).join("")}
+      </div>`;
+    }).join("")}
     <div class="row-flex" style="margin-top:14px;">
       <button class="ghost" onclick="wizardGoToStep(3)">&larr; Kembali</button>
       <button class="primary" onclick="wizardGoToStep(5)">Lanjut ke Review &rarr;</button>
@@ -3231,6 +3262,16 @@ function wizardAddCriterion(si) {
 function wizardRemoveCriterion(si, ci) {
   state._wizard.sections[si].criteria.splice(ci, 1);
   render();
+}
+function wizardUpdateCriterionRubric(si, ci, level, value) {
+  const c = state._wizard.sections[si].criteria[ci];
+  const parts = parseRubricText(c.rubric);
+  parts[level] = value;
+  const joined = [];
+  if (parts[1]) joined.push(`Skor 1 = ${parts[1]}`);
+  if (parts[3]) joined.push(`Skor 3 = ${parts[3]}`);
+  if (parts[5]) joined.push(`Skor 5 = ${parts[5]}`);
+  c.rubric = joined.join("\n");
 }
 function wizardUpdateCriterion(si, ci, field, value) {
   const c = state._wizard.sections[si].criteria[ci];

@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-192-exclude-new-hire-from-compliance — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-198-generic-evaluation-structure-live — LIVE</div>
 
 <script>
 // =================================================================
@@ -1458,10 +1458,10 @@ function t(key) {
 function setLanguage(lang) {
   state.lang = (lang === "en") ? "en" : "id";
   try { localStorage.setItem("appLang", state.lang); } catch (e) { /* localStorage unavailable — language just won't persist across reloads */ }
-  // None of the PIN entry step, the business-unit picker, or the "TEST is closed" notice
-  // are their own state.screen value — they're drawn directly, not routed through
-  // render() — so toggling language while sitting on any of them needs to redraw THAT
-  // screen specifically, or it'd wrongly bounce to some other pre-login screen.
+  // Neither the PIN entry step nor the business-unit picker are their own state.screen
+  // value — they're drawn directly, not routed through render() — so toggling language
+  // while sitting on either needs to redraw THAT screen specifically, or it'd wrongly
+  // bounce to some other pre-login screen.
   if (document.getElementById("business-unit-picker")) {
     renderBusinessUnitPicker();
   } else if (!state.user && document.getElementById("pin-code-input")) {
@@ -1505,6 +1505,7 @@ function render() {
   if (state.screen === "staffMapping") return renderStaffMapping();
   if (state.screen === "kpiManagement") return renderKpiManagement();
   if (state.screen === "devTools") return renderDevTools();
+  if (state.screen === "evalWizard") return renderEvaluationWizard();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
   if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
@@ -2988,11 +2989,354 @@ function kpiCoverageSummary(res) {
  *  require opening the Apps Script editor directly. See runSystemHealthCheck and
  *  runMaintenanceAction on the backend; both independently re-check isSuperAdmin
  *  server-side too, so this screen being reachable is not itself the only gate. */
+async function doLoadStageStatus() {
+  const scopeType = document.getElementById("stage-scope-type").value;
+  const scopeValue = document.getElementById("stage-scope-value").value.trim();
+  const resultsEl = document.getElementById("stage-toggle-results");
+  if (!scopeValue) { resultsEl.innerHTML = `<div class="error">Isi nilainya dulu.</div>`; return; }
+  resultsEl.innerHTML = `<div class="loading">${t("form_loading")}</div>`;
+
+  const res = await apiGet("getStageOverrideRow", { requesterId: state.user.staffId, scopeType, scopeValue });
+  if (!res.found) { resultsEl.innerHTML = `<div class="error">${friendlyError(res.error)}</div>`; return; }
+
+  // For NIK specifically, the backend resolves the REAL default (respects the
+  // HR-department auto-exception) instead of guessing from the raw text here.
+  const fallbackDefault = res.defaultStages || { self: true, leader: true, hr: !(scopeType === "Department" && /human resources|\bhr\b/i.test(scopeValue)) };
+  const self = res.hasOverride ? res.self : fallbackDefault.self;
+  const leader = res.hasOverride ? res.leader : fallbackDefault.leader;
+  const hr = res.hasOverride ? res.hr : fallbackDefault.hr;
+
+  resultsEl.innerHTML = `
+    ${res.name ? `<div style="font-weight:700; margin-bottom:4px;">${res.name}</div>` : ""}
+    <div class="hint" style="margin-bottom:8px;">${res.hasOverride ? "🔧 Ada override manual aktif." : "⚙️ Belum ada override — pakai aturan otomatis."}</div>
+    <div class="row-flex" style="margin-bottom:6px;">
+      <label style="flex:1;"><input type="checkbox" id="stage-self" ${self ? "checked" : ""} /> Self</label>
+      <label style="flex:1;"><input type="checkbox" id="stage-leader" ${leader ? "checked" : ""} /> Leader/Management</label>
+      <label style="flex:1;"><input type="checkbox" id="stage-hr" ${hr ? "checked" : ""} /> HR</label>
+    </div>
+    <div class="row-flex">
+      <button class="primary" onclick="doSaveStageOverride('${scopeType}', '${escapeAttr(scopeValue)}')">Simpan Override</button>
+      ${res.hasOverride ? `<button class="ghost" onclick="doClearStageOverride('${scopeType}', '${escapeAttr(scopeValue)}')">Reset ke Otomatis</button>` : ""}
+    </div>
+    <div class="hint" id="stage-save-note" style="margin-top:8px;"></div>
+  `;
+}
+
+async function doSaveStageOverride(scopeType, scopeValue) {
+  const noteEl = document.getElementById("stage-save-note");
+  const selfActive = document.getElementById("stage-self").checked;
+  const leaderActive = document.getElementById("stage-leader").checked;
+  const hrActive = document.getElementById("stage-hr").checked;
+  if (!selfActive && !leaderActive && !hrActive) { noteEl.textContent = "Minimal 1 tahap harus aktif."; noteEl.style.color = "var(--red)"; return; }
+
+  noteEl.textContent = t("sm_saving");
+  const res = await apiPost("saveEvaluationStageOverride", { requesterId: state.user.staffId, scopeType, scopeValue, selfActive, leaderActive, hrActive });
+  if (res.error || res.success === false) { noteEl.textContent = friendlyError(res.error); noteEl.style.color = "var(--red)"; return; }
+  showToast("✅ Override tersimpan.");
+  doLoadStageStatus();
+}
+
+async function doClearStageOverride(scopeType, scopeValue) {
+  const res = await apiPost("saveEvaluationStageOverride", { requesterId: state.user.staffId, scopeType, scopeValue, selfActive: null, leaderActive: null, hrActive: null });
+  if (res.error || res.success === false) { showToast(friendlyError(res.error), "error"); return; }
+  showToast("✅ Balik ke otomatis.");
+  doLoadStageStatus();
+}
+
+/** ============================================================================
+ *  EVALUATION STRUCTURE WIZARD — TEST ONLY, experimental. Lets superadmin/HR define a
+ *  fully custom Section + criteria structure for one Job Title (any number of
+ *  sections, any weight split, per-criterion weights, score-or-text input types),
+ *  instead of the fixed Attitude/Discipline/KPI 25/25/50 every position has used
+ *  until now. A Job Title never touched here keeps using that old structure exactly —
+ *  see computeEvaluatorTotalGeneric on the backend, which literally calls the
+ *  original scoring function untouched whenever no custom structure exists.
+ *  ============================================================================ */
+function startEvaluationWizard() {
+  state._wizard = { step: 1, businessUnit: null, jobTitle: null, jobTitleOptions: [], sections: [] };
+  state.screen = "evalWizard";
+  render();
+}
+
+function wizardStepLabel(n) {
+  const labels = ["Unit Bisnis", "Job Title", "Section", "Kriteria", "Review & Simpan"];
+  return `${n}. ${labels[n - 1]}`;
+}
+
+function renderEvaluationWizard() {
+  if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
+  const w = state._wizard;
+  const stepper = `
+    <div class="row-flex" style="margin-bottom:14px; flex-wrap:wrap; gap:6px;">
+      ${[1, 2, 3, 4, 5].map(n => `<span class="badge ${n === w.step ? "done" : n < w.step ? "performer" : "pending"}" style="font-size:11px;">${wizardStepLabel(n)}</span>`).join("")}
+    </div>`;
+  let body = "";
+  if (w.step === 1) body = wizardStep1();
+  else if (w.step === 2) body = wizardStep2();
+  else if (w.step === 3) body = wizardStep3();
+  else if (w.step === 4) body = wizardStep4();
+  else body = wizardStep5();
+
+  app.innerHTML = topbar("🧩 Struktur Evaluasi") + `
+    <button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>
+    <div class="card">${stepper}${body}</div>
+  `;
+  if (w.step === 2) wizardLoadJobTitles();
+}
+
+function wizardStep1() {
+  const w = state._wizard;
+  const units = [["fnb", "F&B"], ["gym", "Gym"], ["backoffice", "Back Office"]];
+  return `
+    <h2>Pilih Business Unit</h2>
+    <div class="row-flex" style="margin-bottom:14px;">
+      ${units.map(([key, label]) => `<button class="${w.businessUnit === key ? "primary" : "secondary"}" style="flex:1;" onclick="wizardSetUnit('${key}')">${label}</button>`).join("")}
+    </div>
+    <button class="primary" ${!w.businessUnit ? "disabled" : ""} onclick="wizardGoToStep(2)">Lanjut &rarr;</button>
+  `;
+}
+async function wizardSetUnit(unit) {
+  state._wizard.businessUnit = unit;
+  state._wizard.jobTitle = null;
+  render();
+}
+
+function wizardStep2() {
+  const w = state._wizard;
+  return `
+    <h2>Pilih Job Title</h2>
+    <div class="hint" style="margin-bottom:10px;">Daftar ini dibaca langsung dari HR Sheet setiap kali halaman ini dibuka — Job Title yang baru aja diketik HR langsung muncul di sini, gak perlu clear cache.</div>
+    <div id="wizard-job-title-list">${w.jobTitleOptions.length ? "" : `<div class="loading">${t("form_loading")}</div>`}</div>
+    <div class="hint" id="wizard-existing-note" style="margin-top:8px;"></div>
+    <div class="row-flex" style="margin-top:14px;">
+      <button class="ghost" onclick="wizardGoToStep(1)">&larr; Kembali</button>
+      <button class="primary" id="wizard-step2-next-btn" ${!w.jobTitle ? "disabled" : ""} onclick="wizardGoToStep(3)">Lanjut &rarr;</button>
+    </div>
+  `;
+}
+async function wizardLoadJobTitles() {
+  const w = state._wizard;
+  if (!w.jobTitleOptions.length) {
+    const res = await apiGet("getFreshJobTitlesForUnit", { businessUnit: w.businessUnit });
+    w.jobTitleOptions = res.titles || [];
+  }
+  const listEl = document.getElementById("wizard-job-title-list");
+  if (!listEl) return;
+  listEl.innerHTML = `
+    <select onchange="wizardSetJobTitle(this.value)">
+      <option value="">— pilih Job Title —</option>
+      ${w.jobTitleOptions.map(jt => `<option value="${escapeAttr(jt)}" ${w.jobTitle === jt ? "selected" : ""}>${jt}</option>`).join("")}
+    </select>`;
+}
+async function wizardSetJobTitle(jt) {
+  state._wizard.jobTitle = jt || null;
+  const btn = document.getElementById("wizard-step2-next-btn");
+  if (btn) btn.disabled = !jt;
+  state._wizard.sections = []; // clear any previously-loaded structure before checking this new Job Title
+
+  if (!jt) return;
+  const noteEl = document.getElementById("wizard-existing-note");
+  if (noteEl) noteEl.textContent = t("form_loading");
+  const res = await apiGet("getEvaluationStructureStatus", { requesterId: state.user.staffId, jobTitle: jt });
+  if (res.found && res.isCustomStructure && res.sections) {
+    // Existing structure found — load it into the wizard so re-opening an already-
+    // configured Job Title lets someone EDIT it, instead of unknowingly starting from
+    // zero and silently overwriting what was there (exactly what happened before this
+    // fix: saving again after "Head Butcher" looked empty would have wiped it clean).
+    state._wizard.sections = res.sections;
+    if (noteEl) noteEl.innerHTML = `<span style="color:var(--amber); font-weight:600;">⚠️ Struktur custom sudah ada buat "${jt}" — akan dibuka buat DIEDIT, bukan dibuat baru.</span>`;
+  } else if (noteEl) {
+    noteEl.textContent = `Belum ada struktur custom buat "${jt}" — akan bikin baru dari nol.`;
+  }
+}
+
+function wizardStep3() {
+  const w = state._wizard;
+  const totalWeight = w.sections.reduce((s, sec) => s + (Number(sec.weightPct) || 0), 0);
+  return `
+    <h2>Section — ${w.jobTitle}</h2>
+    <div class="hint" style="margin-bottom:10px;">Bikin section sebanyak yang perlu (misal "KPI" dan "Kompetensi"). Total bobot semua section harus 100%.</div>
+    ${w.sections.map((sec, i) => `
+      <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px;">
+        <div class="row-flex">
+          <input type="text" placeholder="Nama Section (ID)" value="${escapeAttr(sec.labelId)}" oninput="wizardUpdateSection(${i}, 'labelId', this.value)" />
+          <input type="text" placeholder="Section Name (EN)" value="${escapeAttr(sec.labelEn)}" oninput="wizardUpdateSection(${i}, 'labelEn', this.value)" />
+          <input type="number" placeholder="Bobot %" value="${sec.weightPct || ""}" style="max-width:100px;" onchange="wizardUpdateSection(${i}, 'weightPct', this.value); render();" />
+          <button class="ghost" style="flex:0 0 auto; color:var(--red);" onclick="wizardRemoveSection(${i})">✕</button>
+        </div>
+      </div>`).join("")}
+    <button class="secondary" onclick="wizardAddSection()" style="margin-bottom:12px;">+ Tambah Section</button>
+    <div class="hint" style="font-weight:700; color:${Math.abs(totalWeight - 100) < 0.01 ? "var(--green)" : "var(--red)"};">Total bobot: ${totalWeight}% ${Math.abs(totalWeight - 100) < 0.01 ? "✅" : "(harus 100%)"}</div>
+    <div class="row-flex" style="margin-top:14px;">
+      <button class="ghost" onclick="wizardGoToStep(2)">&larr; Kembali</button>
+      <button class="primary" ${(!w.sections.length || Math.abs(totalWeight - 100) > 0.01) ? "disabled" : ""} onclick="wizardGoToStep(4)">Lanjut &rarr;</button>
+    </div>
+  `;
+}
+function wizardAddSection() {
+  state._wizard.sections.push({ key: "section_" + Date.now(), labelId: "", labelEn: "", weightPct: "", criteria: [] });
+  render();
+}
+function wizardRemoveSection(i) {
+  state._wizard.sections.splice(i, 1);
+  render();
+}
+function wizardUpdateSection(i, field, value) {
+  state._wizard.sections[i][field] = field === "weightPct" ? Number(value) : value;
+  if (field === "labelId") state._wizard.sections[i].key = value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "") || ("section_" + i);
+}
+
+function wizardStep4() {
+  const w = state._wizard;
+  const sectionWeightTotal = (sec) => {
+    const scored = sec.criteria.filter(c => c.inputType !== "text");
+    if (!scored.length) return null;
+    const filled = scored.filter(c => c.weightPct !== null && c.weightPct !== "");
+    if (filled.length === 0) return { mode: "auto", total: 0 }; // all blank — will split evenly, valid
+    if (filled.length < scored.length) return { mode: "partial", total: filled.reduce((s, c) => s + Number(c.weightPct), 0) };
+    return { mode: "full", total: filled.reduce((s, c) => s + Number(c.weightPct), 0) };
+  };
+  return `
+    <h2>Kriteria per Section</h2>
+    <div class="hint" style="margin-bottom:14px; background:var(--sand); padding:10px 12px; border-radius:10px;">
+      <strong>Cara kerja bobot:</strong> Section KPI 60% × total bobot kriteria di dalamnya 100% = proporsional ke 60% itu. Jadi bobot kriteria DALAM 1 section harus total <strong>persis 100%</strong> (atau dikosongin SEMUA biar dibagi rata otomatis) — gak bisa setengah-setengah, misal cuma 80%.
+    </div>
+    ${w.sections.map((sec, si) => {
+      const wt = sectionWeightTotal(sec);
+      return `
+      <div style="margin-bottom:18px;">
+        <div style="font-weight:700; color:var(--teal); margin-bottom:4px;">${sec.labelId || "(belum dikasih nama)"} — ${sec.weightPct}% dari total nilai</div>
+        ${wt ? `<div class="hint" style="margin-bottom:8px; font-weight:600; color:${wt.mode === "auto" ? "var(--text-muted)" : wt.mode === "full" && Math.abs(wt.total - 100) < 0.01 ? "var(--green)" : "var(--red)"};">
+          ${wt.mode === "auto" ? "⚪ Semua kriteria dikosongin bobotnya — otomatis dibagi rata." : wt.mode === "partial" ? `🔴 Baru sebagian diisi bobot (${wt.total}%) — isi SEMUA kriteria atau kosongin SEMUA.` : Math.abs(wt.total - 100) < 0.01 ? `🟢 Total bobot kriteria: ${wt.total}% ✅` : `🔴 Total bobot kriteria: ${wt.total}% — harus tepat 100%.`}
+        </div>` : ""}
+        ${sec.criteria.map((c, ci) => {
+          const rubricParts = parseRubricText(c.rubric);
+          return `
+          <div style="border:1px solid var(--border); border-radius:10px; padding:12px; margin-bottom:8px;">
+            <label style="font-size:12px; font-weight:700;">Nama Kriteria</label>
+            <input type="text" placeholder="Contoh: Kebersihan area kerja" value="${escapeAttr(c.name)}" oninput="wizardUpdateCriterion(${si}, ${ci}, 'name', this.value)" style="margin-bottom:8px;" />
+            <label style="font-size:12px; font-weight:700;">Target</label>
+            <input type="text" placeholder="Contoh: 0 komplain kebersihan per bulan" value="${escapeAttr(c.target)}" oninput="wizardUpdateCriterion(${si}, ${ci}, 'target', this.value)" style="margin-bottom:8px;" />
+            <label style="font-size:12px; font-weight:700;">Rubrik Skor (opsional, tapi disarankan)</label>
+            <div class="hint" style="margin-bottom:6px;">Cukup isi kondisi tiap level — Skor 2 & 4 otomatis dianggap "di antara", gak perlu diisi.</div>
+            <input type="text" placeholder="Skor 1 (paling lemah)" value="${escapeAttr(rubricParts[1])}" oninput="wizardUpdateCriterionRubric(${si}, ${ci}, 1, this.value)" style="margin-bottom:4px; border-left:3px solid var(--red);" />
+            <input type="text" placeholder="Skor 3 (standar/cukup)" value="${escapeAttr(rubricParts[3])}" oninput="wizardUpdateCriterionRubric(${si}, ${ci}, 3, this.value)" style="margin-bottom:4px; border-left:3px solid var(--gold);" />
+            <input type="text" placeholder="Skor 5 (paling kuat)" value="${escapeAttr(rubricParts[5])}" oninput="wizardUpdateCriterionRubric(${si}, ${ci}, 5, this.value)" style="margin-bottom:8px; border-left:3px solid var(--green);" />
+            <div class="row-flex">
+              <div style="flex:1;">
+                <label style="font-size:12px; font-weight:700;">Bobot % (opsional)</label>
+                <input type="number" placeholder="Kosongin = rata otomatis" value="${c.weightPct === null ? "" : c.weightPct}" onchange="wizardUpdateCriterion(${si}, ${ci}, 'weightPct', this.value); render();" />
+              </div>
+              <div style="flex:1;">
+                <label style="font-size:12px; font-weight:700;">Tipe Input</label>
+                <select onchange="wizardUpdateCriterion(${si}, ${ci}, 'inputType', this.value); render();">
+                  <option value="score_1_5" ${c.inputType === "score_1_5" ? "selected" : ""}>Skor 1-5</option>
+                  <option value="text" ${c.inputType === "text" ? "selected" : ""}>Isian Teks (gak dinilai)</option>
+                </select>
+              </div>
+              <button class="ghost" style="flex:0 0 auto; color:var(--red); align-self:flex-end;" onclick="wizardRemoveCriterion(${si}, ${ci})">✕</button>
+            </div>
+          </div>`;
+        }).join("")}
+        <button class="secondary" onclick="wizardAddCriterion(${si})">+ Tambah Kriteria di ${sec.labelId || "section ini"}</button>
+      </div>`;
+    }).join("")}
+    <div class="row-flex" style="margin-top:14px;">
+      <button class="ghost" onclick="wizardGoToStep(3)">&larr; Kembali</button>
+      <button class="primary" onclick="wizardGoToStep(5)">Lanjut ke Review &rarr;</button>
+    </div>
+  `;
+}
+function wizardAddCriterion(si) {
+  state._wizard.sections[si].criteria.push({ name: "", target: "", rubric: "", weightPct: null, inputType: "score_1_5" });
+  render();
+}
+function wizardRemoveCriterion(si, ci) {
+  state._wizard.sections[si].criteria.splice(ci, 1);
+  render();
+}
+function wizardUpdateCriterionRubric(si, ci, level, value) {
+  const c = state._wizard.sections[si].criteria[ci];
+  const parts = parseRubricText(c.rubric);
+  parts[level] = value;
+  const joined = [];
+  if (parts[1]) joined.push(`Skor 1 = ${parts[1]}`);
+  if (parts[3]) joined.push(`Skor 3 = ${parts[3]}`);
+  if (parts[5]) joined.push(`Skor 5 = ${parts[5]}`);
+  c.rubric = joined.join("\n");
+}
+function wizardUpdateCriterion(si, ci, field, value) {
+  const c = state._wizard.sections[si].criteria[ci];
+  c[field] = field === "weightPct" ? (value === "" ? null : Number(value)) : value;
+}
+
+function wizardStep5() {
+  const w = state._wizard;
+  return `
+    <h2>Review — ${w.jobTitle}</h2>
+    ${w.sections.map(sec => `
+      <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px;">
+        <div style="font-weight:700;">${sec.labelId} / ${sec.labelEn} — ${sec.weightPct}%</div>
+        <ul style="margin:8px 0 0; padding-left:20px; font-size:13px;">
+          ${sec.criteria.map(c => `<li>${c.name} ${c.weightPct !== null ? `(${c.weightPct}%)` : "(rata)"} — ${c.inputType === "text" ? "Isian Teks" : "Skor 1-5"}</li>`).join("")}
+        </ul>
+      </div>`).join("")}
+    <div class="hint" id="wizard-save-note" style="margin:10px 0;"></div>
+    <div class="row-flex">
+      <button class="ghost" onclick="wizardGoToStep(4)">&larr; Kembali</button>
+      <button class="primary" onclick="wizardSave()">💾 Simpan Struktur Ini</button>
+    </div>
+  `;
+}
+async function wizardGoToStep(n) {
+  state._wizard.step = n;
+  render();
+}
+async function wizardSave() {
+  const w = state._wizard;
+  const noteEl = document.getElementById("wizard-save-note");
+  noteEl.textContent = t("sm_saving");
+  const res = await apiPost("saveSectionStructure", { requesterId: state.user.staffId, jobTitle: w.jobTitle, sections: w.sections });
+  if (res.error || res.success === false) {
+    const errorLabels = {
+      section_weights_must_total_100: `Total bobot section harus 100% (sekarang ${res.detail}%).`,
+      partial_criterion_weights: `Section "${res.detail}" ada kriteria yang dikasih bobot, ada yang enggak — isi semua atau kosongin semua.`,
+      criterion_weights_must_total_100: `Total bobot kriteria dalam section "${res.detail}" harus 100%.`,
+    };
+    noteEl.textContent = "❌ " + (errorLabels[res.error] || friendlyError(res.error));
+    noteEl.style.color = "var(--red)";
+    return;
+  }
+  showToast(`✅ Struktur "${w.jobTitle}" tersimpan (${res.rowCount} baris kriteria).`);
+  goToRoleMenu();
+}
+
 async function renderDevTools() {
   if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
   const showMenuLink = availableScreens(state.user).length > 1;
   app.innerHTML = topbar(t("dt_title")) + `
     ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
+    <div class="card">
+      <h2>🧩 Struktur Evaluasi Fleksibel (Eksperimental)</h2>
+      <div class="hint" style="margin-bottom:10px;">Bikin/edit struktur Section + kriteria custom per Job Title, dan atur tahap evaluasi mana yang aktif. Job Title yang belum pernah disentuh di sini tetap pakai struktur lama (25/25/50), gak berubah sama sekali.</div>
+      <button class="primary" onclick="startEvaluationWizard()" style="margin-bottom:8px;">+ Buat / Edit Struktur Posisi</button>
+    </div>
+    <div class="card">
+      <h2>🔀 Toggle Tahap Evaluasi (Self/Leader/HR)</h2>
+      <div class="hint" style="margin-bottom:10px;">Default-nya: semua posisi 3 tahap aktif, KECUALI department HR (otomatis cuma Self+Leader). Di sini bisa override manual per Job Title, Department, atau per-orang (NIK) kapan aja.</div>
+      <div class="row-flex" style="margin-bottom:8px;">
+        <select id="stage-scope-type" onchange="updateStageScopeInput()">
+          <option value="JobTitle">Job Title</option>
+          <option value="Department">Department</option>
+          <option value="StaffId">NIK (per-orang)</option>
+        </select>
+        <input type="text" id="stage-scope-value" list="job-title-datalist" placeholder="Ketik buat cari Job Title..." style="flex:1;" />
+        <button class="secondary" style="flex:0 0 auto;" onclick="doLoadStageStatus()">Cek</button>
+      </div>
+      <datalist id="job-title-datalist"></datalist>
+      <datalist id="department-datalist"></datalist>
+      <div id="stage-toggle-results"></div>
+    </div>
     <div class="card">
       <h2>${t("dt_override_title")}</h2>
       <div class="hint" style="margin-bottom:10px;">${t("dt_override_desc")}</div>
@@ -3015,11 +3359,43 @@ async function renderDevTools() {
       <button class="secondary" id="maint-dedupeKpiSheet-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('dedupeKpiSheet', this)">${t("dt_dedupe_kpi_btn")}</button>
       <button class="secondary" id="maint-migratePhotosToLinks-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('migratePhotosToLinks', this)">${t("dt_migrate_photos_btn")}</button>
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
+      <button class="secondary" id="maint-syncPositionMapFromLive-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('syncPositionMapFromLive', this)">🔄 Sync Config_PositionMap dari LIVE</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
       <div class="hint">${t("dt_backend_version_label")} ${state.user._debugVersion || "-"}</div>
     </div>`;
+  loadStageDatalists();
+}
+
+/** Populates the Job Title / Department datalists once per screen load, reading
+ *  fresh from the HR Sheet — same "no stale cache" principle as the Wizard's Job
+ *  Title dropdown. NIK deliberately stays a plain input (no datalist): unlike Job
+ *  Title/Department, which have many near-identical-looking real values worth
+ *  searching, a NIK is just typed in directly once someone already knows it. */
+async function loadStageDatalists() {
+  const res = await apiGet("getFreshJobTitlesAndDepartments", { requesterId: state.user.staffId });
+  if (!res.found) return;
+  const jtList = document.getElementById("job-title-datalist");
+  const deptList = document.getElementById("department-datalist");
+  if (jtList) jtList.innerHTML = res.jobTitles.map(jt => `<option value="${escapeAttr(jt)}"></option>`).join("");
+  if (deptList) deptList.innerHTML = res.departments.map(d => `<option value="${escapeAttr(d)}"></option>`).join("");
+}
+
+function updateStageScopeInput() {
+  const scopeType = document.getElementById("stage-scope-type").value;
+  const valueInput = document.getElementById("stage-scope-value");
+  valueInput.value = "";
+  if (scopeType === "JobTitle") {
+    valueInput.setAttribute("list", "job-title-datalist");
+    valueInput.placeholder = "Ketik buat cari Job Title...";
+  } else if (scopeType === "Department") {
+    valueInput.setAttribute("list", "department-datalist");
+    valueInput.placeholder = "Ketik buat cari Department...";
+  } else {
+    valueInput.removeAttribute("list");
+    valueInput.placeholder = "Contoh: 1267";
+  }
 }
 
 function accessOverrideTypeLabel(evaluatorType) {
@@ -3128,7 +3504,7 @@ async function doRunMaintenanceAction(action, btnEl) {
     const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action });
     noteEl.textContent = (res.error || res.success === false)
       ? `${t("dt_maintenance_failed_prefix")} ${friendlyError(res.error)}`
-      : `${t("dt_maintenance_done_prefix")} (${action}).`;
+      : `${t("dt_maintenance_done_prefix")} (${action})${res.rowCount !== undefined ? ` — ${res.rowCount} baris disalin` : ""}.`;
   } catch (e) {
     noteEl.textContent = t("dt_maintenance_conn_error");
   } finally {
@@ -3889,6 +4265,16 @@ async function loadHistoricalForm() {
     apiGet("getKpiConfigForTarget", { targetStaffId: state._historicalStaffId }),
   ]);
   state._historicalCfg = cfg;
+
+  // GENERIC structures aren't supported in Historical Input yet — this screen predates
+  // the Wizard and assumes the fixed Attitude/Discipline/KPI shape throughout. Showing a
+  // clear message here beats crashing on cfg.attitude being undefined for a custom-
+  // structure Job Title.
+  if (cfg.isCustomStructure) {
+    detailContainer.innerHTML = `<div class="card"><div class="hint" style="color:var(--coral); font-weight:600;">🧩 Posisi ini (${cfg.lockedJobTitle}) pakai struktur evaluasi custom — Input Data Historis belum mendukung struktur custom, cuma struktur lama (Attitude/Discipline/KPI). Hubungi IT kalau butuh data historis buat posisi ini.</div></div>`;
+    return;
+  }
+
   const existingScores = (existing.found && existing.criterionScores) || { attitude: {}, discipline: {}, kpi: {} };
   const hasDetailScores = Object.keys(existingScores.attitude).length || Object.keys(existingScores.discipline).length || Object.keys(existingScores.kpi).length;
 
@@ -4965,7 +5351,108 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   renderFormBody(evaluatorType, target, cfg);
 }
 
+/** GENERIC — renders whatever Section/criteria structure the Wizard defined for this
+ *  Job Title, instead of the fixed Attitude/Discipline/KPI layout. Text-type criteria
+ *  get a textarea instead of the 1-5 pill row and are NEVER counted toward the
+ *  required-completion progress counter — they're qualitative reference notes, same
+ *  spirit as Section D's free-text fields, not something that blocks submission. */
+function renderCustomFormBody(evaluatorType, target, cfg) {
+  const scoredCriteriaFlat = [];
+  cfg.customSections.forEach(sec => sec.criteria.forEach(c => { if (c.inputType !== "text") scoredCriteriaFlat.push(c.name); }));
+  state._totalCriteria = scoredCriteriaFlat.length;
+  state._requiredCriteria = scoredCriteriaFlat;
+
+  const scoreRow = (criterion, desc, rubric) => `
+    <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
+      <div class="name">${criterion}${state.selfReference && state.selfReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--coral);">· Self: ${state.selfReference[criterion]}</span>` : ""}${state.leaderReference && state.leaderReference[criterion] !== undefined ? ` <span style="font-weight:600; font-size:11px; color:var(--teal);">· Leader/Mgmt: ${state.leaderReference[criterion]}</span>` : ""}</div>
+      ${desc ? `<div class="desc">${desc}</div>` : ""}
+      ${rubric ? `<details style="margin:4px 0 8px;"><summary style="cursor:pointer; font-size:11px; color:var(--teal); font-weight:700;">${t("form_view_rubric")}</summary><div style="margin-top:8px;">${formatRubricHtml(rubric)}</div></details>` : ""}
+      <div class="score-select">
+        ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
+      </div>
+    </div>`;
+
+  const textRow = (criterion, desc) => `
+    <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
+      <div class="name">${criterion} <span style="font-weight:400; font-size:11px; color:var(--text-muted);">(opsional, isian bebas)</span></div>
+      ${desc ? `<div class="desc">${desc}</div>` : ""}
+      <textarea class="custom-text-answer" data-criterion="${escapeAttr(criterion)}" rows="3" placeholder="Tulis observasi/jawaban di sini..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:15px;" oninput="state.scores['${escapeAttr(criterion)}'] = this.value;"></textarea>
+    </div>`;
+
+  const bonusRow = (item, points, idx, inputType) => `
+    <div class="criterion-row">
+      <div class="name">${item} <span style="font-weight:600; color:${points > 0 ? "var(--green)" : "var(--red)"};">${points > 0 ? "+" : ""}${points} pts</span></div>
+      <div class="row-flex" style="align-items:center;">
+        ${inputType === "checkbox"
+          ? `<label style="display:flex; align-items:center; gap:8px; flex:0 0 80px; margin-bottom:0; cursor:pointer;">
+               <input type="checkbox" class="bonus-count" data-idx="${idx}" style="width:20px; height:20px; margin:0;" />
+               <span style="font-size:13px; color:var(--text-muted);">${t("form_bonus_occurred")}</span>
+             </label>`
+          : `<input type="number" min="0" class="bonus-count" data-idx="${idx}" value="0" style="margin-bottom:0; flex:0 0 80px;" />`}
+        <input type="text" class="bonus-notes" data-idx="${idx}" placeholder="${t("form_bonus_notes_placeholder")}" style="margin-bottom:0;" />
+      </div>
+    </div>`;
+
+  const isSelf = evaluatorType === "self";
+  const sectionLabel = sec => (state.lang === "en" ? sec.labelEn : sec.labelId) || sec.labelId || sec.key;
+
+  app.innerHTML = topbar("Appraisal — " + target.name) + `
+    <div class="card">
+      <div class="mode-banner mode-${evaluatorType}">
+        <span class="mode-label">${evaluatorType === "self" ? "Appraise Yourself" : evaluatorType === "hr" ? "HR Appraisal" : "Leader / Management Appraisal"}</span>
+        <span class="mode-meta">${target.department !== "-" ? target.department : target.tier} · ${state.month}</span>
+      </div>
+      <div class="hint" style="background:var(--gold-bg,#F5E9D6); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">🧩 Posisi ini pakai struktur penilaian custom (${cfg.lockedJobTitle}).</div>
+      <div class="hint" style="background:var(--sand); padding:9px 12px; border-radius:10px; margin-bottom:8px;">
+        ${t("form_score_legend")}
+      </div>
+      ${evaluatorType !== "self" ? (state.selfReference
+        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself — skornya ditampilkan sebagai referensi.</div>`
+        : `<div class="hint" style="background:var(--amber-bg); color:var(--amber); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">⚠️ ${target.name} belum Appraise Yourself — kamu menilai tanpa referensi dari dia.</div>`
+      ) : ""}
+      <div class="hint" id="progress-counter" style="text-align:right; font-weight:700; color:var(--teal); margin-bottom:14px;"></div>
+
+      ${cfg.customSections.map(sec => `
+        <div class="section-title">${sectionLabel(sec)} (${sec.weightPct}%)</div>
+        ${sec.criteria.map(c => c.inputType === "text" ? textRow(c.name, c.target) : scoreRow(c.name, c.target, c.rubric)).join("")}
+      `).join("")}
+
+      ${isSelf ? "" : `
+        <div class="section-title">${t("form_section_d")}</div>
+        <div class="hint">${t("form_bonus_hint")}</div>
+        ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i, b.inputType)).join("")}
+      `}
+
+      ${isSelf ? `
+        <div class="section-title">${t("form_feedback_section")}</div>
+        <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
+          ${t("form_feedback_privacy")}
+        </div>
+        <textarea id="management-feedback" rows="4" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
+      ` : ""}
+
+      <div class="error" id="form-error"></div>
+      <button class="primary" onclick="reviewBeforeSubmit('${evaluatorType}')" style="margin-top: 14px;">${t("form_submit")}</button>
+      <div class="center" style="margin-top: 10px;">
+        <button class="ghost" onclick="cancelForm()">${t("form_cancel")}</button>
+      </div>
+    </div>`;
+
+  Object.keys(state.scores).forEach(criterion => {
+    const row = app.querySelector(`.criterion-row[data-criterion="${CSS.escape(criterion)}"]`);
+    if (!row) return;
+    const val = state.scores[criterion];
+    const opt = row.querySelector(`.score-opt:nth-child(${val})`);
+    if (opt) { opt.classList.add("selected"); }
+    const textarea = row.querySelector(".custom-text-answer");
+    if (textarea && typeof val === "string") textarea.value = val;
+  });
+  updateProgressCounter();
+}
+
 function renderFormBody(evaluatorType, target, cfg) {
+  if (cfg.isCustomStructure) { renderCustomFormBody(evaluatorType, target, cfg); return; }
+  state._requiredCriteria = null; // legacy mode: every key in state.scores is already a required criterion
   state._totalCriteria = cfg.attitude.length + cfg.discipline.length + (cfg.placeholder ? 0 : cfg.kpi.length);
 
   const scoreRow = (criterion, desc, rubric) => `
@@ -5073,7 +5560,14 @@ function renderFormBody(evaluatorType, target, cfg) {
 
 function updateProgressCounter() {
   const el = document.getElementById("progress-counter");
-  if (el) el.textContent = `${Object.keys(state.scores).length} ${t("form_progress")} ${state._totalCriteria} ${t("form_progress_suffix")}`;
+  // Only count keys that are actually part of the REQUIRED (scored) criteria set —
+  // matters for custom structures, where a filled-in text-type answer also lands in
+  // state.scores but must never inflate the completion count past _totalCriteria.
+  const requiredSet = state._requiredCriteria || null;
+  const filledCount = requiredSet
+    ? Object.keys(state.scores).filter(k => requiredSet.indexOf(k) !== -1).length
+    : Object.keys(state.scores).length;
+  if (el) el.textContent = `${filledCount} ${t("form_progress")} ${state._totalCriteria} ${t("form_progress_suffix")}`;
 }
 
 function selectScore(el, criterion, value) {
@@ -5112,6 +5606,7 @@ function cancelForm() {
 }
 
 function reviewBeforeSubmit(evaluatorType) {
+  if (state.kpiConfig.isCustomStructure) { reviewCustomBeforeSubmit(evaluatorType); return; }
   const cfg = state.kpiConfig;
   const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
   const allCriteria = [...cfg.attitude.map(c => c.name), ...cfg.discipline.map(c => c.name), ...kpiCriteria];
@@ -5172,6 +5667,60 @@ function reviewBeforeSubmit(evaluatorType) {
     </div>`;
 }
 
+function reviewCustomBeforeSubmit(evaluatorType) {
+  const cfg = state.kpiConfig;
+  const missing = (state._requiredCriteria || []).filter(c => !(c in state.scores));
+  if (missing.length) {
+    document.getElementById("form-error").textContent = `Masih ada ${missing.length} kriteria yang belum diisi.`;
+    return;
+  }
+
+  if (evaluatorType === "self") {
+    const feedbackEl = document.getElementById("management-feedback");
+    state._pendingFeedback = feedbackEl ? feedbackEl.value : "";
+  }
+
+  const bonusEntries = [];
+  if (evaluatorType !== "self") {
+    cfg.bonus.forEach((b, i) => {
+      const countInput = document.querySelector(`.bonus-count[data-idx="${i}"]`);
+      let count = 0;
+      if (countInput) {
+        count = countInput.type === "checkbox" ? (countInput.checked ? 1 : 0) : (Number(countInput.value) || 0);
+      }
+      if (count > 0) {
+        const notesInput = document.querySelector(`.bonus-notes[data-idx="${i}"]`);
+        bonusEntries.push({ item: b.item, count, notes: notesInput ? notesInput.value : "" });
+      }
+    });
+  }
+  state._pendingBonusEntries = bonusEntries;
+
+  const target = state.targetStaff;
+  const sectionLabel = sec => (state.lang === "en" ? sec.labelEn : sec.labelId) || sec.labelId || sec.key;
+  const sectionTable = (rows) => `<table class="mini">${rows.map(r => `<tr><td>${r.label}</td><td>${r.score}</td></tr>`).join("")}</table>`;
+
+  app.innerHTML = topbar("Cek Jawaban — " + target.name) + `
+    <div class="card">
+      <div class="hint" style="font-size:14px; margin-bottom:14px;">Cek lagi jawaban di bawah sebelum kirim final. Appraisal ini <strong>cuma bisa dikirim 1 kali</strong> dan tidak bisa diubah lagi setelah terkirim.</div>
+
+      ${cfg.customSections.map(sec => `
+        <div class="section-title" style="margin-top:8px;">${sectionLabel(sec)} (${sec.weightPct}%)</div>
+        ${sectionTable(sec.criteria.map(c => ({ label: c.name, score: c.inputType === "text" ? (state.scores[c.name] ? "✓ diisi" : "(kosong)") : (state.scores[c.name] || "-") })))}
+      `).join("")}
+
+      ${bonusEntries.length ? `
+        <div class="section-title">Section D — Bonus &amp; Deduction</div>
+        <table class="mini">${bonusEntries.map(b => `<tr><td>${b.item}</td><td>${b.count}×</td></tr>`).join("")}</table>
+      ` : ""}
+
+      <div class="row-flex" style="margin-top:16px;">
+        <button class="secondary" onclick="backToEditForm('${evaluatorType}')">&larr; Kembali, Cek Lagi</button>
+        <button class="primary" onclick="confirmAndSubmit('${evaluatorType}')">Ya, Kirim Sekarang</button>
+      </div>
+    </div>`;
+}
+
 function backToEditForm(evaluatorType) {
   state._preserveScores = true;
   renderFormBody(evaluatorType, state.targetStaff, state.kpiConfig);
@@ -5180,7 +5729,7 @@ function backToEditForm(evaluatorType) {
 async function confirmAndSubmit(evaluatorType) {
   try {
     const cfg = state.kpiConfig;
-    const kpiCriteria = cfg.placeholder ? [] : cfg.kpi.map(c => c.name);
+    const kpiCriteria = (cfg.isCustomStructure || cfg.placeholder) ? [] : cfg.kpi.map(c => c.name);
     const target = state.targetStaff;
     if (!target || !target.staffId) {
       showToast("Error internal: target appraisal tidak ditemukan. Coba kembali dan buka ulang form ini.", "error");
@@ -5190,9 +5739,14 @@ async function confirmAndSubmit(evaluatorType) {
       staffId: target.staffId,
       evaluatorId: state.user.staffId,
       slot: evaluatorType,
-      attitudeScores: cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
-      disciplineScores: cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
-      kpiScores: kpiCriteria.map(c => ({ criterion: c, score: state.scores[c] })),
+      attitudeScores: cfg.isCustomStructure ? [] : cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+      disciplineScores: cfg.isCustomStructure ? [] : cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
+      kpiScores: cfg.isCustomStructure ? [] : kpiCriteria.map(c => ({ criterion: c, score: state.scores[c] })),
+      customSectionScores: cfg.isCustomStructure ? cfg.customSections.flatMap(sec => sec.criteria.map(c => ({
+        sectionKey: sec.key, criterion: c.name, inputType: c.inputType,
+        score: c.inputType === "text" ? null : state.scores[c.name],
+        textValue: c.inputType === "text" ? (state.scores[c.name] || "") : "",
+      }))) : [],
       bonusEntries: state._pendingBonusEntries || [],
     };
     showToast("Menyimpan...");
@@ -5862,10 +6416,10 @@ function showInstallBanner(mode) {
     actionHtml = "";
   }
 
-  // Inserted into normal document flow at the very top (like the TEST MODE banner),
-  // NOT position:fixed — the topbar below is itself `position:sticky`, so a fixed banner
-  // at top:0 would float on top of it and cover the logo/title. Flowing naturally just
-  // pushes the topbar down instead, no overlap possible.
+  // Inserted into normal document flow at the very top, NOT position:fixed — the topbar
+  // below is itself `position:sticky`, so a fixed banner at top:0 would float on top of
+  // it and cover the logo/title. Flowing naturally just pushes the topbar down instead,
+  // no overlap possible.
   const banner = document.createElement("div");
   banner.id = "install-banner";
   banner.style.cssText = "background:var(--teal-dark); color:#fff; padding:10px 14px; display:flex; align-items:center; gap:10px; font-size:12px;";

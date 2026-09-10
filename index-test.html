@@ -316,7 +316,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-195-wizard-step4-ux-and-rubric-fields — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-07-196-stage-toggle-datalist-and-nik-scope — TEST</div>
 
 <script>
 // =================================================================
@@ -3011,11 +3011,15 @@ async function doLoadStageStatus() {
   const res = await apiGet("getStageOverrideRow", { requesterId: state.user.staffId, scopeType, scopeValue });
   if (!res.found) { resultsEl.innerHTML = `<div class="error">${friendlyError(res.error)}</div>`; return; }
 
-  const self = res.hasOverride ? res.self : true;
-  const leader = res.hasOverride ? res.leader : true;
-  const hr = res.hasOverride ? res.hr : (scopeType === "Department" && /human resources|\bhr\b/i.test(scopeValue) ? false : true);
+  // For NIK specifically, the backend resolves the REAL default (respects the
+  // HR-department auto-exception) instead of guessing from the raw text here.
+  const fallbackDefault = res.defaultStages || { self: true, leader: true, hr: !(scopeType === "Department" && /human resources|\bhr\b/i.test(scopeValue)) };
+  const self = res.hasOverride ? res.self : fallbackDefault.self;
+  const leader = res.hasOverride ? res.leader : fallbackDefault.leader;
+  const hr = res.hasOverride ? res.hr : fallbackDefault.hr;
 
   resultsEl.innerHTML = `
+    ${res.name ? `<div style="font-weight:700; margin-bottom:4px;">${res.name}</div>` : ""}
     <div class="hint" style="margin-bottom:8px;">${res.hasOverride ? "🔧 Ada override manual aktif." : "⚙️ Belum ada override — pakai aturan otomatis."}</div>
     <div class="row-flex" style="margin-bottom:6px;">
       <label style="flex:1;"><input type="checkbox" id="stage-self" ${self ? "checked" : ""} /> Self</label>
@@ -3331,15 +3335,18 @@ async function renderDevTools() {
     </div>
     <div class="card">
       <h2>🔀 Toggle Tahap Evaluasi (Self/Leader/HR)</h2>
-      <div class="hint" style="margin-bottom:10px;">Default-nya: semua posisi 3 tahap aktif, KECUALI department HR (otomatis cuma Self+Leader). Di sini bisa override manual per Job Title atau per Department kapan aja.</div>
+      <div class="hint" style="margin-bottom:10px;">Default-nya: semua posisi 3 tahap aktif, KECUALI department HR (otomatis cuma Self+Leader). Di sini bisa override manual per Job Title, Department, atau per-orang (NIK) kapan aja.</div>
       <div class="row-flex" style="margin-bottom:8px;">
-        <select id="stage-scope-type">
+        <select id="stage-scope-type" onchange="updateStageScopeInput()">
           <option value="JobTitle">Job Title</option>
           <option value="Department">Department</option>
+          <option value="StaffId">NIK (per-orang)</option>
         </select>
-        <input type="text" id="stage-scope-value" placeholder="Contoh: Waiter, atau Floor - Social Wellness Club" style="flex:1;" />
+        <input type="text" id="stage-scope-value" list="job-title-datalist" placeholder="Ketik buat cari Job Title..." style="flex:1;" />
         <button class="secondary" style="flex:0 0 auto;" onclick="doLoadStageStatus()">Cek</button>
       </div>
+      <datalist id="job-title-datalist"></datalist>
+      <datalist id="department-datalist"></datalist>
       <div id="stage-toggle-results"></div>
     </div>
     <div class="card">
@@ -3369,6 +3376,37 @@ async function renderDevTools() {
     <div class="card">
       <div class="hint">${t("dt_backend_version_label")} ${state.user._debugVersion || "-"}</div>
     </div>`;
+  loadStageDatalists();
+}
+
+/** Populates the Job Title / Department datalists once per screen load, reading
+ *  fresh from the HR Sheet — same "no stale cache" principle as the Wizard's Job
+ *  Title dropdown. NIK deliberately stays a plain input (no datalist): unlike Job
+ *  Title/Department, which have many near-identical-looking real values worth
+ *  searching, a NIK is just typed in directly once someone already knows it. */
+async function loadStageDatalists() {
+  const res = await apiGet("getFreshJobTitlesAndDepartments", { requesterId: state.user.staffId });
+  if (!res.found) return;
+  const jtList = document.getElementById("job-title-datalist");
+  const deptList = document.getElementById("department-datalist");
+  if (jtList) jtList.innerHTML = res.jobTitles.map(jt => `<option value="${escapeAttr(jt)}"></option>`).join("");
+  if (deptList) deptList.innerHTML = res.departments.map(d => `<option value="${escapeAttr(d)}"></option>`).join("");
+}
+
+function updateStageScopeInput() {
+  const scopeType = document.getElementById("stage-scope-type").value;
+  const valueInput = document.getElementById("stage-scope-value");
+  valueInput.value = "";
+  if (scopeType === "JobTitle") {
+    valueInput.setAttribute("list", "job-title-datalist");
+    valueInput.placeholder = "Ketik buat cari Job Title...";
+  } else if (scopeType === "Department") {
+    valueInput.setAttribute("list", "department-datalist");
+    valueInput.placeholder = "Ketik buat cari Department...";
+  } else {
+    valueInput.removeAttribute("list");
+    valueInput.placeholder = "Contoh: 1267";
+  }
 }
 
 function accessOverrideTypeLabel(evaluatorType) {

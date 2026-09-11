@@ -2613,6 +2613,23 @@ function escapeAttr(s) {
     .replace(/\r/g, "\\r");
 }
 
+/** Splits a combined "Skor 1 = X\nSkor 3 = Y\nSkor 5 = Z" rubric string back into its 3
+ *  parts for editing — used by the Wizard's per-criterion rubric fields (Step 4). Falls
+ *  back gracefully (puts the whole thing in the Skor 1 field) if the text doesn't match
+ *  the expected pattern, e.g. a rubric written before this structured format existed. */
+function parseRubricText(text) {
+  const result = { 1: "", 3: "", 5: "" };
+  if (!text) return result;
+  const regex = /Skor\s*(\d)\s*=\s*(.+?)(?=\n?Skor\s*\d\s*=|$)/gis;
+  let match, matchedAny = false;
+  while ((match = regex.exec(text)) !== null) {
+    const level = match[1];
+    if (result[level] !== undefined) { result[level] = match[2].trim(); matchedAny = true; }
+  }
+  if (!matchedAny) result[1] = text; // old free-text rubric — preserve it, don't lose data
+  return result;
+}
+
 /** Splits a rubric string ("Skor 1 = ...\nSkor 3 = ...\nSkor 5 = ...") into 3 clearly
  *  separated, color-coded cards instead of one dense wall of pre-formatted text — much
  *  easier to scan at a glance while actually scoring someone. Falls back to the original

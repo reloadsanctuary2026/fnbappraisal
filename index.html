@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-203-dynamic-custom-section-chart — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-205-full-migration-to-section-criteria — LIVE</div>
 
 <script>
 // =================================================================
@@ -1458,12 +1458,15 @@ function t(key) {
 function setLanguage(lang) {
   state.lang = (lang === "en") ? "en" : "id";
   try { localStorage.setItem("appLang", state.lang); } catch (e) { /* localStorage unavailable — language just won't persist across reloads */ }
-  // Neither the PIN entry step nor the business-unit picker are their own state.screen
-  // value — they're drawn directly, not routed through render() — so toggling language
-  // while sitting on either needs to redraw THAT screen specifically, or it'd wrongly
-  // bounce to some other pre-login screen.
+  // None of the PIN entry step, the business-unit picker, or the Superadmin login
+  // screen are their own state.screen value — they're drawn directly, not routed
+  // through render() — so toggling language while sitting on any of them needs to
+  // redraw THAT screen specifically, or it'd wrongly bounce to some other pre-login
+  // screen (losing whatever the person had already typed, for the Superadmin case).
   if (document.getElementById("business-unit-picker")) {
     renderBusinessUnitPicker();
+  } else if (!state.user && document.getElementById("superadmin-username-input")) {
+    renderSuperAdminLoginScreen();
   } else if (!state.user && document.getElementById("pin-code-input")) {
     showPinPrompt();
   } else {
@@ -1503,7 +1506,6 @@ function render() {
   if (state.screen === "historical") return renderHistoricalInput();
   if (state.screen === "settings") return renderSettings();
   if (state.screen === "staffMapping") return renderStaffMapping();
-  if (state.screen === "kpiManagement") return renderKpiManagement();
   if (state.screen === "devTools") return renderDevTools();
   if (state.screen === "evalWizard") return renderEvaluationWizard();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
@@ -2015,9 +2017,60 @@ function onLogoTapped() {
   state._logoTapTimestamps.push(now);
   if (state._logoTapTimestamps.length >= 10) {
     state._logoTapTimestamps = [];
-    state.businessUnit = null;
-    applyBusinessUnitTheme();
-    renderLogin();
+    renderSuperAdminLoginScreen();
+  }
+}
+
+/** Dedicated entry point for Superadmin ONLY — completely separate credentials
+ *  (username/password, not NIK/PIN) from the regular staff login, and checked by its
+ *  own backend function (superAdminLogin) that never accepts a regular employee's
+ *  NIK/PIN here. Before this, tapping the logo 10x just reopened the SAME NIK/PIN form
+ *  everyone else uses (with businessUnit reset to null) — meaning any valid employee
+ *  credentials worked here too, not just Superadmin's. */
+function renderSuperAdminLoginScreen() {
+  app.innerHTML = `
+    <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Superadmin</h1></div>${langTogglePreLoginHtml()}</div>
+    <div class="card">
+      <h2>Akses Superadmin</h2>
+      <label>Username</label>
+      <input type="text" id="superadmin-username-input" autocomplete="off" />
+      <label>Password</label>
+      <input type="password" id="superadmin-password-input" autocomplete="off" />
+      <div class="error" id="superadmin-login-error"></div>
+      <button class="primary" id="superadmin-login-btn" onclick="doSuperAdminLogin()">Masuk</button>
+      <button class="ghost" style="margin-top:8px; width:100%;" onclick="renderLogin()">&larr; Kembali ke Login Biasa</button>
+    </div>`;
+  document.getElementById("superadmin-username-input").focus();
+  document.getElementById("superadmin-password-input").addEventListener("keydown", e => { if (e.key === "Enter") doSuperAdminLogin(); });
+}
+
+async function doSuperAdminLogin() {
+  const username = document.getElementById("superadmin-username-input").value;
+  const password = document.getElementById("superadmin-password-input").value;
+  const errorEl = document.getElementById("superadmin-login-error");
+  const btn = document.getElementById("superadmin-login-btn");
+  errorEl.textContent = "";
+  btn.disabled = true;
+  btn.textContent = "Memproses...";
+
+  try {
+    const res = await apiGet("superAdminLogin", { username, password });
+    if (!res.found) {
+      errorEl.textContent = "Username atau password salah.";
+      return;
+    }
+    // Same completion tail as the regular login flow (see completeLogin) — session
+    // saved, unread count refreshed, straight into the app.
+    state.user = res;
+    localStorage.setItem("appraisalSession", JSON.stringify({ token: res.sessionToken, staffId: res.staffId }));
+    await refreshUnreadCount();
+    goToRoleMenu();
+  } catch (err) {
+    console.error(err);
+    errorEl.textContent = t("login_server_error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Masuk";
   }
 }
 
@@ -2241,7 +2294,6 @@ function availableScreensGrouped(user) {
     settingsItems.push({ key: "staffMapping", label: t("menu_staff_mapping") });
   }
   if (user.isHR || user.isExecutive || user.isAdminOperational) {
-    settingsItems.push({ key: "kpiManagement", label: t("menu_manage_kpi") });
     settingsItems.push({ key: "evalWizard", label: "🧩 Buat / Edit Struktur KPI Set" });
   }
   if (settingsItems.length) groups.push({ name: "MySettings", items: settingsItems });
@@ -2944,41 +2996,6 @@ async function renderMyDevelopmentPlan() {
   }
 }
 
-let _isLoadingKpiManagement = false;
-function kpiCoverageSummary(res) {
-  const withOwnCriteria = [];
-  const realGaps = [];
-
-  // Staff tier: coverage comes from Config_JobTitleKpiSet's mapping — a Job Title is
-  // covered if it's assigned a Set AND that Set actually has criteria.
-  Object.keys(res.jobTitleKpiMap || {}).sort().forEach(title => {
-    const setName = res.jobTitleKpiMap[title];
-    const setHasCriteria = setName && res.kpiByPosition[setName] && res.kpiByPosition[setName].length;
-    if (setHasCriteria) {
-      withOwnCriteria.push(`${title} — pakai Set "${setName}" (${res.kpiByPosition[setName].length} kriteria)`);
-    } else if (setName) {
-      realGaps.push(`${title} — Set "${setName}" ada tapi belum ada kriterianya`);
-    } else {
-      realGaps.push(`${title} — belum di-assign ke Set manapun`);
-    }
-  });
-
-  const detailsBlock = (title, color, items, emptyText) => `
-    <details style="margin-bottom:8px;">
-      <summary style="cursor:pointer; padding:10px 14px; border-radius:10px; background:${color}; color:#fff; font-weight:700; font-size:13px; list-style:none;">${title}</summary>
-      <div style="padding:10px 4px;">
-        ${items.length ? `<ul style="margin:0; padding-left:20px; font-size:13px; line-height:1.8;">${items.map(x => `<li>${x}</li>`).join("")}</ul>` : `<div class="hint">${emptyText}</div>`}
-      </div>
-    </details>`;
-
-  return `
-    <div class="card">
-      <h2>${t("km_coverage_title")}</h2>
-      ${detailsBlock(`✅ ${t("km_coverage_dedicated")} (${withOwnCriteria.length})`, "linear-gradient(90deg, var(--green), #0f7a4f)", withOwnCriteria, t("km_coverage_none_yet"))}
-      ${detailsBlock(`🚨 ${t("km_coverage_gaps")} (${realGaps.length})`, "linear-gradient(90deg, var(--red), #8a2318)", realGaps, t("km_coverage_no_gaps"))}
-    </div>`;
-}
-
 /** Superadmin-only (NIK 9999) — Health Check + one-click maintenance actions that used to
  *  require opening the Apps Script editor directly. See runSystemHealthCheck and
  *  runMaintenanceAction on the backend; both independently re-check isSuperAdmin
@@ -3087,6 +3104,11 @@ function wizardStep1() {
       ${units.map(([key, label]) => `<button class="${w.businessUnit === key ? "primary" : "secondary"}" style="flex:1;" onclick="wizardSetUnit('${key}')">${label}</button>`).join("")}
     </div>
     <button class="primary" ${!w.businessUnit ? "disabled" : ""} onclick="wizardGoToStep(2)">Lanjut &rarr;</button>
+    <div style="margin-top:20px; padding-top:16px; border-top:1.5px solid var(--border);">
+      <div class="hint" style="margin-bottom:8px;">Mau lihat struktur (Section + bobot + kriteria) semua posisi sekaligus dalam 1 file?</div>
+      <button class="secondary" id="section-audit-btn" onclick="doGenerateSectionAudit()">📥 Unduh Audit Struktur Semua Posisi</button>
+      <div class="hint" id="section-audit-note" style="margin-top:8px;"></div>
+    </div>
   `;
 }
 async function wizardSetUnit(unit) {
@@ -3359,7 +3381,7 @@ async function renderDevTools() {
       <button class="secondary" id="maint-dedupeKpiSheet-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('dedupeKpiSheet', this)">${t("dt_dedupe_kpi_btn")}</button>
       <button class="secondary" id="maint-migratePhotosToLinks-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('migratePhotosToLinks', this)">${t("dt_migrate_photos_btn")}</button>
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
-      <button class="secondary" id="maint-setupKpiSetMigration-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('setupKpiSetMigration', this)">📋 Setup KPI Set + Config_JobTitleKpiSet</button>
+      <button class="secondary" id="maint-setupKpiSetMigration-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('setupKpiSetMigration', this)">📋 Refresh Dropdown Config_JobTitleKpiSet</button>
       <button class="secondary" id="maint-migrateAllToSectionCriteriaModel-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('migrateAllToSectionCriteriaModel', this)">⚡ Migrasi ke Model Terpadu (Section Criteria)</button>
       <button class="secondary" id="maint-syncPositionMapFromLive-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('syncPositionMapFromLive', this)">🔄 Sync Config_PositionMap dari LIVE</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
@@ -3513,275 +3535,6 @@ async function doRunMaintenanceAction(action, btnEl) {
     document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = false);
     btnEl.textContent = originalLabel;
   }
-}
-
-async function renderKpiManagement() {
-  if (_isLoadingKpiManagement) return;
-  _isLoadingKpiManagement = true;
-  try {
-    app.innerHTML = topbar("Manage KPI Criteria") + `<div class="loading">${t("form_loading")}</div>`;
-    const res = await apiGet("getAllKpiCriteriaForManagement", { requesterId: state.user.staffId });
-    if (!res.found) {
-      app.innerHTML = topbar("Manage KPI Criteria") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
-      return;
-    }
-    state._kpiMgmtData = res;
-    if (!state._kpiMgmtSection) state._kpiMgmtSection = "attitude";
-    renderKpiManagementBody();
-  } finally {
-    _isLoadingKpiManagement = false;
-  }
-}
-
-function renderKpiManagementBody() {
-  const res = state._kpiMgmtData;
-  const section = state._kpiMgmtSection;
-  const showMenuLink = availableScreens(state.user).length > 1;
-
-  let listHtml, addFormHtml;
-  if (section === "attitude") {
-    listHtml = res.attitude.map(c => kpiCriterionRow("attitude", c.rowIndex, c.name, c.description, null, null, c.rubric)).join("");
-    addFormHtml = kpiAddForm("attitude", t("km_name_criteria_label"), t("km_description_label"), null);
-  } else if (section === "discipline") {
-    listHtml = res.discipline.map(c => kpiCriterionRow("discipline", c.rowIndex, c.name, c.dataSource, c.target, null, c.rubric)).join("");
-    addFormHtml = kpiAddForm("discipline", t("km_name_criteria_label"), t("km_data_source_label"), t("km_target_label"));
-  } else {
-    const position = state._kpiMgmtPosition || Object.keys(res.kpiByPosition)[0] || res.allPositionKeys[0];
-    state._kpiMgmtPosition = position;
-    const items = res.kpiByPosition[position] || [];
-    const usedBy = (res.titlesUsingSet || {})[position] || [];
-    listHtml = `
-      <label>${t("km_select_position_label")}</label>
-      <div class="hint" style="margin-bottom:8px;">${t("km_position_hint")}</div>
-      <select onchange="switchKpiManagementPosition(this.value)">
-        ${res.allPositionKeys.map(k => {
-          const count = (res.kpiByPosition[k] || []).length;
-          return `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k} (${count} kriteria)</option>`;
-        }).join("")}
-      </select>
-      <div class="hint" style="margin:6px 0 8px;">Mau bikin KPI Set baru? Buka <strong>"🧩 Buat / Edit Struktur KPI Set"</strong> di menu — dari situ juga bisa atur berapa Section-nya dan bobotnya.</div>
-      ${usedBy.length ? `<div class="hint" style="margin-bottom:8px;">Dipakai oleh Job Title: ${usedBy.join(", ")}</div>` : `<div class="hint" style="margin-bottom:8px; color:var(--amber);">⚠️ Belum ada Job Title yang pakai Set ini — cek Config_JobTitleKpiSet.</div>`}
-      ${items.map(c => kpiCriterionRow("kpi", c.rowIndex, c.name, c.howToMeasure, c.target, position, c.rubric)).join("")}
-      ${!items.length ? `<div class="hint">${t("km_no_criteria_for_position")}</div>` : ""}
-    `;
-    addFormHtml = kpiAddForm("kpi", t("km_name_criteria_label"), t("km_how_to_measure_label"), t("km_target_label"), position);
-  }
-
-  app.innerHTML = topbar("Manage KPI Criteria") + `
-    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
-    <div class="card">
-      ${tabSwitcher([
-        { key: "attitude", label: "Attitude" },
-        { key: "discipline", label: "Discipline" },
-        { key: "kpi", label: "KPI" },
-      ], section, "switchKpiManagementSection")}
-    </div>
-    ${section === "kpi" ? kpiCoverageSummary(res) : ""}
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div>
-          <h2 style="margin-bottom:2px;">${t("km_audit_title")}</h2>
-          <div class="hint">${t("km_audit_desc")}</div>
-        </div>
-        <button class="secondary" id="section-audit-btn" style="width:auto;" onclick="doGenerateSectionAudit()">${t("km_audit_btn")}</button>
-      </div>
-      <div class="hint" id="section-audit-note" style="margin-top:8px;"></div>
-    </div>
-    <div class="card">
-      <h2>${t("km_existing_criteria_title")}</h2>
-      ${listHtml}
-    </div>
-    ${state._kpiFormOpen ? `
-    <div class="card">
-      <h2>${state._kpiFormEditing ? t("km_edit_criteria_title") : t("km_add_criteria_title")}</h2>
-      ${addFormHtml}
-      <div class="hint" id="kpi-mgmt-note" style="margin-top:8px;"></div>
-      <div class="row-flex" style="margin-top:10px;">
-        <button class="primary" style="flex:1;" onclick="doSaveKpiCriterion()">${state._kpiFormEditing ? t("km_save_changes_btn") : t("km_save_new_btn")}</button>
-        <button class="secondary" style="flex:0 0 auto;" onclick="closeKpiForm()">${t("km_cancel_btn")}</button>
-      </div>
-    </div>` : `
-    <button class="primary" onclick="openKpiFormForAdd()" style="width:100%; margin-bottom:14px;">${t("km_add_criteria_title")}</button>`}
-  `;
-}
-
-function kpiCriterionRow(section, rowIndex, name, field2, field3, positionKey, rubric) {
-  return `
-    <div style="border:1.5px solid var(--border); border-radius:12px; padding:10px 14px; margin-bottom:8px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-        <div>
-          <div class="name">${name}</div>
-          <div class="hint">${field2 || ""}${field3 ? " — Target: " + field3 : ""}</div>
-        </div>
-        <div style="display:flex; gap:6px; flex:0 0 auto;">
-          <button class="ghost" onclick="editKpiCriterion('${section}', ${rowIndex}, '${escapeAttr(name)}', '${escapeAttr(field2 || "")}', '${escapeAttr(field3 || "")}', '${escapeAttr(rubric || "")}'${positionKey ? `, '${escapeAttr(positionKey)}'` : ""})">✏️</button>
-          <button class="ghost" onclick="doDeleteKpiCriterion('${section}', ${rowIndex})">🗑️</button>
-        </div>
-      </div>
-      ${rubric ? `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border);">${formatRubricHtml(rubric)}</div>` : `<div class="hint" style="margin-top:4px; color:var(--coral); font-style:italic;">${t("km_no_rubric_yet")}</div>`}
-    </div>`;
-}
-
-/** Soft nudge, not a hard block — rubrik is optional, so this never prevents saving. Just
- *  flags the most common low-effort patterns (too short, or clearly no real content) so
- *  whoever's filling it in notices before they move on, without being forced into a rigid
- *  format that might not fit every criterion. */
-function checkRubricQuality() {
-  const warningEl = document.getElementById("kpi-form-rubric-warning");
-  if (!warningEl) return;
-  const s1 = (document.getElementById("kpi-form-rubric-1") || {}).value || "";
-  const s3 = (document.getElementById("kpi-form-rubric-3") || {}).value || "";
-  const s5 = (document.getElementById("kpi-form-rubric-5") || {}).value || "";
-  const filledCount = [s1, s3, s5].filter(v => v.trim()).length;
-
-  if (filledCount === 0) { warningEl.textContent = ""; return; }
-  if (filledCount === 1) {
-    warningEl.textContent = t("km_rubric_quality_low");
-    warningEl.style.color = "var(--coral)";
-  } else {
-    warningEl.textContent = t("km_rubric_quality_good");
-    warningEl.style.color = "var(--green)";
-  }
-}
-
-/** Combines the 3 structured score fields into the single text blob the Sheet actually
- *  stores — keeps the storage format unchanged (one rubric string) while the editing
- *  experience itself is now guided/structured, not free-text. */
-function buildRubricText() {
-  const s1 = (document.getElementById("kpi-form-rubric-1") || {}).value.trim();
-  const s3 = (document.getElementById("kpi-form-rubric-3") || {}).value.trim();
-  const s5 = (document.getElementById("kpi-form-rubric-5") || {}).value.trim();
-  const parts = [];
-  if (s1) parts.push(`Skor 1 = ${s1}`);
-  if (s3) parts.push(`Skor 3 = ${s3}`);
-  if (s5) parts.push(`Skor 5 = ${s5}`);
-  return parts.join("\n");
-}
-
-/** Reverse of buildRubricText — splits an existing rubric string back into the 3 fields
- *  when opening it for editing. Falls back gracefully (puts the whole thing in the Skor 1
- *  field) if the text doesn't match the expected "Skor N = ..." pattern, e.g. rubrik
- *  written before this structured form existed. */
-function parseRubricText(text) {
-  const result = { 1: "", 3: "", 5: "" };
-  if (!text) return result;
-  const regex = /Skor\s*(\d)\s*=\s*(.+?)(?=\n?Skor\s*\d\s*=|$)/gis;
-  let match, matchedAny = false;
-  while ((match = regex.exec(text)) !== null) {
-    const level = match[1];
-    if (result[level] !== undefined) { result[level] = match[2].trim(); matchedAny = true; }
-  }
-  if (!matchedAny) result[1] = text; // old free-text rubric — preserve it, don't lose data
-  return result;
-}
-
-function kpiAddForm(section, label1, label2, label3, positionKey) {
-  return `
-    <input type="hidden" id="kpi-form-row-index" value="" />
-    <input type="hidden" id="kpi-form-section" value="${section}" />
-    ${positionKey ? `<input type="hidden" id="kpi-form-position" value="${escapeAttr(positionKey)}" />` : ""}
-    <label>${label1}</label>
-    <input type="text" id="kpi-form-name" placeholder="${label1}" />
-    ${label2 ? `<label>${label2}</label><input type="text" id="kpi-form-field2" placeholder="${label2}" />` : ""}
-    ${label3 ? `<label>${label3}</label><input type="text" id="kpi-form-field3" placeholder="${label3}" />` : ""}
-    <label>${t("km_rubric_label")}</label>
-    <div class="hint" style="margin-bottom:8px;">${t("km_rubric_hint")}</div>
-    <label style="font-size:12px; color:var(--red);">${t("km_score1_label")}</label>
-    <input type="text" id="kpi-form-rubric-1" placeholder="${t("km_rubric_ph1")}" oninput="checkRubricQuality()" />
-    <label style="font-size:12px; color:var(--gold);">${t("km_score3_label")}</label>
-    <input type="text" id="kpi-form-rubric-3" placeholder="${t("km_rubric_ph3")}" oninput="checkRubricQuality()" />
-    <label style="font-size:12px; color:var(--green);">${t("km_score5_label")}</label>
-    <input type="text" id="kpi-form-rubric-5" placeholder="${t("km_rubric_ph5")}" oninput="checkRubricQuality()" />
-    <div class="hint" id="kpi-form-rubric-warning" style="margin-bottom:14px;"></div>
-  `;
-}
-
-function switchKpiManagementSection(section) {
-  state._kpiMgmtSection = section;
-  state._kpiMgmtPosition = null;
-  state._kpiFormOpen = false;
-  state._kpiFormEditing = false;
-  renderKpiManagementBody();
-}
-
-function switchKpiManagementPosition(position) {
-  state._kpiMgmtPosition = position;
-  state._kpiFormOpen = false;
-  state._kpiFormEditing = false;
-  renderKpiManagementBody();
-}
-
-function openKpiFormForAdd() {
-  state._kpiFormOpen = true;
-  state._kpiFormEditing = false;
-  renderKpiManagementBody();
-}
-
-function closeKpiForm() {
-  state._kpiFormOpen = false;
-  state._kpiFormEditing = false;
-  renderKpiManagementBody();
-}
-
-function editKpiCriterion(section, rowIndex, name, field2, field3, rubric, positionKey) {
-  state._kpiFormOpen = true;
-  state._kpiFormEditing = true;
-  renderKpiManagementBody(); // renders the form fields into the DOM first — they don't exist until this runs
-
-  document.getElementById("kpi-form-row-index").value = rowIndex;
-  document.getElementById("kpi-form-name").value = name;
-  const f2 = document.getElementById("kpi-form-field2");
-  if (f2) f2.value = field2 || "";
-  const f3 = document.getElementById("kpi-form-field3");
-  if (f3) f3.value = field3 || "";
-  const parsed = parseRubricText(rubric || "");
-  document.getElementById("kpi-form-rubric-1").value = parsed[1];
-  document.getElementById("kpi-form-rubric-3").value = parsed[3];
-  document.getElementById("kpi-form-rubric-5").value = parsed[5];
-  checkRubricQuality();
-  document.getElementById("kpi-form-name").scrollIntoView({ behavior: "smooth", block: "center" });
-}
-
-async function doSaveKpiCriterion() {
-  const section = document.getElementById("kpi-form-section").value;
-  const rowIndex = document.getElementById("kpi-form-row-index").value;
-  const name = document.getElementById("kpi-form-name").value.trim();
-  const field2El = document.getElementById("kpi-form-field2");
-  const field3El = document.getElementById("kpi-form-field3");
-  const positionEl = document.getElementById("kpi-form-position");
-  const noteEl = document.getElementById("kpi-mgmt-note");
-
-  if (!name) { noteEl.textContent = t("km_name_required"); noteEl.style.color = "var(--red)"; return; }
-
-  noteEl.textContent = t("sm_saving");
-  noteEl.style.color = "var(--text-muted)";
-  const payload = {
-    requesterId: state.user.staffId, section, name,
-    field2: field2El ? field2El.value.trim() : "",
-    field3: field3El ? field3El.value.trim() : "",
-    rubric: buildRubricText(),
-  };
-  if (rowIndex) payload.rowIndex = Number(rowIndex);
-  if (positionEl) payload.positionKey = positionEl.value;
-
-  const res = await apiPost("saveKpiCriterion", payload);
-  if (res.error || res.success === false) {
-    noteEl.textContent = t("sm_save_failed_prefix") + " " + friendlyError(res.error);
-    noteEl.style.color = "var(--red)";
-    return;
-  }
-  showToast(rowIndex ? t("km_criteria_updated_toast") : t("km_criteria_added_toast"));
-  state._kpiFormOpen = false;
-  state._kpiFormEditing = false;
-  renderKpiManagement();
-}
-
-async function doDeleteKpiCriterion(section, rowIndex) {
-  if (!confirm(t("km_delete_confirm"))) return;
-  const res = await apiPost("deleteKpiCriterion", { requesterId: state.user.staffId, section, rowIndex });
-  if (res.error || res.success === false) { showToast(t("km_delete_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
-  showToast(t("km_criteria_deleted_toast"));
-  renderKpiManagement();
 }
 
 async function doExportStaffMapping() {

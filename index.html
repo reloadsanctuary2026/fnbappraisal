@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-201-kpi-set-catalog-restructure — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-202-unify-section-criteria-model — LIVE</div>
 
 <script>
 // =================================================================
@@ -2242,6 +2242,7 @@ function availableScreensGrouped(user) {
   }
   if (user.isHR || user.isExecutive || user.isAdminOperational) {
     settingsItems.push({ key: "kpiManagement", label: t("menu_manage_kpi") });
+    settingsItems.push({ key: "evalWizard", label: "🧩 Buat / Edit Struktur KPI Set" });
   }
   if (settingsItems.length) groups.push({ name: "MySettings", items: settingsItems });
 
@@ -2414,6 +2415,7 @@ function toggleGroup(id) {
 }
 
 function goToScreen(key) {
+  if (key === "evalWizard") { startEvaluationWizard(); return; } // needs state._wizard initialized first — see startEvaluationWizard
   state.screen = key;
   render();
 }
@@ -3056,7 +3058,7 @@ function wizardStepLabel(n) {
 }
 
 function renderEvaluationWizard() {
-  if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
+  if (!(state.user.isSuperAdmin || state.user.isHR || state.user.isExecutive || state.user.isAdminOperational)) { goToRoleMenu(); return; }
   const w = state._wizard;
   const stepper = `
     <div class="row-flex" style="margin-bottom:14px; flex-wrap:wrap; gap:6px;">
@@ -3137,6 +3139,12 @@ async function wizardSetJobTitle(jt) {
     // fix: saving again after "Head Butcher" looked empty would have wiped it clean).
     state._wizard.sections = res.sections;
     if (noteEl) noteEl.innerHTML = `<span style="color:var(--amber); font-weight:600;">⚠️ Struktur custom sudah ada buat "${jt}" — akan dibuka buat DIEDIT, bukan dibuat baru.</span>`;
+  } else if (!state.user.isSuperAdmin) {
+    // No existing structure = this would be a brand-new KPI Set — restricted to
+    // Superadmin. HR/Executive/Admin Operational can still open and EDIT anything
+    // that already exists (the branch above), just can't originate a new one here.
+    if (noteEl) noteEl.innerHTML = `<span style="color:var(--red); font-weight:600;">🚫 Belum ada struktur buat "${jt}", dan bikin KPI Set baru cuma bisa Superadmin. Minta Superadmin buat bikinin dulu, abis itu kamu bisa edit.</span>`;
+    if (btn) btn.disabled = true;
   } else if (noteEl) {
     noteEl.textContent = `Belum ada struktur custom buat "${jt}" — akan bikin baru dari nol.`;
   }
@@ -3544,15 +3552,13 @@ function renderKpiManagementBody() {
     listHtml = `
       <label>${t("km_select_position_label")}</label>
       <div class="hint" style="margin-bottom:8px;">${t("km_position_hint")}</div>
-      <div class="row-flex" style="margin-bottom:8px;">
-        <select style="flex:1;" onchange="switchKpiManagementPosition(this.value)">
-          ${res.allPositionKeys.map(k => {
-            const count = (res.kpiByPosition[k] || []).length;
-            return `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k} (${count} kriteria)</option>`;
-          }).join("")}
-        </select>
-        <button class="secondary" style="flex:0 0 auto;" onclick="promptNewKpiSet()">+ Set Baru</button>
-      </div>
+      <select onchange="switchKpiManagementPosition(this.value)">
+        ${res.allPositionKeys.map(k => {
+          const count = (res.kpiByPosition[k] || []).length;
+          return `<option value="${escapeAttr(k)}" ${k === position ? "selected" : ""}>${k} (${count} kriteria)</option>`;
+        }).join("")}
+      </select>
+      <div class="hint" style="margin:6px 0 8px;">Mau bikin KPI Set baru? Buka <strong>"🧩 Buat / Edit Struktur KPI Set"</strong> di menu — dari situ juga bisa atur berapa Section-nya dan bobotnya.</div>
       ${usedBy.length ? `<div class="hint" style="margin-bottom:8px;">Dipakai oleh Job Title: ${usedBy.join(", ")}</div>` : `<div class="hint" style="margin-bottom:8px; color:var(--amber);">⚠️ Belum ada Job Title yang pakai Set ini — cek Config_JobTitleKpiSet.</div>`}
       ${items.map(c => kpiCriterionRow("kpi", c.rowIndex, c.name, c.howToMeasure, c.target, position, c.rubric)).join("")}
       ${!items.length ? `<div class="hint">${t("km_no_criteria_for_position")}</div>` : ""}
@@ -3700,39 +3706,6 @@ function switchKpiManagementSection(section) {
 function switchKpiManagementPosition(position) {
   state._kpiMgmtPosition = position;
   state._kpiFormOpen = false;
-  state._kpiFormEditing = false;
-  renderKpiManagementBody();
-}
-
-/** "+ Set Baru" — creates a brand new KPI Set (Function 2), kept deliberately
- *  separate from editing an existing one (Function 1, the dropdown above) so neither
- *  can accidentally overwrite the other. Checks the proposed name case-insensitively
- *  against every Set/Job Title already in the dropdown before proceeding — catches a
- *  near-duplicate typo (e.g. "bartender" vs "Bartender") before it creates a
- *  confusing near-identical Set instead of just editing the real one. Nothing is
- *  written to the sheet until the first criterion is actually saved — this just opens
- *  the add-criteria form scoped to the new name. */
-function promptNewKpiSet() {
-  const name = window.prompt("Nama KPI Set baru (contoh: \"Waiter/Waitress\"):");
-  if (!name || !name.trim()) return;
-  const trimmed = name.trim();
-
-  const res = state._kpiMgmtData;
-  const existing = (res.allPositionKeys || []).find(k => k.toLowerCase() === trimmed.toLowerCase());
-  if (existing) {
-    showToast(`Set "${existing}" udah ada — dibuka buat diedit, bukan dibuat baru.`);
-    state._kpiMgmtPosition = existing;
-    state._kpiFormOpen = false;
-    renderKpiManagementBody();
-    return;
-  }
-
-  // Not in the backend list yet — add it locally so it shows up as the selected
-  // option immediately; it becomes permanent the moment the first criterion is saved.
-  res.allPositionKeys = [...res.allPositionKeys, trimmed].sort();
-  if (!res.kpiByPosition[trimmed]) res.kpiByPosition[trimmed] = [];
-  state._kpiMgmtPosition = trimmed;
-  state._kpiFormOpen = true;
   state._kpiFormEditing = false;
   renderKpiManagementBody();
 }

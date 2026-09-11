@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-202-unify-section-criteria-model — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-203-dynamic-custom-section-chart — LIVE</div>
 
 <script>
 // =================================================================
@@ -3360,6 +3360,7 @@ async function renderDevTools() {
       <button class="secondary" id="maint-migratePhotosToLinks-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('migratePhotosToLinks', this)">${t("dt_migrate_photos_btn")}</button>
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
       <button class="secondary" id="maint-setupKpiSetMigration-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('setupKpiSetMigration', this)">📋 Setup KPI Set + Config_JobTitleKpiSet</button>
+      <button class="secondary" id="maint-migrateAllToSectionCriteriaModel-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('migrateAllToSectionCriteriaModel', this)">⚡ Migrasi ke Model Terpadu (Section Criteria)</button>
       <button class="secondary" id="maint-syncPositionMapFromLive-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('syncPositionMapFromLive', this)">🔄 Sync Config_PositionMap dari LIVE</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
     </div>
@@ -3505,7 +3506,7 @@ async function doRunMaintenanceAction(action, btnEl) {
     const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action });
     noteEl.textContent = (res.error || res.success === false)
       ? `${t("dt_maintenance_failed_prefix")} ${friendlyError(res.error)}`
-      : `${t("dt_maintenance_done_prefix")} (${action})${res.rowCount !== undefined ? ` — ${res.rowCount} baris disalin` : ""}${res.jobTitlesAdded !== undefined ? ` — ${res.renamedSets} Set direname, ${res.removedPlaceholders} placeholder lama dibuang, ${res.jobTitlesAdded} Job Title ditambahin ke mapping, ${res.kpiSetCount} KPI Set tersedia di dropdown` : ""}.`;
+      : `${t("dt_maintenance_done_prefix")} (${action})${res.rowCount !== undefined ? ` — ${res.rowCount} baris disalin` : ""}${res.jobTitlesAdded !== undefined ? ` — ${res.renamedSets} Set direname, ${res.removedPlaceholders} placeholder lama dibuang, ${res.jobTitlesAdded} Job Title ditambahin ke mapping, ${res.kpiSetCount} KPI Set tersedia di dropdown` : ""}${res.migratedCount !== undefined ? ` — ${res.migratedCount} Job Title dimigrasi (${res.rowsAdded} baris), ${res.skippedAlready} udah pernah dimigrasi, ${res.skippedNoSet} dilewatin (belum ada KPI Set)` : ""}.`;
   } catch (e) {
     noteEl.textContent = t("dt_maintenance_conn_error");
   } finally {
@@ -5098,10 +5099,13 @@ async function renderMyAppraisalStatus(target) {
         </table>
         <div class="hint" style="font-weight:700; color:var(--teal); margin:14px 0 6px;">Breakdown per Section (biar tau bagian mana yang lemah)</div>
         <table class="mini">
+          ${d.customSectionBreakdown && d.customSectionBreakdown.length ? d.customSectionBreakdown.map(s =>
+            `<tr><td>${state.lang === "en" ? (s.labelEn || s.labelId) : s.labelId} (${s.weightPct}%)</td><td>${Number(s.blended || 0).toFixed(1)} / ${s.weightPct}</td></tr>`
+          ).join("") : `
           <tr><td>Section A — Attitude</td><td>${Number(d.sectionABlend || 0).toFixed(1)} / 30</td></tr>
           <tr><td>Section B — Discipline</td><td>${Number(d.sectionBBlend || 0).toFixed(1)} / 30</td></tr>
           <tr><td>Section C — Performance KPI</td><td>${Number(d.sectionCBlend || 0).toFixed(1)} / 40</td></tr>
-          <tr><td>Section D — Bonus/Deduction</td><td>${Number(d.sectionDBlend || 0) >= 0 ? "+" : ""}${Number(d.sectionDBlend || 0).toFixed(1)}</td></tr>
+          <tr><td>Section D — Bonus/Deduction</td><td>${Number(d.sectionDBlend || 0) >= 0 ? "+" : ""}${Number(d.sectionDBlend || 0).toFixed(1)}</td></tr>`}
         </table>
         <div class="mode-banner" style="background:var(--sand); margin-top:14px;">
           <span class="mode-label" style="color:var(--teal);">Decision</span>
@@ -5167,7 +5171,11 @@ async function renderMyAppraisalHistory(staffId) {
         <div>
           <div class="name">${monthLabelID(h.month)}</div>
           <div class="dept">${h.selfTotal === "" && h.hrTotal === "" ? `📜 Data Historis (cuma Leader Appraisal) · Leader ${Number(h.leaderTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}` : `Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}`}</div>
-          ${h.selfTotal === "" && h.hrTotal === "" ? "" : `<div class="dept" style="margin-top:2px; font-size:11px;">Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}</div>`}
+          ${h.selfTotal === "" && h.hrTotal === "" ? "" : `<div class="dept" style="margin-top:2px; font-size:11px;">${
+            h.customSectionBreakdown && h.customSectionBreakdown.length
+              ? h.customSectionBreakdown.map(s => `${s.labelId} ${Number(s.blended || 0).toFixed(1)}/${s.weightPct}`).join(" · ")
+              : `Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}`
+          }</div>`}
           ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findLabel(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
         </div>
         ${statusBadge(h.status === 'Performer', h.status)}

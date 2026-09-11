@@ -316,7 +316,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-206-clarify-wizard-message — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-207-section-structure-audit-log — TEST</div>
 
 <script>
 // =================================================================
@@ -3140,6 +3140,7 @@ function wizardStep2() {
     <div class="hint" style="margin-bottom:10px;">Daftar ini dibaca langsung dari HR Sheet setiap kali halaman ini dibuka — Job Title yang baru aja diketik HR langsung muncul di sini, gak perlu clear cache.</div>
     <div id="wizard-job-title-list">${w.jobTitleOptions.length ? "" : `<div class="loading">${t("form_loading")}</div>`}</div>
     <div class="hint" id="wizard-existing-note" style="margin-top:8px;"></div>
+    <div id="wizard-audit-log" style="margin-top:8px;"></div>
     <div class="row-flex" style="margin-top:14px;">
       <button class="ghost" onclick="wizardGoToStep(1)">&larr; Kembali</button>
       <button class="primary" id="wizard-step2-next-btn" ${!w.jobTitle ? "disabled" : ""} onclick="wizardGoToStep(3)">Lanjut &rarr;</button>
@@ -3185,6 +3186,22 @@ async function wizardSetJobTitle(jt) {
     if (btn) btn.disabled = true;
   } else if (noteEl) {
     noteEl.textContent = `Belum ada struktur custom buat "${jt}" — akan bikin baru dari nol.`;
+  }
+
+  const logEl = document.getElementById("wizard-audit-log");
+  if (logEl) {
+    const logRes = await apiGet("getSectionStructureAuditLogForJobTitle", { requesterId: state.user.staffId, jobTitle: jt });
+    if (logRes.found && logRes.entries.length) {
+      logEl.innerHTML = `
+        <details>
+          <summary style="cursor:pointer; font-size:12px; color:var(--teal); font-weight:700;">📜 Riwayat perubahan "${jt}" (${logRes.entries.length} terakhir)</summary>
+          <ul style="margin:8px 0 0; padding-left:20px; font-size:12px; line-height:1.8;">
+            ${logRes.entries.map(e => `<li>${e.action === "Created" ? "Dibuat" : "Diedit"} oleh <strong>${e.changedByName}</strong> (${e.changedByStaffId}) — ${new Date(e.timestamp).toLocaleString("id-ID")}</li>`).join("")}
+          </ul>
+        </details>`;
+    } else {
+      logEl.innerHTML = "";
+    }
   }
 }
 
@@ -3355,11 +3372,6 @@ async function renderDevTools() {
   app.innerHTML = topbar(t("dt_title")) + `
     ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
-      <h2>🧩 Struktur Evaluasi Fleksibel (Eksperimental)</h2>
-      <div class="hint" style="margin-bottom:10px;">Bikin/edit struktur Section + kriteria custom per Job Title, dan atur tahap evaluasi mana yang aktif. Job Title yang belum pernah disentuh di sini tetap pakai struktur lama (25/25/50), gak berubah sama sekali.</div>
-      <button class="primary" onclick="startEvaluationWizard()" style="margin-bottom:8px;">+ Buat / Edit Struktur Posisi</button>
-    </div>
-    <div class="card">
       <h2>🔀 Toggle Tahap Evaluasi (Self/Leader/HR)</h2>
       <div class="hint" style="margin-bottom:10px;">Default-nya: semua posisi 3 tahap aktif, KECUALI department HR (otomatis cuma Self+Leader). Di sini bisa override manual per Job Title, Department, atau per-orang (NIK) kapan aja.</div>
       <div class="row-flex" style="margin-bottom:8px;">
@@ -3399,7 +3411,6 @@ async function renderDevTools() {
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
       <button class="secondary" id="maint-setupKpiSetMigration-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('setupKpiSetMigration', this)">📋 Refresh Dropdown Config_JobTitleKpiSet</button>
       <button class="secondary" id="maint-migrateAllToSectionCriteriaModel-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('migrateAllToSectionCriteriaModel', this)">⚡ Migrasi ke Model Terpadu (Section Criteria)</button>
-      <button class="secondary" id="maint-syncPositionMapFromLive-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('syncPositionMapFromLive', this)">🔄 Sync Config_PositionMap dari LIVE</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">

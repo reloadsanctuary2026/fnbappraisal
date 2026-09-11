@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-205-full-migration-to-section-criteria — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-10-206-clarify-wizard-message — LIVE</div>
 
 <script>
 // =================================================================
@@ -2021,12 +2021,15 @@ function onLogoTapped() {
   }
 }
 
-/** Dedicated entry point for Superadmin ONLY — completely separate credentials
- *  (username/password, not NIK/PIN) from the regular staff login, and checked by its
- *  own backend function (superAdminLogin) that never accepts a regular employee's
- *  NIK/PIN here. Before this, tapping the logo 10x just reopened the SAME NIK/PIN form
- *  everyone else uses (with businessUnit reset to null) — meaning any valid employee
- *  credentials worked here too, not just Superadmin's. */
+/** Dedicated entry point for Superadmin ONLY.
+ *
+ *  BEFORE this existed, tapping the logo 10x just reopened the SAME NIK/PIN form
+ *  everyone else uses — meaning any valid employee's credentials worked here too, not
+ *  just Superadmin's. That was the bug.
+ *
+ *  NOW: completely separate credentials (username/password, unrelated to any
+ *  employee's NIK/PIN), checked by its own backend function (superAdminLogin) that
+ *  never accepts a regular employee's NIK/PIN here. */
 function renderSuperAdminLoginScreen() {
   app.innerHTML = `
     <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Superadmin</h1></div>${langTogglePreLoginHtml()}</div>
@@ -3165,7 +3168,7 @@ async function wizardSetJobTitle(jt) {
     // No existing structure = this would be a brand-new KPI Set — restricted to
     // Superadmin. HR/Executive/Admin Operational can still open and EDIT anything
     // that already exists (the branch above), just can't originate a new one here.
-    if (noteEl) noteEl.innerHTML = `<span style="color:var(--red); font-weight:600;">🚫 Belum ada struktur buat "${jt}", dan bikin KPI Set baru cuma bisa Superadmin. Minta Superadmin buat bikinin dulu, abis itu kamu bisa edit.</span>`;
+    if (noteEl) noteEl.innerHTML = `<span style="color:var(--red); font-weight:600;">🚫 "${jt}" belum ada di sistem struktur baru ini — appraisal-nya TETAP jalan normal pakai sistem lama, ini cuma soal belum dipindahin ke sini. Bikin struktur baru cuma bisa Superadmin. Minta Superadmin buat bikinin/migrasiin dulu, abis itu kamu bisa edit di sini.</span>`;
     if (btn) btn.disabled = true;
   } else if (noteEl) {
     noteEl.textContent = `Belum ada struktur custom buat "${jt}" — akan bikin baru dari nol.`;
@@ -3383,7 +3386,6 @@ async function renderDevTools() {
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
       <button class="secondary" id="maint-setupKpiSetMigration-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('setupKpiSetMigration', this)">📋 Refresh Dropdown Config_JobTitleKpiSet</button>
       <button class="secondary" id="maint-migrateAllToSectionCriteriaModel-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('migrateAllToSectionCriteriaModel', this)">⚡ Migrasi ke Model Terpadu (Section Criteria)</button>
-      <button class="secondary" id="maint-syncPositionMapFromLive-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('syncPositionMapFromLive', this)">🔄 Sync Config_PositionMap dari LIVE</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">

@@ -2228,7 +2228,7 @@ function availableScreensGrouped(user) {
     add("sc", t("menu_calc_sc"));
     add("historical", t("menu_input_historical"));
     if (user.hasStaffMappingAccess) add("staffMapping", t("menu_staff_mapping"));
-    add("kpiManagement", t("menu_manage_kpi"));
+    add("evalWizard", "🧩 Buat / Edit Struktur KPI Set");
     return [
       { name: "MyTeams", items },
       { name: "DevTools", items: [{ key: "devTools", label: "🛠️ Dev Tools (Superadmin)" }] },

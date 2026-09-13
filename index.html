@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-11-208-fix-missing-parseRubricText — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-12-209-repair-blank-month-submissions — LIVE</div>
 
 <script>
 // =================================================================
@@ -3415,6 +3415,7 @@ async function renderDevTools() {
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
       <button class="secondary" id="maint-setupKpiSetMigration-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('setupKpiSetMigration', this)">📋 Refresh Dropdown Config_JobTitleKpiSet</button>
       <button class="secondary" id="maint-migrateAllToSectionCriteriaModel-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('migrateAllToSectionCriteriaModel', this)">⚡ Migrasi ke Model Terpadu (Section Criteria)</button>
+      <button class="secondary" id="maint-repairBlankMonthSubmissions-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('repairBlankMonthSubmissions', this)">🩹 Perbaiki Submission Bulan Kosong (Access Override)</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
@@ -3559,7 +3560,7 @@ async function doRunMaintenanceAction(action, btnEl) {
     const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action });
     noteEl.textContent = (res.error || res.success === false)
       ? `${t("dt_maintenance_failed_prefix")} ${friendlyError(res.error)}`
-      : `${t("dt_maintenance_done_prefix")} (${action})${res.rowCount !== undefined ? ` — ${res.rowCount} baris disalin` : ""}${res.jobTitlesAdded !== undefined ? ` — ${res.renamedSets} Set direname, ${res.removedPlaceholders} placeholder lama dibuang, ${res.jobTitlesAdded} Job Title ditambahin ke mapping, ${res.kpiSetCount} KPI Set tersedia di dropdown` : ""}${res.migratedCount !== undefined ? ` — ${res.migratedCount} Job Title dimigrasi (${res.rowsAdded} baris), ${res.skippedAlready} udah pernah dimigrasi, ${res.skippedNoSet} dilewatin (belum ada KPI Set)` : ""}.`;
+      : `${t("dt_maintenance_done_prefix")} (${action})${res.rowCount !== undefined ? ` — ${res.rowCount} baris disalin` : ""}${res.jobTitlesAdded !== undefined ? ` — ${res.renamedSets} Set direname, ${res.removedPlaceholders} placeholder lama dibuang, ${res.jobTitlesAdded} Job Title ditambahin ke mapping, ${res.kpiSetCount} KPI Set tersedia di dropdown` : ""}${res.migratedCount !== undefined ? ` — ${res.migratedCount} Job Title dimigrasi (${res.rowsAdded} baris), ${res.skippedAlready} udah pernah dimigrasi, ${res.skippedNoSet} dilewatin (belum ada KPI Set)` : ""}${res.pairsFixed !== undefined ? ` — ${res.pairsFixed} pasangan (staff+tahap) dibenerin, ${res.rowsFixed} baris Submissions diperbaiki` : ""}.`;
   } catch (e) {
     noteEl.textContent = t("dt_maintenance_conn_error");
   } finally {

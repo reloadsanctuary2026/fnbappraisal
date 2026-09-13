@@ -316,7 +316,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-13-213-diagnostic-try-catch — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-13-214-review-shows-all-team-members — TEST</div>
 
 <script>
 // =================================================================
@@ -513,7 +513,7 @@ const translations = {
     menu_history: "Track Your Progress",
     menu_dev_plan: "My Development Plan",
     menu_team_appraisal: "Team Appraisal",
-    menu_review_team: "Review Your Team",
+    menu_review_team: "Your Team's Performance",
     menu_approve_final: "Approve Final Decisions",
     menu_training_needs: "Training Needs",
     menu_review_all: "Review Everyone's Records",
@@ -1002,7 +1002,7 @@ const translations = {
     menu_history: "Track Your Progress",
     menu_dev_plan: "My Development Plan",
     menu_team_appraisal: "Team Appraisal",
-    menu_review_team: "Review Your Team",
+    menu_review_team: "Your Team's Performance",
     menu_approve_final: "Approve Final Decisions",
     menu_training_needs: "Training Needs",
     menu_review_all: "Review Everyone's Records",
@@ -4592,10 +4592,11 @@ async function renderReview() {
     // AdminOp and doesn't include Leader. Computing here means Leader (reviewing just their
     // own team) gets the exact same grouped view as everyone else, not a stripped-down one.
     const total = rows.length;
-    const avgScore = total ? rows.reduce((s, r) => s + Number(r.finalScore || 0), 0) / total : 0;
-    const performerCount = rows.filter(r => r.status === "Performer").length;
-    const underperformCount = total - performerCount;
-    const approvedCount = rows.filter(r => r.approvalStatus === "Approved").length;
+    const finalizedRows = rows.filter(r => r.finalScore !== null); // stats only count REAL records — a placeholder for someone not yet finalized isn't a score of 0, it's simply not data yet
+    const avgScore = finalizedRows.length ? finalizedRows.reduce((s, r) => s + Number(r.finalScore || 0), 0) / finalizedRows.length : 0;
+    const performerCount = finalizedRows.filter(r => r.status === "Performer").length;
+    const underperformCount = finalizedRows.length - performerCount;
+    const approvedCount = finalizedRows.filter(r => r.approvalStatus === "Approved").length;
 
     const rowsByDept = {};
     rows.forEach(r => {
@@ -4650,8 +4651,9 @@ async function renderReview() {
       <div id="review-list-container">
         ${deptKeys.map((dept, di) => {
           const deptRows = rowsByDept[dept];
-          const deptAvg = deptRows.reduce((s, r) => s + Number(r.finalScore || 0), 0) / deptRows.length;
-          const deptUnderperform = deptRows.filter(r => r.status === "Underperform").length;
+          const deptFinalized = deptRows.filter(r => r.finalScore !== null);
+          const deptAvg = deptFinalized.length ? deptFinalized.reduce((s, r) => s + Number(r.finalScore || 0), 0) / deptFinalized.length : 0;
+          const deptUnderperform = deptFinalized.filter(r => r.status === "Underperform").length;
           const summaryId = `dept-chevron-${di}`;
           return `
           <details class="review-dept-group" data-department="${escapeAttr(dept)}" open style="margin-bottom:10px; border:1px solid var(--border); border-radius:14px; overflow:hidden;" ontoggle="document.getElementById('${summaryId}').style.transform = this.open ? 'rotate(90deg)' : 'rotate(0deg)'">
@@ -4664,18 +4666,18 @@ async function renderReview() {
                   ${deptUnderperform > 0 ? `<div style="font-size:12px; color:#FFD9CF; margin-top:2px;">${deptUnderperform} ${t("review_underperform_count_suffix")}</div>` : ""}
                 </div>
               </div>
-              ${statusBadge(deptAvg >= 60, deptAvg.toFixed(1))}
+              ${deptFinalized.length ? statusBadge(deptAvg >= 60, deptAvg.toFixed(1)) : `<span class="badge pending">Belum Final</span>`}
             </summary>
             <div class="review-dept-body" style="padding:10px 14px 14px;">
               ${deptRows.map(r => `
                 <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:pointer; border: 1.5px solid ${r.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'};" onclick="showComparisonModal('${r.staffId}', '${escapeAttr(r.name)}')">
                   <div>
                     <div class="name">${r.name}</div>
-                    <div class="dept">Final Score: ${Number(r.finalScore||0).toFixed(1)}${rangeMode ? ` · ${monthLabelID(r.month)}` : ""}</div>
+                    <div class="dept">${r.finalScore === null ? "Belum final bulan ini — klik buat lihat histori" : `Final Score: ${Number(r.finalScore).toFixed(1)}${rangeMode ? ` · ${monthLabelID(r.month)}` : ""}`}</div>
                     ${r.calibrationAdjustment ? `<div class="dept" style="color:var(--gold); font-weight:700;">⚖️ Calibration ${r.calibrationAdjustment > 0 ? "+" : ""}${r.calibrationAdjustment}</div>` : ""}
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
-                    ${statusBadge(r.status === 'Performer', r.status === 'Performer' ? t("review_stat_performer") : t("review_stat_underperform"))}
+                    ${r.finalScore === null ? `<span class="badge pending">Belum Final</span>` : statusBadge(r.status === 'Performer', r.status === 'Performer' ? t("review_stat_performer") : t("review_stat_underperform"))}
                     <span style="color:var(--text-muted); font-size:16px;">›</span>
                   </div>
                 </div>`).join("")}

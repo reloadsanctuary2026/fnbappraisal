@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-13-211-fix-floor-supervisor-overlap — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-13-212-per-leader-appraise-label — LIVE</div>
 
 <script>
 // =================================================================
@@ -923,7 +923,7 @@ const translations = {
     notif_evaluate_loading: "Memuat...",
     notif_evaluate_unavailable: "Penilaian ini tidak lagi tersedia untuk kamu.",
     review_title_all: "Review Semua Karyawan",
-    review_title_team: "Review Tim Kamu",
+    review_title_team: "Performa Tim Kamu",
     review_tab_list: "Daftar Karyawan",
     review_tab_compliance: "Kepatuhan",
     review_compliance_hint: "Progress evaluator bulan ini — belum termasuk skor, cuma status sudah/belum isi appraisal.",
@@ -1412,7 +1412,7 @@ const translations = {
     notif_evaluate_loading: "Loading...",
     notif_evaluate_unavailable: "This evaluation is no longer available to you.",
     review_title_all: "Review Everyone's Records",
-    review_title_team: "Review Your Team",
+    review_title_team: "Your Team's Performance",
     review_tab_list: "Staff List",
     review_tab_compliance: "Compliance",
     review_compliance_hint: "This month's evaluator progress — doesn't include scores yet, just submitted/not-submitted status.",
@@ -5834,7 +5834,7 @@ async function showComparisonModal(staffId, name) {
     apiGet("getCriterionHistoryComparison", { staffId, evaluatorType: "leader" }),
     apiGet("getStaffPhoto", { staffId }),
   ]);
-  const history = res.history || [];
+  const history = (res.history || []).filter(m => m.approvalStatus === "Approved");
   const existing = document.getElementById("comparison-modal");
   if (existing) existing.remove();
 

@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-13-214-review-shows-all-team-members — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-14-216-restore-lost-kpi — LIVE</div>
 
 <script>
 // =================================================================
@@ -3338,7 +3338,16 @@ async function renderDevTools() {
       <button class="secondary" id="maint-migrateAllToSectionCriteriaModel-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('migrateAllToSectionCriteriaModel', this)">⚡ Migrasi ke Model Terpadu (Section Criteria)</button>
       <button class="secondary" id="maint-repairBlankMonthSubmissions-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('repairBlankMonthSubmissions', this)">🩹 Perbaiki Submission Bulan Kosong (Access Override)</button>
       <button class="secondary" id="maint-fixFloorSupervisorOverlap-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('fixFloorSupervisorOverlap', this)">🎯 Benerin Overlap Floor Supervisor (43 staff)</button>
+      <button class="secondary" id="maint-restoreLostKpiStructures-btn" style="margin-top:8px; border-color:var(--red);" onclick="doRunMaintenanceAction('restoreLostKpiStructures', this)">🚑 Restore KPI yang Hilang (Finance Controller + 4 HR)</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <h2>📥 Import KPI dari Google Sheet</h2>
+      <div class="hint" style="margin-bottom:10px;">Baca langsung dari Sheet (bukan hardcode di kode) — 1 tab per Job Title, format: Section | Nama Kriteria | Target | Rubrik Skor 1 | Rubrik Skor 3 | Rubrik Skor 5 | Bobot % (opsional). Tab "INDEX" dilewatin otomatis. Salah/typo tinggal edit di Sheet, jalanin lagi.</div>
+      <label>Link atau ID Google Sheet</label>
+      <input type="text" id="kpi-import-sheet-id" placeholder="Tempel link Google Sheet di sini" />
+      <button class="primary" id="kpi-import-btn" style="margin-top:8px;" onclick="doImportKpiFromWorkbook()">Import Sekarang</button>
+      <div id="kpi-import-result" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
       <div class="hint">${t("dt_backend_version_label")} ${state.user._debugVersion || "-"}</div>
@@ -3482,12 +3491,42 @@ async function doRunMaintenanceAction(action, btnEl) {
     const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action });
     noteEl.textContent = (res.error || res.success === false)
       ? `${t("dt_maintenance_failed_prefix")} ${res.detail || friendlyError(res.error)}`
-      : `${t("dt_maintenance_done_prefix")} (${action})${res.rowCount !== undefined ? ` — ${res.rowCount} baris disalin` : ""}${res.jobTitlesAdded !== undefined ? ` — ${res.renamedSets} Set direname, ${res.removedPlaceholders} placeholder lama dibuang, ${res.jobTitlesAdded} Job Title ditambahin ke mapping, ${res.kpiSetCount} KPI Set tersedia di dropdown` : ""}${res.migratedCount !== undefined ? ` — ${res.migratedCount} Job Title dimigrasi (${res.rowsAdded} baris), ${res.skippedAlready} udah pernah dimigrasi, ${res.skippedNoSet} dilewatin (belum ada KPI Set)` : ""}${res.pairsFixed !== undefined ? ` — ${res.pairsFixed} pasangan (staff+tahap) dibenerin, ${res.rowsFixed} baris Submissions diperbaiki` : ""}${res.appliedCount !== undefined ? ` — ${res.appliedCount} staff di-assign ke supervisor yang benar${res.hostessSupAdded ? ", Hostess Supervisor ditambahin ke Config_PositionMap" : ""}` : ""}.`;
+      : `${t("dt_maintenance_done_prefix")} (${action})${res.rowCount !== undefined ? ` — ${res.rowCount} baris disalin` : ""}${res.jobTitlesAdded !== undefined ? ` — ${res.renamedSets} Set direname, ${res.removedPlaceholders} placeholder lama dibuang, ${res.jobTitlesAdded} Job Title ditambahin ke mapping, ${res.kpiSetCount} KPI Set tersedia di dropdown` : ""}${res.migratedCount !== undefined ? ` — ${res.migratedCount} Job Title dimigrasi (${res.rowsAdded} baris), ${res.skippedAlready} udah pernah dimigrasi, ${res.skippedNoSet} dilewatin (belum ada KPI Set)` : ""}${res.pairsFixed !== undefined ? ` — ${res.pairsFixed} pasangan (staff+tahap) dibenerin, ${res.rowsFixed} baris Submissions diperbaiki` : ""}${res.appliedCount !== undefined ? ` — ${res.appliedCount} staff di-assign ke supervisor yang benar${res.hostessSupAdded ? ", Hostess Supervisor ditambahin ke Config_PositionMap" : ""}` : ""}${res.restoredCount !== undefined ? ` — ${res.restoredCount} Job Title berhasil di-restore, ${res.failedCount} gagal` : ""}.`;
   } catch (e) {
     noteEl.textContent = t("dt_maintenance_conn_error");
   } finally {
     document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = false);
     btnEl.textContent = originalLabel;
+  }
+}
+
+async function doImportKpiFromWorkbook() {
+  const input = document.getElementById("kpi-import-sheet-id");
+  const btn = document.getElementById("kpi-import-btn");
+  const noteEl = document.getElementById("kpi-import-result");
+  const sheetIdOrUrl = input.value.trim();
+  if (!sheetIdOrUrl) { noteEl.textContent = "Tempel link Google Sheet-nya dulu."; return; }
+
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.innerHTML = `<span class="btn-spinner"></span>Mengimpor...`;
+  noteEl.textContent = "";
+  try {
+    const res = await apiPost("importKpiFromWorkbook", { requesterId: state.user.staffId, sheetIdOrUrl });
+    if (res.error && !res.results) {
+      noteEl.textContent = `Gagal: ${res.detail || friendlyError(res.error)}`;
+    } else {
+      noteEl.innerHTML = `
+        ✅ ${res.importedCount} Job Title berhasil diimpor, ${res.failedCount} gagal, ${res.skippedCount} tab dilewatin (kosong).
+        ${res.detail ? `<br><span style="color:var(--red);">${res.detail}</span>` : ""}
+        ${res.results && res.results.length ? `<details style="margin-top:6px;"><summary style="cursor:pointer;">Lihat detail per Job Title</summary><ul style="margin:6px 0 0; padding-left:20px;">${res.results.map(r => `<li>${r.jobTitle}: ${r.success ? `✅ ${r.rowCount} baris` : `❌ ${r.error}`}</li>`).join("")}</ul></details>` : ""}
+      `;
+    }
+  } catch (e) {
+    noteEl.textContent = "Gagal konek ke server. Coba lagi.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 }
 

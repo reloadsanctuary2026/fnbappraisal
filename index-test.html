@@ -316,7 +316,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-14-216-restore-lost-kpi — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-14-217-section-weight-column — TEST</div>
 
 <script>
 // =================================================================
@@ -3352,12 +3352,12 @@ async function renderDevTools() {
       <button class="secondary" id="maint-repairBlankMonthSubmissions-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('repairBlankMonthSubmissions', this)">🩹 Perbaiki Submission Bulan Kosong (Access Override)</button>
       <button class="secondary" id="maint-fixFloorSupervisorOverlap-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('fixFloorSupervisorOverlap', this)">🎯 Benerin Overlap Floor Supervisor (43 staff)</button>
       <button class="secondary" id="maint-restoreLostKpiStructures-btn" style="margin-top:8px; border-color:var(--red);" onclick="doRunMaintenanceAction('restoreLostKpiStructures', this)">🚑 Restore KPI yang Hilang (Finance Controller + 4 HR)</button>
-      <button class="secondary" id="maint-syncPositionMapFromLive-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('syncPositionMapFromLive', this)">🔄 Sync Config_PositionMap dari LIVE</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
       <h2>📥 Import KPI dari Google Sheet</h2>
-      <div class="hint" style="margin-bottom:10px;">Baca langsung dari Sheet (bukan hardcode di kode) — 1 tab per Job Title, format: Section | Nama Kriteria | Target | Rubrik Skor 1 | Rubrik Skor 3 | Rubrik Skor 5 | Bobot % (opsional). Tab "INDEX" dilewatin otomatis. Salah/typo tinggal edit di Sheet, jalanin lagi.</div>
+      <div class="hint" style="margin-bottom:10px;">Baca langsung dari Sheet (bukan hardcode di kode) — 1 tab per Job Title, format: Section | Nama Kriteria | Target | Rubrik Skor 1 | Rubrik Skor 3 | Rubrik Skor 5 | Bobot % Kriteria (opsional) | Bobot % Section (opsional). Section tanpa bobot dibagi rata dari SISA persentase (bukan dari 100 lagi) — jadi bisa pin 1 section ke angka tertentu (misal 50%), sisanya otomatis dibagi rata ke section lain. Tab "INDEX" dilewatin otomatis. Salah/typo tinggal edit di Sheet, jalanin lagi.</div>
+      <div class="hint" style="margin-bottom:10px; color:var(--teal);">Contoh: 3 section, section pertama dikasih 50% di kolom Bobot Section, 2 section lain dikosongin → otomatis jadi 50/25/25 (SISA 50% dibagi rata ke 2 section yang kosong).</div>
       <label>Link atau ID Google Sheet</label>
       <input type="text" id="kpi-import-sheet-id" placeholder="Tempel link Google Sheet di sini" />
       <button class="primary" id="kpi-import-btn" style="margin-top:8px;" onclick="doImportKpiFromWorkbook()">Import Sekarang</button>

@@ -316,7 +316,7 @@
 <body>
 <div style="background:var(--gold); color:#fff; text-align:center; padding:6px; font-weight:800; font-size:12px; letter-spacing:0.05em; position:relative; z-index:20;">🧪 TEST MODE — data di sini TIDAK akan kepakai buat data live, bebas dicoba-coba</div>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-14-217-section-weight-column — TEST</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-14-218-general-sectiond-universal-qualitative-e — TEST</div>
 
 <script>
 // =================================================================
@@ -5188,6 +5188,10 @@ function renderCustomFormBody(evaluatorType, target, cfg) {
         ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i, b.inputType)).join("")}
       `}
 
+      <div class="section-title">${sectionLabel(isSelf ? cfg.qualitativeSectionSelf : cfg.qualitativeSectionOther)}</div>
+      <div class="hint">Opsional — boleh dikosongin kalau gak relevan.</div>
+      ${(isSelf ? cfg.qualitativeSectionSelf : cfg.qualitativeSectionOther).criteria.map(c => textRow(c.name, (state.lang === "en" && c.nameEn) ? c.nameEn : c.name, "")).join("")}
+
       ${isSelf ? `
         <div class="section-title">${t("form_feedback_section")}</div>
         <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
@@ -5228,6 +5232,17 @@ function renderFormBody(evaluatorType, target, cfg) {
       <div class="score-select">
         ${[1,2,3,4,5].map(v => `<div class="score-opt" onclick="selectScore(this, '${escapeAttr(criterion)}', ${v})">${v}</div>`).join("")}
       </div>
+    </div>`;
+
+  // Legacy form never had a free-text criterion type before Section E (Evaluasi
+  // Kualitatif) — same shape as the custom-structure form's own textRow, kept as a
+  // separate local copy here rather than sharing one, since this whole function is
+  // already its own self-contained legacy rendering path.
+  const textRow = (criterion, desc) => `
+    <div class="criterion-row" data-criterion="${escapeAttr(criterion)}">
+      <div class="name">${criterion} <span style="font-weight:400; font-size:11px; color:var(--text-muted);">(opsional, isian bebas)</span></div>
+      ${desc ? `<div class="desc">${desc}</div>` : ""}
+      <textarea class="custom-text-answer" data-criterion="${escapeAttr(criterion)}" rows="3" placeholder="Tulis observasi/jawaban di sini..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:15px;" oninput="state.scores['${escapeAttr(criterion)}'] = this.value;"></textarea>
     </div>`;
 
   const bonusRow = (item, points, idx, inputType) => `
@@ -5278,6 +5293,10 @@ function renderFormBody(evaluatorType, target, cfg) {
         <div class="hint">${t("form_bonus_hint")}</div>
         ${cfg.bonus.map((b, i) => bonusRow(b.item, b.points, i, b.inputType)).join("")}
       `}
+
+      <div class="section-title">${(isSelf ? cfg.qualitativeSectionSelf : cfg.qualitativeSectionOther).labelId}</div>
+      <div class="hint">Opsional — boleh dikosongin kalau gak relevan.</div>
+      ${(isSelf ? cfg.qualitativeSectionSelf : cfg.qualitativeSectionOther).criteria.map(c => textRow(c.name, "")).join("")}
 
       ${isSelf ? `
         <div class="section-title">${t("form_feedback_section")}</div>
@@ -5500,6 +5519,11 @@ async function confirmAndSubmit(evaluatorType) {
       showToast("Error internal: target appraisal tidak ditemukan. Coba kembali dan buka ulang form ini.", "error");
       return;
     }
+    const activeQualitativeSection = evaluatorType === "self" ? cfg.qualitativeSectionSelf : cfg.qualitativeSectionOther;
+    const qualitativeScores = activeQualitativeSection.criteria.map(c => ({
+      sectionKey: activeQualitativeSection.key, criterion: c.name, inputType: "text",
+      score: null, textValue: state.scores[c.name] || "",
+    }));
     const payload = {
       staffId: target.staffId,
       evaluatorId: state.user.staffId,
@@ -5507,11 +5531,14 @@ async function confirmAndSubmit(evaluatorType) {
       attitudeScores: cfg.isCustomStructure ? [] : cfg.attitude.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
       disciplineScores: cfg.isCustomStructure ? [] : cfg.discipline.map(c => ({ criterion: c.name, score: state.scores[c.name] })),
       kpiScores: cfg.isCustomStructure ? [] : kpiCriteria.map(c => ({ criterion: c, score: state.scores[c] })),
-      customSectionScores: cfg.isCustomStructure ? cfg.customSections.flatMap(sec => sec.criteria.map(c => ({
-        sectionKey: sec.key, criterion: c.name, inputType: c.inputType,
-        score: c.inputType === "text" ? null : state.scores[c.name],
-        textValue: c.inputType === "text" ? (state.scores[c.name] || "") : "",
-      }))) : [],
+      customSectionScores: [
+        ...(cfg.isCustomStructure ? cfg.customSections.flatMap(sec => sec.criteria.map(c => ({
+          sectionKey: sec.key, criterion: c.name, inputType: c.inputType,
+          score: c.inputType === "text" ? null : state.scores[c.name],
+          textValue: c.inputType === "text" ? (state.scores[c.name] || "") : "",
+        }))) : []),
+        ...qualitativeScores,
+      ],
       bonusEntries: state._pendingBonusEntries || [],
     };
     showToast("Menyimpan...");
@@ -5627,6 +5654,18 @@ async function renderGm() {
           <option value="">${t("gm_select_placeholder")}</option>
           ${state.oneOnOneOptions.map(o => `<option value="${o.value}" ${isEdit && o.value === s.oneOnOneStatus ? "selected" : ""}>${o.label}</option>`).join("")}
         </select>
+        ${(s.leaderQualitative || s.hrQualitative) ? `
+        <div style="background:var(--sand); border-radius:12px; padding:12px; margin:10px 0;">
+          <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:var(--teal);">📋 Catatan dari Leader/HR (referensi — belum tentu perlu ditulis ulang)</div>
+          ${s.leaderQualitative ? `
+            <div style="font-weight:600; font-size:12px; margin-bottom:4px;">Dari Leader/Mgmt${s.leaderEvaluatorName ? ` (${s.leaderEvaluatorName})` : ""}:</div>
+            ${Object.entries(s.leaderQualitative).map(([q, a]) => `<div style="font-size:13px; margin-bottom:6px;"><em>${q}</em><br/>${a}</div>`).join("")}
+          ` : ""}
+          ${s.hrQualitative ? `
+            <div style="font-weight:600; font-size:12px; margin-bottom:4px; ${s.leaderQualitative ? "margin-top:10px;" : ""}">Dari HR${s.hrEvaluatorName ? ` (${s.hrEvaluatorName})` : ""}:</div>
+            ${Object.entries(s.hrQualitative).map(([q, a]) => `<div style="font-size:13px; margin-bottom:6px;"><em>${q}</em><br/>${a}</div>`).join("")}
+          ` : ""}
+        </div>` : ""}
         <label>${t("gm_notes_label")}</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
         ${!isEdit ? `

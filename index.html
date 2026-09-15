@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-14-218-general-sectiond-universal-qualitative-e — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-15-219-cleanup-maintenance-actions — LIVE</div>
 
 <script>
 // =================================================================
@@ -3331,15 +3331,17 @@ async function renderDevTools() {
     <div class="card">
       <h2>${t("dt_maintenance_title")}</h2>
       <div class="hint" style="margin-bottom:10px;">${t("dt_maintenance_desc")}</div>
-      <button class="secondary" id="maint-dedupeKpiSheet-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('dedupeKpiSheet', this)">${t("dt_dedupe_kpi_btn")}</button>
-      <button class="secondary" id="maint-migratePhotosToLinks-btn" style="margin-bottom:8px;" onclick="doRunMaintenanceAction('migratePhotosToLinks', this)">${t("dt_migrate_photos_btn")}</button>
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
-      <button class="secondary" id="maint-setupKpiSetMigration-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('setupKpiSetMigration', this)">📋 Refresh Dropdown Config_JobTitleKpiSet</button>
-      <button class="secondary" id="maint-migrateAllToSectionCriteriaModel-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('migrateAllToSectionCriteriaModel', this)">⚡ Migrasi ke Model Terpadu (Section Criteria)</button>
-      <button class="secondary" id="maint-repairBlankMonthSubmissions-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('repairBlankMonthSubmissions', this)">🩹 Perbaiki Submission Bulan Kosong (Access Override)</button>
-      <button class="secondary" id="maint-fixFloorSupervisorOverlap-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('fixFloorSupervisorOverlap', this)">🎯 Benerin Overlap Floor Supervisor (43 staff)</button>
-      <button class="secondary" id="maint-restoreLostKpiStructures-btn" style="margin-top:8px; border-color:var(--red);" onclick="doRunMaintenanceAction('restoreLostKpiStructures', this)">🚑 Restore KPI yang Hilang (Finance Controller + 4 HR)</button>
+      <button class="secondary" id="maint-cleanupOrphanedSuperiorOverrides-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('cleanupOrphanedSuperiorOverrides', this)">🧹 Bersihkan Superior Override Orphan</button>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <h2>🚑 Restore Struktur dari Audit Log</h2>
+      <div class="hint" style="margin-bottom:10px;">Kalau struktur KPI 1 Job Title tiba-tiba hilang dari Config_SectionCriteria (padahal audit log-nya nyatet berhasil disimpen) — masukin nama Job Title-nya persis, sistem otomatis restore dari entry TERAKHIR di audit log.</div>
+      <label>Nama Job Title (persis, case-insensitive)</label>
+      <input type="text" id="restore-audit-jobtitle" placeholder="Contoh: Finance Controller" />
+      <button class="primary" id="restore-audit-btn" style="margin-top:8px;" onclick="doRestoreStructureFromAuditLog()">Restore Sekarang</button>
+      <div id="restore-audit-result" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
       <h2>📥 Import KPI dari Google Sheet</h2>
@@ -3492,12 +3494,38 @@ async function doRunMaintenanceAction(action, btnEl) {
     const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action });
     noteEl.textContent = (res.error || res.success === false)
       ? `${t("dt_maintenance_failed_prefix")} ${res.detail || friendlyError(res.error)}`
-      : `${t("dt_maintenance_done_prefix")} (${action})${res.rowCount !== undefined ? ` — ${res.rowCount} baris disalin` : ""}${res.jobTitlesAdded !== undefined ? ` — ${res.renamedSets} Set direname, ${res.removedPlaceholders} placeholder lama dibuang, ${res.jobTitlesAdded} Job Title ditambahin ke mapping, ${res.kpiSetCount} KPI Set tersedia di dropdown` : ""}${res.migratedCount !== undefined ? ` — ${res.migratedCount} Job Title dimigrasi (${res.rowsAdded} baris), ${res.skippedAlready} udah pernah dimigrasi, ${res.skippedNoSet} dilewatin (belum ada KPI Set)` : ""}${res.pairsFixed !== undefined ? ` — ${res.pairsFixed} pasangan (staff+tahap) dibenerin, ${res.rowsFixed} baris Submissions diperbaiki` : ""}${res.appliedCount !== undefined ? ` — ${res.appliedCount} staff di-assign ke supervisor yang benar${res.hostessSupAdded ? ", Hostess Supervisor ditambahin ke Config_PositionMap" : ""}` : ""}${res.restoredCount !== undefined ? ` — ${res.restoredCount} Job Title berhasil di-restore, ${res.failedCount} gagal` : ""}.`;
+      : `${t("dt_maintenance_done_prefix")} (${action})${res.removedCount !== undefined ? ` — ${res.removedCount} entri orphan dibersihin${res.removedCount ? `: ${res.removedTargets.join(", ")}` : ""}` : ""}.`;
   } catch (e) {
     noteEl.textContent = t("dt_maintenance_conn_error");
   } finally {
     document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = false);
     btnEl.textContent = originalLabel;
+  }
+}
+
+async function doRestoreStructureFromAuditLog() {
+  const input = document.getElementById("restore-audit-jobtitle");
+  const btn = document.getElementById("restore-audit-btn");
+  const noteEl = document.getElementById("restore-audit-result");
+  const jobTitle = input.value.trim();
+  if (!jobTitle) { noteEl.textContent = "Masukin nama Job Title-nya dulu."; return; }
+
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.innerHTML = `<span class="btn-spinner"></span>Merestore...`;
+  noteEl.textContent = "";
+  try {
+    const res = await apiPost("restoreStructureFromAuditLog", { requesterId: state.user.staffId, jobTitle });
+    if (res.success) {
+      noteEl.innerHTML = `✅ "${res.jobTitle}" berhasil di-restore (${res.rowCount} baris kriteria) dari entry ${new Date(res.restoredFromTimestamp).toLocaleString("id-ID")}.`;
+    } else {
+      noteEl.textContent = `Gagal: ${res.detail || friendlyError(res.error)}`;
+    }
+  } catch (e) {
+    noteEl.textContent = "Gagal konek ke server. Coba lagi.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 }
 

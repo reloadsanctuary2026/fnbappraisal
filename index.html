@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-220-review-approved-only-and-access-fixes — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-221-critical-access-and-money-leak-fixes — LIVE</div>
 
 <script>
 // =================================================================
@@ -4109,7 +4109,7 @@ async function loadHistoricalForm() {
   detailContainer.innerHTML = `<div class="loading">${t("hi_loading_criteria")}</div>`;
 
   const [existing, cfg] = await Promise.all([
-    apiGet("getHistoricalAppraisal", { staffId: state._historicalStaffId, month }),
+    apiGet("getHistoricalAppraisal", { requesterId: state.user.staffId, staffId: state._historicalStaffId, month }),
     apiGet("getKpiConfigForTarget", { targetStaffId: state._historicalStaffId }),
   ]);
   state._historicalCfg = cfg;
@@ -5195,13 +5195,13 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   state.selfReference = null;
   state.leaderReference = null;
   if (evaluatorType !== "self") {
-    const selfRes = await apiGet("getSelfScoresForTarget", { staffId: target.staffId });
+    const selfRes = await apiGet("getSelfScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId });
     if (selfRes.found) state.selfReference = selfRes.scores;
   }
   // HR appraises LAST (day 18-27) — by then Self AND Leader/Mgmt should both already be
   // submitted, so HR gets both as reference instead of just Self.
   if (evaluatorType === "hr") {
-    const leaderRes = await apiGet("getLeaderScoresForTarget", { staffId: target.staffId });
+    const leaderRes = await apiGet("getLeaderScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId });
     if (leaderRes.found) state.leaderReference = leaderRes.scores;
   }
 
@@ -5685,7 +5685,7 @@ async function confirmAndSubmit(evaluatorType) {
 // =================================================================
 async function renderGm() {
   app.innerHTML = topbar("Approve Final Decisions") + `<div class="loading">Memuat data...</div>`;
-  const final = await apiGet("getFinalAppraisal", { month: state.month });
+  const final = await apiGet("getFinalAppraisal", { requesterId: state.user.staffId, month: state.month });
   if (final.error) {
     app.innerHTML = topbar("Approve Final Decisions") + `<div class="card"><div class="error">${friendlyError(final.error)}</div></div>`;
     return;
@@ -6045,7 +6045,7 @@ async function loadCalibrationSuggestion(staffId) {
   container.dataset.loaded = "true";
   container.innerHTML = `<div class="hint">${t("gm_calibration_loading")}</div>`;
 
-  const res = await apiGet("getCalibrationSuggestion", { staffId, month: state.month });
+  const res = await apiGet("getCalibrationSuggestion", { requesterId: state.user.staffId, staffId, month: state.month });
   if (!res.found) {
     container.innerHTML = `<div class="hint">${t("gm_calibration_insufficient")}</div>`;
     return;
@@ -6255,8 +6255,13 @@ async function doExportSc() {
 async function saveTotalSC() {
   const val = document.getElementById("sc-input").value;
   if (!val) return;
-  const res = await apiPost("setTotalSC", { month: state.month, totalSC: Number(val), inputBy: state.user.name });
-  if (res.error) { showToast(t("sc_total_save_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  const res = await apiPost("setTotalSC", { requesterId: state.user.staffId, month: state.month, totalSC: Number(val), inputBy: state.user.name });
+  if (res.error === "not_all_approved") {
+    const names = (res.pendingStaff || []).slice(0, 5).map(p => p.name).join(", ");
+    showToast(`⚠️ Belum bisa hitung pool — ${res.pendingCount} orang bulan ini belum di-Approve Executive (${names}${res.pendingCount > 5 ? ", ..." : ""}). Selesaikan approval dulu.`, "error");
+    return;
+  }
+  if (res.error || res.success === false) { showToast(t("sc_total_save_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
   showToast(t("sc_total_saved_toast"));
   renderScInput();
 }
@@ -6274,7 +6279,12 @@ async function saveRoleBonusSelections() {
     seen[key] = true;
     selections.push({ department: dept, staffId });
   }
-  const res = await apiPost("setRoleBonusSelections", { month: state.month, selections });
+  const res = await apiPost("setRoleBonusSelections", { requesterId: state.user.staffId, month: state.month, selections });
+  if (res.error === "not_all_approved") {
+    const names = (res.pendingStaff || []).slice(0, 5).map(p => p.name).join(", ");
+    showToast(`⚠️ Belum bisa hitung pool — ${res.pendingCount} orang bulan ini belum di-Approve Executive (${names}${res.pendingCount > 5 ? ", ..." : ""}). Selesaikan approval dulu.`, "error");
+    return;
+  }
   if (res.error || res.success === false) {
     showToast(`${t("sc_quota_exceeded_prefix")} ${res.department || ""} ${t("sc_quota_exceeded_suffix")}`, "error");
     return;

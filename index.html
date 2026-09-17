@@ -3333,7 +3333,23 @@ async function renderDevTools() {
       <div class="hint" style="margin-bottom:10px;">${t("dt_maintenance_desc")}</div>
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
       <button class="secondary" id="maint-cleanupOrphanedSuperiorOverrides-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('cleanupOrphanedSuperiorOverrides', this)">🧹 Bersihkan Superior Override Orphan</button>
+      <button class="secondary" id="maint-findStaleKpiStructures-btn" style="margin-top:8px;" onclick="doFindStaleKpiStructures(this)">🔍 Cari Submission dengan Struktur KPI Ketinggalan</button>
+      <div id="stale-kpi-results" style="margin-top:10px;"></div>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
+    </div>
+    <div class="card">
+      <h2>🔓 Reset Jatah Submit (Self/Leader/HR)</h2>
+      <div class="hint" style="margin-bottom:10px;">Tiap orang cuma boleh submit 1x per slot per bulan. Kalau ada yang submit dengan struktur KPI yang udah ketinggalan (misal Job Title-nya baru di-redirect/di-migrasi ke struktur baru SETELAH dia submit), pakai ini buat kasih jatah submit 1x lagi — data lama otomatis KETIMPA begitu dia submit ulang, bukan numpuk. Ini CUMA buka kuncinya; data lama TETAP ada sampai orangnya beneran submit ulang.</div>
+      <label>NIK Staff</label>
+      <input type="text" id="reset-submission-nik" placeholder="Contoh: 1198" />
+      <label style="margin-top:8px; display:block;">Slot</label>
+      <select id="reset-submission-slot" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
+        <option value="self">Self</option>
+        <option value="leader">Leader</option>
+        <option value="hr">HR</option>
+      </select>
+      <button class="primary" id="reset-submission-btn" style="margin-top:8px;" onclick="doResetSubmissionCount()">Reset Jatah Submit</button>
+      <div id="reset-submission-result" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
       <h2>🚑 Restore Struktur dari Audit Log</h2>
@@ -3484,6 +3500,34 @@ async function doRunHealthCheck() {
   }
 }
 
+async function doFindStaleKpiStructures(btnEl) {
+  const resultsEl = document.getElementById("stale-kpi-results");
+  const originalLabel = btnEl.textContent;
+  btnEl.disabled = true;
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>${t("dt_processing")}`;
+  resultsEl.innerHTML = "";
+  try {
+    const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action: "findStaleKpiStructures" });
+    if (res.error || res.success === false) {
+      resultsEl.innerHTML = `<div class="hint" style="color:var(--red);">Gagal: ${friendlyError(res.error)}</div>`;
+    } else if (!res.mismatchCount) {
+      resultsEl.innerHTML = `<div class="hint" style="color:var(--green);">✅ Semua submission bulan ini (${res.monthKey}) udah cocok sama struktur yang lagi aktif — gak ada yang ketinggalan.</div>`;
+    } else {
+      resultsEl.innerHTML = `<div class="hint" style="margin-bottom:8px;">⚠️ ${res.mismatchCount} submission bulan ${res.monthKey} pakai jumlah kriteria yang beda dari struktur yang SEKARANG aktif untuk Job Title-nya — kemungkinan diisi sebelum struktur diubah:</div>` +
+        res.mismatches.map(m => `
+          <div class="staff-card" style="margin-bottom:6px;">
+            <div class="name">${m.staffName} (NIK ${m.staffId}) — ${m.jobTitle}</div>
+            <div class="dept">Slot: ${m.slot} · Submitted: ${m.actualCount} kriteria · Seharusnya sekarang: ${m.expectedCount} kriteria</div>
+          </div>`).join("");
+    }
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="hint" style="color:var(--red);">Gagal konek ke server. Coba lagi.</div>`;
+  } finally {
+    btnEl.disabled = false;
+    btnEl.textContent = originalLabel;
+  }
+}
+
 async function doRunMaintenanceAction(action, btnEl) {
   const noteEl = document.getElementById("maintenance-result-note");
   const originalLabel = btnEl.textContent;
@@ -3500,6 +3544,37 @@ async function doRunMaintenanceAction(action, btnEl) {
   } finally {
     document.querySelectorAll("[id^='maint-']").forEach(b => b.disabled = false);
     btnEl.textContent = originalLabel;
+  }
+}
+
+async function doResetSubmissionCount() {
+  const nikInput = document.getElementById("reset-submission-nik");
+  const slotSelect = document.getElementById("reset-submission-slot");
+  const btn = document.getElementById("reset-submission-btn");
+  const noteEl = document.getElementById("reset-submission-result");
+  const staffId = nikInput.value.trim();
+  const slot = slotSelect.value;
+  if (!staffId) { noteEl.textContent = "Masukin NIK-nya dulu."; return; }
+
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.innerHTML = `<span class="btn-spinner"></span>Mereset...`;
+  noteEl.textContent = "";
+  try {
+    const res = await apiPost("resetSubmissionCountUI", { requesterId: state.user.staffId, staffId, slot });
+    if (res.success) {
+      noteEl.innerHTML = `✅ Jatah submit "${slot}" buat ${res.staffName} (NIK ${res.staffId}) udah direset — dia (atau evaluatornya) bisa isi ulang sekarang. Data LAMA baru ketimpa begitu dia beneran submit ulang.`;
+      nikInput.value = "";
+    } else if (res.error === 'not_found') {
+      noteEl.textContent = `${res.staffName || 'Orang ini'} belum pernah submit slot "${slot}" bulan ini — gak ada yang perlu direset.`;
+    } else {
+      noteEl.textContent = `Gagal: ${friendlyError(res.error)}`;
+    }
+  } catch (e) {
+    noteEl.textContent = "Gagal konek ke server. Coba lagi.";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalLabel;
   }
 }
 
@@ -3777,6 +3852,12 @@ async function onSuperiorCheckboxChange(scope, rowStaffId) {
     if (noteEl) { noteEl.textContent = t("sm_save_failed_prefix") + " " + friendlyError(res.error); noteEl.style.color = "var(--red)"; }
     return;
   }
+  if (noteEl && res.warnings && res.warnings.length) {
+    noteEl.textContent = "⚠️ " + res.warnings.join(" ");
+    noteEl.style.color = "var(--amber)";
+  } else if (noteEl) {
+    noteEl.textContent = "";
+  }
   document.querySelectorAll(`.superior-ms[data-row-staffid="${rowStaffId}"]`).forEach(msEl => {
     const panel = msEl.querySelector(".superior-ms-panel");
     const trigger = msEl.querySelector(".superior-ms-trigger");
@@ -3863,13 +3944,18 @@ async function applyBulkStaffSuperior() {
   applyBtn.disabled = true;
   applyBtn.textContent = `${t("sm_bulk_saving_prefix")} 0/${checked.length}...`;
   let done = 0;
+  const allWarnings = [];
   for (const cb of checked) {
     const staffId = cb.dataset.staffid;
-    await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
+    const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
+    if (res.warnings && res.warnings.length) allWarnings.push(...res.warnings);
     done++;
     applyBtn.textContent = `${t("sm_bulk_saving_prefix")} ${done}/${checked.length}...`;
   }
   showToast(`✅ ${checked.length} ${t("sm_bulk_updated_toast")}`);
+  if (allWarnings.length) {
+    showToast(`⚠️ ${allWarnings.length} assignment kelihatan gak nyambung department — cek lagi: ${allWarnings.slice(0, 2).join(" | ")}${allWarnings.length > 2 ? " ..." : ""}`, "error");
+  }
   renderStaffMapping();
 }
 
@@ -5690,6 +5776,9 @@ async function renderGm() {
           <div id="calibration-suggestion-${s.staffId}" style="margin-bottom:12px;"></div>
           <label>${t("gm_calibration_adj_label")}</label>
           <input type="number" id="calibration-adj-${s.staffId}" placeholder="${t("gm_calibration_adj_placeholder")}" />
+          <div class="hint" style="margin:6px 0;">— atau —</div>
+          <label>Langsung set Final Score jadi (skor sekarang: ${s.finalScore != null ? Number(s.finalScore).toFixed(1) : "-"})</label>
+          <input type="number" id="calibration-target-${s.staffId}" data-current-final="${s.finalScore != null ? Number(s.finalScore) : ""}" placeholder="Contoh: 80" />
           <label>${t("gm_calibration_reason_label")}</label>
           <input type="text" id="calibration-reason-${s.staffId}" placeholder="${t("gm_calibration_reason_placeholder")}" />
         </div>` : ""}
@@ -6043,8 +6132,18 @@ async function submitDecision(staffId) {
   }
 
   const calibrationAdjEl = document.getElementById(`calibration-adj-${staffId}`);
+  const calibrationTargetEl = document.getElementById(`calibration-target-${staffId}`);
   const calibrationReasonEl = document.getElementById(`calibration-reason-${staffId}`);
-  const calibrationAdjustment = calibrationAdjEl ? Number(calibrationAdjEl.value) || 0 : 0;
+  // "Set directly to X" wins if both are filled — it's computed FROM the delta field's
+  // underlying mechanism (calibrationAdjustment is still what's actually sent and stored,
+  // preserving the exact same audit trail: original score always recoverable as
+  // FinalScore - CalibrationAdjustment), just without making the person do the subtraction.
+  let calibrationAdjustment = calibrationAdjEl ? Number(calibrationAdjEl.value) || 0 : 0;
+  if (calibrationTargetEl && calibrationTargetEl.value !== "") {
+    const currentFinal = Number(calibrationTargetEl.dataset.currentFinal) || 0;
+    const targetFinal = Number(calibrationTargetEl.value);
+    calibrationAdjustment = Number((targetFinal - currentFinal).toFixed(2));
+  }
   if (calibrationAdjustment !== 0) {
     const calibrationReason = calibrationReasonEl ? calibrationReasonEl.value.trim() : "";
     if (!calibrationReason) { showToast(t("gm_calibration_reason_required"), "error"); return; }

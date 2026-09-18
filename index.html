@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-222-staff-mapping-department-filter-includes-oversees — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-224-compliance-unit-tab-only-when-multiple — LIVE</div>
 
 <script>
 // =================================================================
@@ -4480,6 +4480,17 @@ function switchReviewViewMode(mode) {
   renderReview();
 }
 
+function switchComplianceUnit(unit) {
+  state._complianceBusinessUnit = unit;
+  state._complianceDept = ""; // reset dept filter — options change per unit, an old selection could be stale/invalid
+  renderReview();
+}
+
+function switchComplianceDept(dept) {
+  state._complianceDept = dept;
+  renderReview();
+}
+
 function changeReviewMonth(value) {
   if (!value) return;
   state.month = value;
@@ -4597,7 +4608,15 @@ async function renderReview() {
     if (progressRes.error) {
       bodyHtml = `<div class="card"><div class="error">${friendlyError(progressRes.error)}</div></div>`;
     } else {
-      const progress = (progressRes.progress || []).sort((a, b) => a.percentage - b.percentage);
+      const allProgress = progressRes.progress || [];
+      const complianceUnit = state._complianceBusinessUnit || allProgress.find(p => p.businessUnit)?.businessUnit || "F&B";
+      const unitOptions = [...new Set(allProgress.map(p => p.businessUnit).filter(Boolean))].sort();
+      const afterUnitFilter = allProgress.filter(p => p.businessUnit === complianceUnit);
+      const deptOptions = [...new Set(afterUnitFilter.flatMap(p => p.oversees || []))].sort();
+      const complianceDept = state._complianceDept || "";
+      const progress = afterUnitFilter
+        .filter(p => !complianceDept || (p.oversees || []).includes(complianceDept))
+        .sort((a, b) => a.percentage - b.percentage);
       const groupOrder = ["Leader", "Management", "HR"];
       const groupLabel = { Leader: "Leader", Management: "Management", HR: "HR" };
       const rowHtml = (p) => {
@@ -4605,7 +4624,10 @@ async function renderReview() {
         return `
           <div class="staff-row" style="cursor:default; display:block;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div class="name">${p.name}</div>
+              <div>
+                <div class="name">${p.name}</div>
+                ${(p.oversees || []).length ? `<div class="cell-sub">${p.oversees.join(", ")}</div>` : ""}
+              </div>
               <span class="badge" style="background:${p.percentage >= 100 ? "var(--green-bg)" : p.percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${p.doneTargets}/${p.totalTargets} (${p.percentage}%)</span>
             </div>
             <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin-top:8px; overflow:hidden;">
@@ -4617,7 +4639,16 @@ async function renderReview() {
         <div class="card">
           <div class="hint">${t("review_compliance_hint")}</div>
         </div>
-        ${renderSelfAppraisalComplianceCard(selfComplianceRes)}
+        ${(unitOptions.length > 1 || deptOptions.length) ? `<div class="card">
+          ${unitOptions.length > 1 ? tabSwitcher(unitOptions.map(u => ({ key: u, label: u })), complianceUnit, "switchComplianceUnit") : ""}
+          ${deptOptions.length ? `
+            <label style="margin-top:10px; display:block;">Department</label>
+            <select onchange="switchComplianceDept(this.value)" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
+              <option value="" ${!complianceDept ? "selected" : ""}>Semua Department</option>
+              ${deptOptions.map(d => `<option value="${escapeAttr(d)}" ${d === complianceDept ? "selected" : ""}>${d}</option>`).join("")}
+            </select>` : ""}
+        </div>` : ""}
+        ${complianceUnit === "F&B" && !complianceDept ? renderSelfAppraisalComplianceCard(selfComplianceRes) : ""}
         ${groupOrder.map(tier => {
           const group = progress.filter(p => p.tier === tier);
           if (!group.length) return "";

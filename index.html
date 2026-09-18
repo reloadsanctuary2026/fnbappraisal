@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-221-critical-access-and-money-leak-fixes — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-222-staff-mapping-department-filter-includes-oversees — LIVE</div>
 
 <script>
 // =================================================================
@@ -3666,7 +3666,10 @@ async function renderStaffMapping() {
   state._staffMappingCandidates = res.candidates || { leaders: [], managements: [], executives: [] };
   state._staffMappingSortCriteria = [];
 
-  const deptKeys = [...new Set(rows.filter(r => r.department !== "-").map(r => r.department))].sort();
+  const deptKeys = [...new Set([
+    ...rows.filter(r => r.department !== "-").map(r => r.department),
+    ...rows.flatMap(r => r.oversees || []),
+  ])].sort();
   const tierKeys = ["Staff", "Leader", "Management"];
 
   // Which of the Leader/Management/Executive columns actually apply, based on the
@@ -3726,7 +3729,7 @@ async function renderStaffMapping() {
       : `<div class="col-${columnKey} col-na">—</div>`;
 
     return `
-      <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-jobtitle="${escapeAttr(r.jobTitle)}" data-department="${escapeAttr(r.department)}">
+      <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-jobtitle="${escapeAttr(r.jobTitle)}" data-department="${escapeAttr(r.department)}" data-oversees="${escapeAttr((r.oversees || []).join(','))}">
         <div class="col-name">
           <input type="checkbox" class="mapping-checkbox" data-staffid="${r.staffId}" onchange="onStaffMappingCheckboxChange(this)">
           <div>
@@ -3968,7 +3971,11 @@ function updateStaffMappingFilter(key, value) {
     let show = true;
     if (f.search && !row.dataset.search.includes(f.search.toLowerCase())) show = false;
     if (f.tier && row.dataset.tier !== f.tier) show = false;
-    if (f.department && row.dataset.department !== f.department) show = false;
+    if (f.department) {
+      const oversees = (row.dataset.oversees || "").split(",").filter(Boolean);
+      const matchesDept = row.dataset.department === f.department || oversees.includes(f.department);
+      if (!matchesDept) show = false;
+    }
     row.style.display = show ? "" : "none";
     if (show) visibleCount++;
   });

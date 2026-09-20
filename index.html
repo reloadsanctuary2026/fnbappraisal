@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-224-compliance-unit-tab-only-when-multiple — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-226-business-unit-activation-gate — LIVE</div>
 
 <script>
 // =================================================================
@@ -3365,6 +3365,12 @@ async function renderDevTools() {
       <div class="hint" style="margin-bottom:10px; color:var(--teal);">Contoh: 3 section, section pertama dikasih 50% di kolom Bobot Section, 2 section lain dikosongin → otomatis jadi 50/25/25 (SISA 50% dibagi rata ke 2 section yang kosong).</div>
       <label>Link atau ID Google Sheet</label>
       <input type="text" id="kpi-import-sheet-id" placeholder="Tempel link Google Sheet di sini" />
+      <label style="margin-top:8px; display:block;">Business Unit (kosongin semua = import SEMUA unit)</label>
+      <div style="display:flex; gap:14px; margin-top:4px;">
+        <label style="display:flex; align-items:center; gap:6px; font-weight:400;"><input type="checkbox" id="kpi-import-unit-fnb" /> F&B</label>
+        <label style="display:flex; align-items:center; gap:6px; font-weight:400;"><input type="checkbox" id="kpi-import-unit-gym" /> Gym</label>
+        <label style="display:flex; align-items:center; gap:6px; font-weight:400;"><input type="checkbox" id="kpi-import-unit-backoffice" /> Back Office</label>
+      </div>
       <button class="primary" id="kpi-import-btn" style="margin-top:8px;" onclick="doImportKpiFromWorkbook()">Import Sekarang</button>
       <div id="kpi-import-result" class="hint" style="margin-top:8px;"></div>
     </div>
@@ -3415,6 +3421,7 @@ function accessOverrideReasonLabel(reason) {
     too_late: "dt_reason_too_late",
     too_early: "dt_reason_too_early",
     already_submitted: "dt_reason_already_submitted",
+    business_unit_not_yet_active: "dt_reason_business_unit_not_yet_active",
   };
   return map[reason] ? t(map[reason]) : reason;
 }
@@ -3611,12 +3618,17 @@ async function doImportKpiFromWorkbook() {
   const sheetIdOrUrl = input.value.trim();
   if (!sheetIdOrUrl) { noteEl.textContent = "Tempel link Google Sheet-nya dulu."; return; }
 
+  const businessUnitFilter = [];
+  if (document.getElementById("kpi-import-unit-fnb").checked) businessUnitFilter.push("F&B");
+  if (document.getElementById("kpi-import-unit-gym").checked) businessUnitFilter.push("Gym");
+  if (document.getElementById("kpi-import-unit-backoffice").checked) businessUnitFilter.push("Back Office");
+
   btn.disabled = true;
   const originalLabel = btn.textContent;
   btn.innerHTML = `<span class="btn-spinner"></span>Mengimpor...`;
   noteEl.textContent = "";
   try {
-    const res = await apiPost("importKpiFromWorkbook", { requesterId: state.user.staffId, sheetIdOrUrl });
+    const res = await apiPost("importKpiFromWorkbook", { requesterId: state.user.staffId, sheetIdOrUrl, businessUnitFilter: businessUnitFilter.length ? businessUnitFilter : undefined });
     if (res.error && !res.results) {
       noteEl.textContent = `Gagal: ${res.detail || friendlyError(res.error)}`;
     } else {
@@ -4518,7 +4530,7 @@ function renderSelfAppraisalComplianceCard(res) {
   if (!res || !res.found) return "";
   const tierOrder = ["Staff", "Leader", "Management"];
   const tierLabel = { Staff: "Staff", Leader: "Leader", Management: "Management" };
-  const anyData = tierOrder.some(t => res.byTier[t] && (res.byTier[t].total > 0 || res.byTier[t].contractPending.length > 0 || res.byTier[t].newHire.length > 0));
+  const anyData = tierOrder.some(t => res.byTier[t] && (res.byTier[t].total > 0 || res.byTier[t].contractPending.length > 0 || res.byTier[t].newHire.length > 0 || (res.byTier[t].notYetActive || []).length > 0));
   if (!anyData) return "";
 
   return `
@@ -4527,7 +4539,7 @@ function renderSelfAppraisalComplianceCard(res) {
       <div class="hint" style="margin-bottom:10px;">${t("selfcompliance_hint")}</div>
       ${tierOrder.map(tier => {
         const bucket = res.byTier[tier];
-        if (!bucket || (bucket.total === 0 && !bucket.contractPending.length && !bucket.newHire.length)) return "";
+        if (!bucket || (bucket.total === 0 && !bucket.contractPending.length && !bucket.newHire.length && !(bucket.notYetActive || []).length)) return "";
         const missingCount = bucket.total - bucket.done;
         const percentage = bucket.total ? Math.round((bucket.done / bucket.total) * 100) : 100;
         const barColor = percentage >= 100 ? "var(--green)" : percentage >= 50 ? "var(--amber)" : "var(--red)";
@@ -4565,6 +4577,15 @@ function renderSelfAppraisalComplianceCard(res) {
                 <div class="hint" style="margin:6px 0 4px;">${t("selfcompliance_new_hire_note")}</div>
                 <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
                   ${bucket.newHire.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
+                </ul>
+              </details>
+            ` : ""}
+            ${(bucket.notYetActive || []).length > 0 ? `
+              <details style="margin-top:6px;">
+                <summary style="cursor:pointer; font-size:13px; color:var(--text-muted); font-weight:600;">${bucket.notYetActive.length} orang unit-nya belum mulai siklus appraisal</summary>
+                <div class="hint" style="margin:6px 0 4px;">Business Unit mereka belum aktif bulan ini (dijadwalkan mulai bulan lain) — bukan lalai, sistemnya sendiri belum kasih akses isi Self Appraisal.</div>
+                <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
+                  ${bucket.notYetActive.map(m => `<li>${m.name} <span style="color:var(--text-muted);">— ${m.businessUnit}${m.department && m.department !== "-" ? ` / ${m.department}` : ""}</span></li>`).join("")}
                 </ul>
               </details>
             ` : ""}
@@ -5205,6 +5226,8 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       msg = t("form_deferred");
     } else if (access.reason === "new_hire_this_month") {
       msg = t("form_new_hire");
+    } else if (access.reason === "business_unit_not_yet_active") {
+      msg = `Unit kamu belum mulai siklus appraisal — dijadwalkan aktif mulai <strong>${access.activatesOn}</strong>. Bukan masalah teknis, memang belum waktunya.`;
     } else {
       msg = t("form_no_contract");
     }

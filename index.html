@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-242-revert-width-plus-oversees-override — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-243-oversees-checkbox-not-freetext — LIVE</div>
 
 <script>
 // =================================================================
@@ -3421,12 +3421,21 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
     <tr ${hasPending ? 'class="org-pending-row"' : ""}>
       <td></td>
       <td colspan="4">
-        <div style="padding:8px; background:var(--sand); border-radius:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <input type="text" id="org-oversees-input-${s.staffId}" value="${escapeAttr((s.oversees || []).join(', '))}" placeholder="Contoh: Runner (pisah koma kalau lebih dari 1)" style="flex:1; min-width:200px; padding:6px; border-radius:8px; border:1.5px solid var(--border);" />
-          <button class="primary" style="background:var(--teal);" onclick="doSetOverseesOverride('${s.staffId}')">Simpan Oversees</button>
-          <button class="ghost" onclick="toggleOrgOverseesEdit(null)">Batal</button>
+        <div style="padding:8px; background:var(--sand); border-radius:8px;">
+          <div class="hint" style="margin-bottom:6px;">Centang department yang BENERAN dipegang orang ini (dari daftar department asli di ${escapeAttr(bu.label)} — gak bisa salah ketik):</div>
+          <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+            ${bu.departments.map(d => `
+              <label style="display:flex; align-items:center; gap:5px; background:#fff; padding:5px 10px; border-radius:8px; border:1.5px solid var(--border);">
+                <input type="checkbox" class="org-oversees-checkbox-${s.staffId}" value="${escapeAttr(d.name)}" ${(s.oversees || []).indexOf(d.name) !== -1 ? "checked" : ""} />
+                ${escapeAttr(d.name)}
+              </label>`).join("")}
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="primary" style="background:var(--teal);" onclick="doSetOverseesOverride('${s.staffId}')">Simpan Oversees</button>
+            <button class="ghost" onclick="toggleOrgOverseesEdit(null)">Batal</button>
+          </div>
         </div>
-        <div class="hint" style="margin-top:6px;">Cuma buat ORANG INI — Job Title lain yang sama gak ikut berubah. Kosongin buat balik ke default Job Title (Oversees bareng semua yang pegang title sama).</div>
+        <div class="hint" style="margin-top:6px;">Cuma buat ORANG INI — Job Title lain yang sama gak ikut berubah. Gak centang apa-apa = balik ke default Job Title (Oversees bareng semua yang pegang title sama).</div>
       </td>
     </tr>` : "";
 
@@ -3575,8 +3584,8 @@ function toggleOrgOverseesEdit(staffId) {
 }
 
 async function doSetOverseesOverride(staffId) {
-  const input = document.getElementById(`org-oversees-input-${staffId}`);
-  const overseesOverride = input ? input.value.trim() : "";
+  const checked = document.querySelectorAll(`.org-oversees-checkbox-${staffId}:checked`);
+  const overseesOverride = Array.from(checked).map(c => c.value).join(', ');
   // Keep this person's CURRENT effective Tier unchanged — this action only touches
   // Oversees. Reading it straight from the visible inline Tier dropdown means it works
   // correctly whether that Tier came from the Job Title default or an existing override.

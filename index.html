@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-227-struktur-dan-rantai-appraisal-screen — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-228-fix-orgstructure-businessunit-key-mismatch — LIVE</div>
 
 <script>
 // =================================================================
@@ -3350,13 +3350,13 @@ function renderOrgStructureBody() {
 
   app.innerHTML = topbar("Struktur & Rantai Appraisal") +
     `<button class="ghost" onclick="navigateToScreen('devTools')">&larr; ${t("form_back")}</button>` +
-    `<div class="card">${tabSwitcher(res.businessUnits.map(b => ({ key: b.name, label: b.name })), activeUnit, "switchOrgStructureUnit")}</div>` +
+    `<div class="card">${tabSwitcher(res.businessUnits.map(b => ({ key: b.name, label: b.label })), activeUnit, "switchOrgStructureUnit")}</div>` +
     (unitWarnings.length ? `
       <div class="card" style="background:var(--amber-bg); border:1.5px solid var(--amber);">
-        <h2 style="color:var(--amber); margin-top:0;">⚠️ ${unitWarnings.length} Peringatan Struktur di ${activeUnit}</h2>
+        <h2 style="color:var(--amber); margin-top:0;">⚠️ ${unitWarnings.length} Peringatan Struktur di ${bu.label}</h2>
         ${unitWarnings.map(w => `<div class="hint" style="margin-bottom:8px; color:var(--text);">${w.message}</div>`).join("")}
       </div>` : `
-      <div class="card"><div class="hint" style="color:var(--green);">✅ Gak ada peringatan struktur di ${activeUnit}.</div></div>`) +
+      <div class="card"><div class="hint" style="color:var(--green);">✅ Gak ada peringatan struktur di ${bu.label}.</div></div>`) +
     `<div class="card">
       <h2>👑 Kepemimpinan (${bu.leadership.length} orang)</h2>
       <div class="hint" style="margin-bottom:10px;">Siapa yang menilai Leader/Management ini sendiri — di sinilah kasus seperti Head Bar/Restaurant Manager/Sous Chef yang sekarang nunjuk ke NIK tertentu bisa diganti.</div>

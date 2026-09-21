@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-243-oversees-checkbox-not-freetext — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-245-department-drilldown-navigation — LIVE</div>
 
 <script>
 // =================================================================
@@ -3331,6 +3331,7 @@ async function renderOrgStructure() {
   state._orgPendingChanges = {};
   state._orgEditingJobTitleFor = null;
   state._orgEditingOverseesFor = null;
+  state._orgDepartmentFilter = state._orgDepartmentFilter || "";
   renderOrgStructureBody();
 }
 
@@ -3339,8 +3340,14 @@ function switchOrgViewMode(mode) {
   renderOrgStructureBody();
 }
 
+function switchOrgDepartmentFilter(deptName) {
+  state._orgDepartmentFilter = deptName;
+  renderOrgStructureBody();
+}
+
 function switchOrgStructureUnit(unit) {
   state._orgStructureUnit = unit;
+  state._orgDepartmentFilter = "";
   renderOrgStructureBody();
 }
 
@@ -3431,7 +3438,7 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
               </label>`).join("")}
           </div>
           <div style="display:flex; gap:8px;">
-            <button class="primary" style="background:var(--teal);" onclick="doSetOverseesOverride('${s.staffId}')">Simpan Oversees</button>
+            <button class="primary" style="background:var(--teal);" onclick="doSetOverseesOverride('${s.staffId}', this)">Simpan Oversees</button>
             <button class="ghost" onclick="toggleOrgOverseesEdit(null)">Batal</button>
           </div>
         </div>
@@ -3499,6 +3506,11 @@ function renderOrgStructureBody() {
       </div>` : "") +
     `<div class="card">
       ${tabSwitcher(res.businessUnits.map(b => ({ key: b.name, label: b.label })), activeUnit, "switchOrgStructureUnit")}
+      <label style="margin-top:10px; display:block;">Department</label>
+      <select onchange="switchOrgDepartmentFilter(this.value)" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
+        <option value="">— Semua Department —</option>
+        ${bu.departments.map(d => `<option value="${escapeAttr(d.name)}" ${state._orgDepartmentFilter === d.name ? "selected" : ""}>${escapeAttr(d.name)} (${d.leaders.length + d.staff.length} orang)</option>`).join("")}
+      </select>
       <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
         <input type="text" placeholder="Cari nama..." value="${escapeAttr(state._orgSearchTerm || "")}" oninput="updateOrgSearchTerm(this.value)" style="flex:1; min-width:180px; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
         <button class="secondary" onclick="doExportOrgStructure()" id="org-export-btn">📊 Export ke Excel</button>
@@ -3518,18 +3530,18 @@ function renderOrgStructureBody() {
             <button class="ghost" onclick="doClearTierOverride('${o.staffId}')">Hapus Override</button>
           </div>`).join("")}
       </div>` : "") +
-    (unitWarnings.length ? `
+    (state._orgDepartmentFilter ? "" : (unitWarnings.length ? `
       <div class="card" style="background:var(--amber-bg); border:1.5px solid var(--amber);">
         <h2 style="color:var(--amber); margin-top:0;">⚠️ ${unitWarnings.length} Peringatan Struktur di ${bu.label}</h2>
         ${unitWarnings.map(w => `<div class="hint" style="margin-bottom:8px; color:var(--text);">${w.message}</div>`).join("")}
       </div>` : `
-      <div class="card"><div class="hint" style="color:var(--green);">✅ Gak ada peringatan struktur di ${bu.label}.</div></div>`) +
-    `<div class="card">
+      <div class="card"><div class="hint" style="color:var(--green);">✅ Gak ada peringatan struktur di ${bu.label}.</div></div>`)) +
+    (state._orgDepartmentFilter ? "" : `<div class="card">
       <h2>👑 Kepemimpinan — Company-wide / Gak Spesifik 1 Department (${bu.unmatchedLeadership.length} orang)</h2>
       <div class="hint" style="margin-bottom:10px;">Leader/Management yang Oversees-nya gak nempel ke 1 department spesifik (misal HR Manager yang oversees "ALL"). Yang oversees department tertentu (kayak Purchasing Manager → Finance & Accounting) sekarang muncul LANGSUNG di kartu department-nya di bawah.</div>
       ${orgTableWrap(bu.unmatchedLeadership.filter(l => matchesSearch(l.name)).map(l => orgPersonRow(l, l.tier, bu, checkedIds)).join("")) || `<div class="hint">Gak ada yang cocok sama pencarian.</div>`}
-    </div>` +
-    bu.departments.map(dept => {
+    </div>`) +
+    bu.departments.filter(d => !state._orgDepartmentFilter || d.name === state._orgDepartmentFilter).map(dept => {
       const filteredLeaders = dept.leaders.filter(l => matchesSearch(l.name));
       const filteredStaff = dept.staff.filter(s => matchesSearch(s.name));
       if (searchTerm && !filteredLeaders.length && !filteredStaff.length) return "";
@@ -3583,8 +3595,9 @@ function toggleOrgOverseesEdit(staffId) {
   renderOrgStructureBody();
 }
 
-async function doSetOverseesOverride(staffId) {
-  const checked = document.querySelectorAll(`.org-oversees-checkbox-${staffId}:checked`);
+async function doSetOverseesOverride(staffId, buttonEl) {
+  const row = buttonEl.closest('tr');
+  const checked = row.querySelectorAll(`.org-oversees-checkbox-${staffId}:checked`);
   const overseesOverride = Array.from(checked).map(c => c.value).join(', ');
   // Keep this person's CURRENT effective Tier unchanged — this action only touches
   // Oversees. Reading it straight from the visible inline Tier dropdown means it works

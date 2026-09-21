@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-228-fix-orgstructure-businessunit-key-mismatch — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-229-org-structure-batch-save — LIVE</div>
 
 <script>
 // =================================================================
@@ -3305,6 +3305,7 @@ async function renderOrgStructure() {
   }
   state._orgStructureData = res;
   state._orgStructureUnit = state._orgStructureUnit || res.businessUnits[0].name;
+  state._orgPendingChanges = {};
   renderOrgStructureBody();
 }
 
@@ -3327,18 +3328,21 @@ function orgEvaluatorOptionsFor(rowTier, bu, currentPrimaryId) {
 }
 
 function orgPersonRow(s, rowTier, bu) {
+  const hasPending = state._orgPendingChanges && Object.prototype.hasOwnProperty.call(state._orgPendingChanges, s.staffId);
+  const currentValue = hasPending ? state._orgPendingChanges[s.staffId] : (s.primaryEvaluator ? s.primaryEvaluator.staffId : '');
   return `
-    <div style="border:1.5px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:8px;">
+    <div id="org-row-${s.staffId}" style="border:1.5px solid ${hasPending ? "var(--amber)" : "var(--border)"}; border-radius:12px; padding:10px 12px; margin-bottom:8px; ${hasPending ? "background:var(--amber-bg);" : ""}">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
         <div>
           <div style="font-weight:700; font-size:13.5px;">${escapeAttr(s.name)}</div>
           <div class="hint" style="margin:0;">${escapeAttr(s.jobTitle)}${rowTier !== 'Staff' ? ` · Oversees: ${(s.oversees || []).join(", ") || "-"}` : ""}</div>
         </div>
-        <select data-staffid="${s.staffId}" style="min-width:220px; padding:6px; border-radius:8px; border:1.5px solid var(--border);" onchange="doSetOrgPrimaryEvaluator('${s.staffId}', this.value)">
-          ${orgEvaluatorOptionsFor(rowTier, bu, s.primaryEvaluator ? s.primaryEvaluator.staffId : null)}
+        <select data-staffid="${s.staffId}" style="min-width:220px; padding:6px; border-radius:8px; border:1.5px solid var(--border);" onchange="markOrgPendingChange('${s.staffId}', this.value)">
+          ${orgEvaluatorOptionsFor(rowTier, bu, currentValue)}
         </select>
       </div>
       ${(s.backupEvaluators || []).length ? `<div class="hint" style="margin-top:6px;">Cadangan pasif (gak dapet tugas aktif kecuali primary resign/deferred): ${s.backupEvaluators.map(b => escapeAttr(b.name)).join(", ")}</div>` : ""}
+      ${hasPending ? `<div class="hint" style="margin-top:6px; color:var(--amber); font-weight:600;">⏳ Belum disimpan</div>` : ""}
     </div>`;
 }
 
@@ -3347,9 +3351,18 @@ function renderOrgStructureBody() {
   const activeUnit = state._orgStructureUnit;
   const bu = res.businessUnits.find(b => b.name === activeUnit);
   const unitWarnings = res.warnings.filter(w => w.businessUnit === activeUnit);
+  const pendingCount = state._orgPendingChanges ? Object.keys(state._orgPendingChanges).length : 0;
 
   app.innerHTML = topbar("Struktur & Rantai Appraisal") +
     `<button class="ghost" onclick="navigateToScreen('devTools')">&larr; ${t("form_back")}</button>` +
+    (pendingCount ? `
+      <div class="card" style="position:sticky; top:8px; z-index:50; background:var(--amber-bg); border:1.5px solid var(--amber); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div style="font-weight:700; color:var(--amber);">⏳ ${pendingCount} perubahan belum disimpan</div>
+        <div style="display:flex; gap:8px;">
+          <button class="ghost" onclick="discardOrgPendingChanges()">Batal Semua</button>
+          <button class="primary" id="org-save-all-btn" onclick="saveAllOrgChanges()">Simpan Semua (${pendingCount})</button>
+        </div>
+      </div>` : "") +
     `<div class="card">${tabSwitcher(res.businessUnits.map(b => ({ key: b.name, label: b.label })), activeUnit, "switchOrgStructureUnit")}</div>` +
     (unitWarnings.length ? `
       <div class="card" style="background:var(--amber-bg); border:1.5px solid var(--amber);">
@@ -3369,18 +3382,45 @@ function renderOrgStructureBody() {
       </div>`).join("");
 }
 
-async function doSetOrgPrimaryEvaluator(staffId, evaluatorId) {
-  const evaluatorStaffIds = evaluatorId ? [evaluatorId] : [];
-  const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
-  if (res.warnings && res.warnings.length) {
-    showToast(`⚠️ ${res.warnings.join(" ")}`, "error");
-  } else if (res.success === false || res.error) {
-    showToast(`Gagal: ${friendlyError(res.error)}`, "error");
-    return;
-  } else {
-    showToast("✅ Evaluator diupdate.");
+function markOrgPendingChange(staffId, evaluatorId) {
+  state._orgPendingChanges = state._orgPendingChanges || {};
+  state._orgPendingChanges[staffId] = evaluatorId;
+  renderOrgStructureBody(); // cheap local re-render — no API call, no refetch
+}
+
+function discardOrgPendingChanges() {
+  state._orgPendingChanges = {};
+  renderOrgStructureBody();
+}
+
+async function saveAllOrgChanges() {
+  const changes = state._orgPendingChanges || {};
+  const staffIds = Object.keys(changes);
+  if (!staffIds.length) return;
+
+  const btn = document.getElementById("org-save-all-btn");
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="btn-spinner"></span>Menyimpan...`; }
+
+  const errors = [];
+  const warningsCollected = [];
+  for (const staffId of staffIds) {
+    const evaluatorId = changes[staffId];
+    const evaluatorStaffIds = evaluatorId ? [evaluatorId] : [];
+    const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
+    if (res.warnings && res.warnings.length) warningsCollected.push(...res.warnings);
+    if (res.success === false || res.error) errors.push(`${staffId}: ${friendlyError(res.error)}`);
   }
-  await renderOrgStructure(); // refetch — resolves the new primary/backup split fresh
+
+  state._orgPendingChanges = {};
+  if (errors.length) {
+    showToast(`⚠️ ${staffIds.length - errors.length} berhasil, ${errors.length} gagal: ${errors.slice(0, 3).join("; ")}`, "error");
+  } else {
+    showToast(`✅ ${staffIds.length} perubahan disimpan.`);
+  }
+  if (warningsCollected.length) {
+    showToast(`⚠️ ${warningsCollected.length} peringatan relevansi: ${warningsCollected.slice(0, 2).join(" | ")}`, "error");
+  }
+  await renderOrgStructure(); // one single refetch, after everything's saved
 }
 
 async function renderDevTools() {

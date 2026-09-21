@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-240-orgstructure-table-layout-wide-screen — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-242-revert-width-plus-oversees-override — LIVE</div>
 
 <script>
 // =================================================================
@@ -1983,6 +1983,7 @@ async function doSuperAdminLogin() {
 
 function renderLogin() {
   app.innerHTML = `
+    <div style="max-width:480px; margin:0 auto;">
     <div class="topbar"><div style="display:flex; align-items:center; gap:10px;"><div class="logo-mark"></div><h1>Reload ${businessUnitLabel()} 360°</h1></div>${langTogglePreLoginHtml()}</div>
     <div class="card">
       <h2>${t("login_title")}</h2>
@@ -1991,6 +1992,7 @@ function renderLogin() {
       <div class="error" id="login-error"></div>
       <button class="primary" id="login-step1-btn" onclick="doLoginStep1()">${t("login_continue")}</button>
       <button class="ghost" style="margin-top:8px; width:100%;" onclick="changeBusinessUnit()">${t("unit_change_btn")} (${businessUnitLabel()})</button>
+    </div>
     </div>`;
   document.getElementById("nik-input").focus();
   document.getElementById("nik-input").addEventListener("keydown", e => { if (e.key === "Enter") doLoginStep1(); });
@@ -3328,6 +3330,7 @@ async function renderOrgStructure() {
   state._orgStructureUnit = state._orgStructureUnit || res.businessUnits[0].name;
   state._orgPendingChanges = {};
   state._orgEditingJobTitleFor = null;
+  state._orgEditingOverseesFor = null;
   renderOrgStructureBody();
 }
 
@@ -3359,11 +3362,21 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
   const currentValue = hasPending ? state._orgPendingChanges[s.staffId] : (s.primaryEvaluator ? s.primaryEvaluator.staffId : '');
   const isChecked = checkedIds && checkedIds.has(s.staffId);
   const isEditingJobTitle = state._orgEditingJobTitleFor === s.staffId;
+  const isEditingOversees = state._orgEditingOverseesFor === s.staffId;
   const jobTitleOptions = (state._orgAllJobTitles || [])
     .map(jt => `<option value="${escapeAttr(jt.jobTitle)}" ${jt.jobTitle === s.jobTitle ? "selected" : ""}>${escapeAttr(jt.jobTitle)} (${jt.tier})</option>`).join("");
   const tierChoices = ['Staff', 'Leader', 'Management', 'Executive', 'HO', 'HR'];
+  // FIX (18/09/2026): Oversees is per-JOB-TITLE by default, so everyone sharing a title
+  // (4 Floor Supervisors, say) shows the exact same broad list and duplicates across every
+  // department it covers — there's no way to tell "Ahmad really only handles Runner" from
+  // that alone. Making this directly editable per-person (writes via the same
+  // Config_TierOverride mechanism, keeping their current Tier unchanged) is how that gets
+  // fixed without touching the shared Job Title default everyone else still relies on.
+  const overseesLine = rowTier !== 'Staff'
+    ? `Oversees: ${escapeAttr((s.oversees || []).join(", ") || "-")} <a href="#" onclick="toggleOrgOverseesEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600;">✏️</a>`
+    : "";
   const notesHtml = [
-    rowTier !== 'Staff' ? `Oversees: ${escapeAttr((s.oversees || []).join(", ") || "-")}` : "",
+    overseesLine,
     (s.backupEvaluators || []).length ? `Cadangan pasif: ${s.backupEvaluators.map(b => escapeAttr(b.name)).join(", ")} <a href="#" onclick="markOrgPendingChange('${s.staffId}', '${currentValue}'); return false;" style="color:var(--red); font-weight:600;">🧹</a>` : "",
     hasPending ? `<span style="color:var(--amber); font-weight:700;">⏳ Belum disimpan</span>` : "",
   ].filter(Boolean).join("<br>");
@@ -3404,7 +3417,20 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
       </td>
     </tr>` : "";
 
-  return mainRow + editRow;
+  const overseesEditRow = isEditingOversees ? `
+    <tr ${hasPending ? 'class="org-pending-row"' : ""}>
+      <td></td>
+      <td colspan="4">
+        <div style="padding:8px; background:var(--sand); border-radius:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="org-oversees-input-${s.staffId}" value="${escapeAttr((s.oversees || []).join(', '))}" placeholder="Contoh: Runner (pisah koma kalau lebih dari 1)" style="flex:1; min-width:200px; padding:6px; border-radius:8px; border:1.5px solid var(--border);" />
+          <button class="primary" style="background:var(--teal);" onclick="doSetOverseesOverride('${s.staffId}')">Simpan Oversees</button>
+          <button class="ghost" onclick="toggleOrgOverseesEdit(null)">Batal</button>
+        </div>
+        <div class="hint" style="margin-top:6px;">Cuma buat ORANG INI — Job Title lain yang sama gak ikut berubah. Kosongin buat balik ke default Job Title (Oversees bareng semua yang pegang title sama).</div>
+      </td>
+    </tr>` : "";
+
+  return mainRow + editRow + overseesEditRow;
 }
 
 function orgTableWrap(rowsHtml) {
@@ -3541,6 +3567,29 @@ async function doClearTierOverride(staffId) {
 function toggleOrgJobTitleEdit(staffId) {
   state._orgEditingJobTitleFor = staffId;
   renderOrgStructureBody();
+}
+
+function toggleOrgOverseesEdit(staffId) {
+  state._orgEditingOverseesFor = staffId;
+  renderOrgStructureBody();
+}
+
+async function doSetOverseesOverride(staffId) {
+  const input = document.getElementById(`org-oversees-input-${staffId}`);
+  const overseesOverride = input ? input.value.trim() : "";
+  // Keep this person's CURRENT effective Tier unchanged — this action only touches
+  // Oversees. Reading it straight from the visible inline Tier dropdown means it works
+  // correctly whether that Tier came from the Job Title default or an existing override.
+  const tierSelect = document.getElementById(`org-tier-inline-${staffId}`);
+  const currentTier = tierSelect ? tierSelect.value : "";
+
+  const res = await apiPost("setTierOverride", { requesterId: state.user.staffId, staffId, tierOverride: currentTier, overseesOverride, reason: "Oversees disesuaikan per-orang lewat Struktur & Rantai Appraisal" });
+  if (res.error || res.success === false) {
+    showToast(`Gagal: ${friendlyError(res.error)}`, "error");
+    return;
+  }
+  showToast(overseesOverride ? `✅ Oversees diubah jadi "${overseesOverride}".` : "✅ Oversees balik ke default Job Title.");
+  await renderOrgStructure();
 }
 
 async function doUpdateJobTitle(staffId) {

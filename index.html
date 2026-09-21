@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-17-226-business-unit-activation-gate — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-227-struktur-dan-rantai-appraisal-screen — LIVE</div>
 
 <script>
 // =================================================================
@@ -1399,6 +1399,7 @@ function render() {
   if (state.screen === "settings") return renderSettings();
   if (state.screen === "staffMapping") return renderStaffMapping();
   if (state.screen === "devTools") return renderDevTools();
+  if (state.screen === "orgStructure") return renderOrgStructure();
   if (state.screen === "evalWizard") return renderEvaluationWizard();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
   if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
@@ -3291,11 +3292,107 @@ async function wizardSave() {
   goToRoleMenu();
 }
 
+async function renderOrgStructure() {
+  if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
+  app.innerHTML = topbar("Struktur & Rantai Appraisal") +
+    `<button class="ghost" onclick="navigateToScreen('devTools')">&larr; ${t("form_back")}</button>` +
+    `<div class="card"><div class="hint">Memuat struktur...</div></div>`;
+
+  const res = await apiGet("getOrgStructure", { requesterId: state.user.staffId });
+  if (!res.found) {
+    app.innerHTML += `<div class="card"><div class="hint" style="color:var(--red);">Gagal: ${friendlyError(res.error)}</div></div>`;
+    return;
+  }
+  state._orgStructureData = res;
+  state._orgStructureUnit = state._orgStructureUnit || res.businessUnits[0].name;
+  renderOrgStructureBody();
+}
+
+function switchOrgStructureUnit(unit) {
+  state._orgStructureUnit = unit;
+  renderOrgStructureBody();
+}
+
+// Options filtered by the ROW's own tier — mirrors the same rule the old Staff Mapping's
+// three-column layout enforced: a Staff can be given a Leader or Management evaluator (not
+// Executive, which never actively evaluates); a Leader can be given Management or Executive;
+// a Management can only be given Executive.
+function orgEvaluatorOptionsFor(rowTier, bu, currentPrimaryId) {
+  let pool = [];
+  if (rowTier === 'Staff') pool = [...bu.candidates.leaders.map(c => ({ ...c, tier: 'Leader' })), ...bu.candidates.managements.map(c => ({ ...c, tier: 'Management' }))];
+  else if (rowTier === 'Leader') pool = [...bu.candidates.managements.map(c => ({ ...c, tier: 'Management' })), ...bu.candidates.executives.map(c => ({ ...c, tier: 'Executive' }))];
+  else if (rowTier === 'Management') pool = bu.candidates.executives.map(c => ({ ...c, tier: 'Executive' }));
+  return `<option value="">(Otomatis)</option>` +
+    pool.map(c => `<option value="${c.staffId}" ${String(c.staffId) === String(currentPrimaryId) ? "selected" : ""}>${escapeAttr(c.name)} (${c.tier})</option>`).join("");
+}
+
+function orgPersonRow(s, rowTier, bu) {
+  return `
+    <div style="border:1.5px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:8px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:700; font-size:13.5px;">${escapeAttr(s.name)}</div>
+          <div class="hint" style="margin:0;">${escapeAttr(s.jobTitle)}${rowTier !== 'Staff' ? ` · Oversees: ${(s.oversees || []).join(", ") || "-"}` : ""}</div>
+        </div>
+        <select data-staffid="${s.staffId}" style="min-width:220px; padding:6px; border-radius:8px; border:1.5px solid var(--border);" onchange="doSetOrgPrimaryEvaluator('${s.staffId}', this.value)">
+          ${orgEvaluatorOptionsFor(rowTier, bu, s.primaryEvaluator ? s.primaryEvaluator.staffId : null)}
+        </select>
+      </div>
+      ${(s.backupEvaluators || []).length ? `<div class="hint" style="margin-top:6px;">Cadangan pasif (gak dapet tugas aktif kecuali primary resign/deferred): ${s.backupEvaluators.map(b => escapeAttr(b.name)).join(", ")}</div>` : ""}
+    </div>`;
+}
+
+function renderOrgStructureBody() {
+  const res = state._orgStructureData;
+  const activeUnit = state._orgStructureUnit;
+  const bu = res.businessUnits.find(b => b.name === activeUnit);
+  const unitWarnings = res.warnings.filter(w => w.businessUnit === activeUnit);
+
+  app.innerHTML = topbar("Struktur & Rantai Appraisal") +
+    `<button class="ghost" onclick="navigateToScreen('devTools')">&larr; ${t("form_back")}</button>` +
+    `<div class="card">${tabSwitcher(res.businessUnits.map(b => ({ key: b.name, label: b.name })), activeUnit, "switchOrgStructureUnit")}</div>` +
+    (unitWarnings.length ? `
+      <div class="card" style="background:var(--amber-bg); border:1.5px solid var(--amber);">
+        <h2 style="color:var(--amber); margin-top:0;">⚠️ ${unitWarnings.length} Peringatan Struktur di ${activeUnit}</h2>
+        ${unitWarnings.map(w => `<div class="hint" style="margin-bottom:8px; color:var(--text);">${w.message}</div>`).join("")}
+      </div>` : `
+      <div class="card"><div class="hint" style="color:var(--green);">✅ Gak ada peringatan struktur di ${activeUnit}.</div></div>`) +
+    `<div class="card">
+      <h2>👑 Kepemimpinan (${bu.leadership.length} orang)</h2>
+      <div class="hint" style="margin-bottom:10px;">Siapa yang menilai Leader/Management ini sendiri — di sinilah kasus seperti Head Bar/Restaurant Manager/Sous Chef yang sekarang nunjuk ke NIK tertentu bisa diganti.</div>
+      ${bu.leadership.map(l => orgPersonRow(l, l.tier, bu)).join("")}
+    </div>` +
+    bu.departments.map(dept => `
+      <div class="card">
+        <h2>${escapeAttr(dept.name)} (${dept.staff.length} staff)${dept.hasNoOverseer ? ` <span style="color:var(--red); font-size:12px; font-weight:400;">⚠️ gak ada overseer otomatis</span>` : ""}</h2>
+        ${dept.staff.map(s => orgPersonRow(s, 'Staff', bu)).join("")}
+      </div>`).join("");
+}
+
+async function doSetOrgPrimaryEvaluator(staffId, evaluatorId) {
+  const evaluatorStaffIds = evaluatorId ? [evaluatorId] : [];
+  const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
+  if (res.warnings && res.warnings.length) {
+    showToast(`⚠️ ${res.warnings.join(" ")}`, "error");
+  } else if (res.success === false || res.error) {
+    showToast(`Gagal: ${friendlyError(res.error)}`, "error");
+    return;
+  } else {
+    showToast("✅ Evaluator diupdate.");
+  }
+  await renderOrgStructure(); // refetch — resolves the new primary/backup split fresh
+}
+
 async function renderDevTools() {
   if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
   const showMenuLink = availableScreens(state.user).length > 1;
   app.innerHTML = topbar(t("dt_title")) + `
     ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
+    <div class="card" style="background:var(--teal); border:none;">
+      <h2 style="color:#fff;">🗂️ Struktur & Rantai Appraisal</h2>
+      <div class="hint" style="color:#EDE7DC; margin-bottom:10px;">Lihat & atur siapa nilai siapa, per Business Unit dan Department, dalam satu tempat — pengganti Staff Mapping lama.</div>
+      <button class="primary" style="background:#fff; color:var(--teal);" onclick="navigateToScreen('orgStructure')">Buka Struktur & Rantai Appraisal</button>
+    </div>
     <div class="card">
       <h2>🔀 Toggle Tahap Evaluasi (Self/Leader/HR)</h2>
       <div class="hint" style="margin-bottom:10px;">Default-nya: semua posisi 3 tahap aktif, KECUALI department HR (otomatis cuma Self+Leader). Di sini bisa override manual per Job Title, Department, atau per-orang (NIK) kapan aja.</div>

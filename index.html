@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-245-department-drilldown-navigation — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-246-force-refresh-button — LIVE</div>
 
 <script>
 // =================================================================
@@ -3335,6 +3335,15 @@ async function renderOrgStructure() {
   renderOrgStructureBody();
 }
 
+async function doRefreshOrgStructure(btnEl) {
+  btnEl.disabled = true;
+  const originalLabel = btnEl.textContent;
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Refreshing...`;
+  await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action: "clearAllCaches" });
+  await renderOrgStructure();
+  showToast("✅ Data di-refresh langsung dari Sheet, gak nunggu cache.");
+}
+
 function switchOrgViewMode(mode) {
   state._orgViewMode = mode;
   renderOrgStructureBody();
@@ -3513,6 +3522,7 @@ function renderOrgStructureBody() {
       </select>
       <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
         <input type="text" placeholder="Cari nama..." value="${escapeAttr(state._orgSearchTerm || "")}" oninput="updateOrgSearchTerm(this.value)" style="flex:1; min-width:180px; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
+        <button class="secondary" onclick="doRefreshOrgStructure(this)" id="org-refresh-btn" title="Kalau baru edit HR Sheet langsung (bukan lewat app), klik ini biar gak nunggu sampai 5 menit">🔄 Refresh Data Sekarang</button>
         <button class="secondary" onclick="doExportOrgStructure()" id="org-export-btn">📊 Export ke Excel</button>
       </div>
       <div id="org-export-note" class="hint" style="margin-top:6px;"></div>

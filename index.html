@@ -68,6 +68,8 @@
     background: var(--bg); color: var(--text);
   }
   #app { max-width: 720px; margin: 0 auto; padding: 16px; padding-bottom: 80px; }
+  #app.wide-screen { max-width: 1400px; }
+  @media (max-width: 900px) { #app.wide-screen { max-width: 720px; } }
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
     background: linear-gradient(120deg, var(--teal) 0%, var(--teal) 65%, var(--coral-dark) 130%);
@@ -230,6 +232,13 @@
   table.mini { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.mini td { padding: 6px 0; border-bottom: 1px solid var(--border); }
   table.mini td:last-child { text-align: right; font-weight: 600; }
+  .org-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1.5px solid var(--border); }
+  table.org-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
+  table.org-table th { background: var(--sand); text-align: left; padding: 8px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  table.org-table td { padding: 8px 10px; border-top: 1px solid var(--border); vertical-align: top; }
+  table.org-table tr.org-pending-row td { background: var(--amber-bg); }
+  table.org-table select { width: 100%; min-width: 150px; padding: 5px; border-radius: 6px; border: 1.5px solid var(--border); font-size: 12.5px; }
+  table.org-table .org-tier-select { border-color: var(--coral); color: var(--coral); font-weight: 600; min-width: 110px; }
   #staff-mapping-list-container { counter-reset: staffmapping-row; }
   .mapping-row { display: grid; grid-template-columns: 1.5fr 1fr 0.6fr 1fr 1fr 0.9fr; gap: 8px; align-items: center; padding: 12px; border-radius: 10px; border-bottom: 1px solid var(--border); transition: background 0.15s ease; }
   .mapping-row:last-child { border-bottom: none; }
@@ -315,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-239-inline-tier-dropdown-simplified — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-240-orgstructure-table-layout-wide-screen — LIVE</div>
 
 <script>
 // =================================================================
@@ -1387,6 +1396,8 @@ let state = {
 const app = document.getElementById("app");
 
 function render() {
+  const appEl = document.getElementById("app");
+  if (appEl) appEl.classList.toggle("wide-screen", state.screen === "orgStructure");
   if (state.screen === "login") return renderLogin();
   if (state.screen === "roleMenu") return renderRoleMenu();
   if (state.screen === "dashboard") return renderDashboard();
@@ -3351,38 +3362,57 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
   const jobTitleOptions = (state._orgAllJobTitles || [])
     .map(jt => `<option value="${escapeAttr(jt.jobTitle)}" ${jt.jobTitle === s.jobTitle ? "selected" : ""}>${escapeAttr(jt.jobTitle)} (${jt.tier})</option>`).join("");
   const tierChoices = ['Staff', 'Leader', 'Management', 'Executive', 'HO', 'HR'];
-  return `
-    <div id="org-row-${s.staffId}" style="border:1.5px solid ${hasPending ? "var(--amber)" : "var(--border)"}; border-radius:12px; padding:10px 12px; margin-bottom:8px; ${hasPending ? "background:var(--amber-bg);" : ""}">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <input type="checkbox" ${isChecked ? "checked" : ""} onchange="toggleOrgBulkCheck('${s.staffId}', this.checked)" style="width:18px; height:18px;" />
-          <div>
-            <div style="font-weight:700; font-size:13.5px;">${escapeAttr(s.name)}</div>
-            <div class="hint" style="margin:0;">${escapeAttr(s.jobTitle)}${rowTier !== 'Staff' ? ` · Oversees: ${(s.oversees || []).join(", ") || "-"}` : ""} · <a href="#" onclick="toggleOrgJobTitleEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600;">✏️ Ubah Job Title</a></div>
-          </div>
-        </div>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <select id="org-tier-inline-${s.staffId}" onchange="doSetTierOverrideInline('${s.staffId}')" title="Tier" style="padding:6px; border-radius:8px; border:1.5px solid var(--coral); font-weight:600; color:var(--coral);">
-            ${tierChoices.map(tc => `<option value="${tc}" ${tc === rowTier ? "selected" : ""}>${tc}</option>`).join("")}
-          </select>
-          <select data-staffid="${s.staffId}" style="min-width:200px; padding:6px; border-radius:8px; border:1.5px solid var(--border);" onchange="markOrgPendingChange('${s.staffId}', this.value)">
-            ${orgEvaluatorOptionsFor(rowTier, bu, currentValue)}
-          </select>
-        </div>
-      </div>
-      ${isEditingJobTitle ? `
-        <div style="margin-top:10px; padding:10px; background:var(--sand); border-radius:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+  const notesHtml = [
+    rowTier !== 'Staff' ? `Oversees: ${escapeAttr((s.oversees || []).join(", ") || "-")}` : "",
+    (s.backupEvaluators || []).length ? `Cadangan pasif: ${s.backupEvaluators.map(b => escapeAttr(b.name)).join(", ")} <a href="#" onclick="markOrgPendingChange('${s.staffId}', '${currentValue}'); return false;" style="color:var(--red); font-weight:600;">🧹</a>` : "",
+    hasPending ? `<span style="color:var(--amber); font-weight:700;">⏳ Belum disimpan</span>` : "",
+  ].filter(Boolean).join("<br>");
+
+  const mainRow = `
+    <tr id="org-row-${s.staffId}" ${hasPending ? 'class="org-pending-row"' : ""}>
+      <td><input type="checkbox" ${isChecked ? "checked" : ""} onchange="toggleOrgBulkCheck('${s.staffId}', this.checked)" style="width:16px; height:16px;" /></td>
+      <td>
+        <div style="font-weight:700;">${escapeAttr(s.name)}</div>
+        <div class="hint" style="margin:0; white-space:nowrap;">${escapeAttr(s.jobTitle)}</div>
+        <a href="#" onclick="toggleOrgJobTitleEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600; font-size:12px;">✏️ Ubah Job Title</a>
+      </td>
+      <td>
+        <select class="org-tier-select" id="org-tier-inline-${s.staffId}" onchange="doSetTierOverrideInline('${s.staffId}')" title="Tier">
+          ${tierChoices.map(tc => `<option value="${tc}" ${tc === rowTier ? "selected" : ""}>${tc}</option>`).join("")}
+        </select>
+      </td>
+      <td>
+        <select data-staffid="${s.staffId}" onchange="markOrgPendingChange('${s.staffId}', this.value)">
+          ${orgEvaluatorOptionsFor(rowTier, bu, currentValue)}
+        </select>
+      </td>
+      <td style="min-width:160px;">${notesHtml || "-"}</td>
+    </tr>`;
+
+  const editRow = isEditingJobTitle ? `
+    <tr ${hasPending ? 'class="org-pending-row"' : ""}>
+      <td></td>
+      <td colspan="4">
+        <div style="padding:8px; background:var(--sand); border-radius:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <select id="org-jobtitle-select-${s.staffId}" style="flex:1; min-width:200px; padding:6px; border-radius:8px; border:1.5px solid var(--border);">
             ${jobTitleOptions}
           </select>
           <button class="primary" onclick="doUpdateJobTitle('${s.staffId}')">Simpan Job Title</button>
           <button class="ghost" onclick="toggleOrgJobTitleEdit(null)">Batal</button>
         </div>
-        <div class="hint" style="margin-top:6px; color:var(--red);">⚠️ Ini nulis LANGSUNG ke HR Sheet (bukan cuma Config) — Tier, Oversees, dan struktur KPI orang ini ikut berubah sesuai Job Title baru begitu disimpan.</div>
-      ` : ""}
-      ${(s.backupEvaluators || []).length ? `<div class="hint" style="margin-top:6px;">Cadangan pasif (gak dapet tugas aktif kecuali primary resign/deferred): ${s.backupEvaluators.map(b => escapeAttr(b.name)).join(", ")} <a href="#" onclick="markOrgPendingChange('${s.staffId}', '${currentValue}'); return false;" style="color:var(--red); font-weight:600;">🧹 Bersihkan cadangan</a></div>` : ""}
-      ${hasPending ? `<div class="hint" style="margin-top:6px; color:var(--amber); font-weight:600;">⏳ Belum disimpan</div>` : ""}
-    </div>`;
+        <div class="hint" style="margin-top:6px; color:var(--red);">⚠️ Nulis LANGSUNG ke HR Sheet — Tier, Oversees, dan struktur KPI ikut berubah sesuai Job Title baru.</div>
+      </td>
+    </tr>` : "";
+
+  return mainRow + editRow;
+}
+
+function orgTableWrap(rowsHtml) {
+  if (!rowsHtml) return "";
+  return `<div class="org-table-wrap"><table class="org-table">
+    <thead><tr><th></th><th>Nama</th><th>Tier</th><th>Evaluator</th><th>Catatan</th></tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table></div>`;
 }
 
 function renderOrgStructureBody() {
@@ -3462,17 +3492,18 @@ function renderOrgStructureBody() {
     `<div class="card">
       <h2>👑 Kepemimpinan — Company-wide / Gak Spesifik 1 Department (${bu.unmatchedLeadership.length} orang)</h2>
       <div class="hint" style="margin-bottom:10px;">Leader/Management yang Oversees-nya gak nempel ke 1 department spesifik (misal HR Manager yang oversees "ALL"). Yang oversees department tertentu (kayak Purchasing Manager → Finance & Accounting) sekarang muncul LANGSUNG di kartu department-nya di bawah.</div>
-      ${bu.unmatchedLeadership.filter(l => matchesSearch(l.name)).map(l => orgPersonRow(l, l.tier, bu, checkedIds)).join("") || `<div class="hint">Gak ada yang cocok sama pencarian.</div>`}
+      ${orgTableWrap(bu.unmatchedLeadership.filter(l => matchesSearch(l.name)).map(l => orgPersonRow(l, l.tier, bu, checkedIds)).join("")) || `<div class="hint">Gak ada yang cocok sama pencarian.</div>`}
     </div>` +
     bu.departments.map(dept => {
       const filteredLeaders = dept.leaders.filter(l => matchesSearch(l.name));
       const filteredStaff = dept.staff.filter(s => matchesSearch(s.name));
       if (searchTerm && !filteredLeaders.length && !filteredStaff.length) return "";
+      const rowsHtml = filteredLeaders.map(l => orgPersonRow(l, l.tier, bu, checkedIds)).join("") +
+        filteredStaff.map(s => orgPersonRow(s, 'Staff', bu, checkedIds)).join("");
       return `
       <div class="card">
         <h2>${escapeAttr(dept.name)} (${dept.leaders.length} pimpinan, ${dept.staff.length} staff)${dept.hasNoOverseer ? ` <span style="color:var(--red); font-size:12px; font-weight:400;">⚠️ gak ada overseer otomatis</span>` : ""}</h2>
-        ${filteredLeaders.length ? `<div class="hint" style="margin-bottom:6px; font-weight:600;">Pimpinan department ini:</div>${filteredLeaders.map(l => orgPersonRow(l, l.tier, bu, checkedIds)).join("")}<div class="hint" style="margin:10px 0 6px; font-weight:600;">Staff:</div>` : ""}
-        ${filteredStaff.map(s => orgPersonRow(s, 'Staff', bu, checkedIds)).join("")}
+        ${orgTableWrap(rowsHtml)}
       </div>`;
     }).join("");
 }

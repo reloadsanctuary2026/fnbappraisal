@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-233-per-person-tier-override — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-237-merge-position-map-into-orgstructure — LIVE</div>
 
 <script>
 // =================================================================
@@ -3307,10 +3307,21 @@ async function renderOrgStructure() {
   state._orgAllJobTitles = jobTitleRes.found ? jobTitleRes.jobTitles : [];
   const overridesRes = await apiGet("getActiveTierOverrides", { requesterId: state.user.staffId });
   state._orgActiveTierOverrides = overridesRes.found ? overridesRes.overrides : [];
+  const positionMapRes = await apiGet("getPositionMapEntries", { requesterId: state.user.staffId });
+  state._positionMapEntries = positionMapRes.found ? positionMapRes.entries : [];
+  state._orgViewMode = state._orgViewMode || "structure"; // "structure" | "jobtitles"
+  state._positionMapSearchTerm = "";
+  state._positionMapEditingIdx = null;
+  state._positionMapAdding = false;
   state._orgStructureData = res;
   state._orgStructureUnit = state._orgStructureUnit || res.businessUnits[0].name;
   state._orgPendingChanges = {};
   state._orgEditingJobTitleFor = null;
+  renderOrgStructureBody();
+}
+
+function switchOrgViewMode(mode) {
+  state._orgViewMode = mode;
   renderOrgStructureBody();
 }
 
@@ -3325,9 +3336,9 @@ function switchOrgStructureUnit(unit) {
 // a Management can only be given Executive.
 function orgEvaluatorOptionsFor(rowTier, bu, currentPrimaryId) {
   let pool = [];
-  if (rowTier === 'Staff') pool = [...bu.candidates.leaders.map(c => ({ ...c, tier: 'Leader' })), ...bu.candidates.managements.map(c => ({ ...c, tier: 'Management' }))];
-  else if (rowTier === 'Leader') pool = [...bu.candidates.managements.map(c => ({ ...c, tier: 'Management' })), ...bu.candidates.executives.map(c => ({ ...c, tier: 'Executive' }))];
-  else if (rowTier === 'Management') pool = bu.candidates.executives.map(c => ({ ...c, tier: 'Executive' }));
+  if (rowTier === 'Staff') pool = [...bu.candidates.leaders.map(c => ({ ...c, tier: 'Leader' })), ...bu.candidates.managements.map(c => ({ ...c, tier: 'Management' })), ...bu.candidates.executives.map(c => ({ ...c, tier: c.actualTier || 'Executive' }))];
+  else if (rowTier === 'Leader') pool = [...bu.candidates.managements.map(c => ({ ...c, tier: 'Management' })), ...bu.candidates.executives.map(c => ({ ...c, tier: c.actualTier || 'Executive' }))];
+  else if (rowTier === 'Management') pool = bu.candidates.executives.map(c => ({ ...c, tier: c.actualTier || 'Executive' }));
   return `<option value="">(Otomatis)</option>` +
     pool.map(c => `<option value="${c.staffId}" ${String(c.staffId) === String(currentPrimaryId) ? "selected" : ""}>${escapeAttr(c.name)} (${c.tier})</option>`).join("");
 }
@@ -3340,7 +3351,7 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
   const isEditingTier = state._orgEditingTierFor === s.staffId;
   const jobTitleOptions = (state._orgAllJobTitles || [])
     .map(jt => `<option value="${escapeAttr(jt.jobTitle)}" ${jt.jobTitle === s.jobTitle ? "selected" : ""}>${escapeAttr(jt.jobTitle)} (${jt.tier})</option>`).join("");
-  const tierChoices = ['Staff', 'Leader', 'Management', 'Executive', 'HR'];
+  const tierChoices = ['Staff', 'Leader', 'Management', 'Executive', 'HO', 'HR'];
   return `
     <div id="org-row-${s.staffId}" style="border:1.5px solid ${hasPending ? "var(--amber)" : "var(--border)"}; border-radius:12px; padding:10px 12px; margin-bottom:8px; ${hasPending ? "background:var(--amber-bg);" : ""}">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -3387,6 +3398,16 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
 }
 
 function renderOrgStructureBody() {
+  const modeToggleHtml = `<div class="card">${tabSwitcher([{ key: "structure", label: "📋 Struktur & Evaluator" }, { key: "jobtitles", label: "🧩 Job Title & Tier" }], state._orgViewMode, "switchOrgViewMode")}</div>`;
+
+  if (state._orgViewMode === "jobtitles") {
+    app.innerHTML = topbar("Struktur & Rantai Appraisal") +
+      `<button class="ghost" onclick="navigateToScreen('devTools')">&larr; ${t("form_back")}</button>` +
+      modeToggleHtml +
+      renderPositionMapEditorContent();
+    return;
+  }
+
   const res = state._orgStructureData;
   const activeUnit = state._orgStructureUnit;
   const bu = res.businessUnits.find(b => b.name === activeUnit);
@@ -3400,6 +3421,7 @@ function renderOrgStructureBody() {
 
   app.innerHTML = topbar("Struktur & Rantai Appraisal") +
     `<button class="ghost" onclick="navigateToScreen('devTools')">&larr; ${t("form_back")}</button>` +
+    modeToggleHtml +
     (pendingCount ? `
       <div class="card" style="position:sticky; top:8px; z-index:50; background:var(--amber-bg); border:1.5px solid var(--amber); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
         <div style="font-weight:700; color:var(--amber);">⏳ ${pendingCount} perubahan belum disimpan</div>
@@ -3476,7 +3498,7 @@ async function doSetTierOverride(staffId) {
   const tierOverride = tierSelect ? tierSelect.value : "";
   const reason = reasonInput ? reasonInput.value.trim() : "";
   if (!reason) { showToast("Alasan wajib diisi buat referensi ke depannya.", "error"); return; }
-  const warningText = tierOverride === "Executive"
+  const warningText = (tierOverride === "Executive" || tierOverride === "HO")
     ? `Yakin? "${tierOverride}" bikin orang ini LANGSUNG HILANG dari sistem appraisal otomatis (persis General Manager) — appraisal-nya harus manual di luar app mulai sekarang.`
     : `Yakin override Tier jadi "${tierOverride}"?`;
   if (!confirm(warningText)) return;
@@ -3609,6 +3631,88 @@ async function saveAllOrgChanges() {
   await renderOrgStructure(); // one single refetch, after everything's saved
 }
 
+function updatePositionMapSearch(v) { state._positionMapSearchTerm = v; renderOrgStructureBody(); }
+function togglePositionMapAdd() { state._positionMapAdding = !state._positionMapAdding; state._positionMapEditingIdx = null; renderOrgStructureBody(); }
+function togglePositionMapEdit(idx) { state._positionMapEditingIdx = idx; state._positionMapAdding = false; renderOrgStructureBody(); }
+
+function positionMapEditForm(entry, idPrefix) {
+  const tierChoices = ['', 'Staff', 'Leader', 'Management', 'Executive', 'HO', 'HR'];
+  return `
+    <div class="card" style="border:2px solid var(--coral);">
+      <h2>${entry ? `Edit: ${escapeAttr(entry.jobTitle)}` : "Job Title Baru"}</h2>
+      ${!entry ? `<label>Job Title</label><input type="text" id="pm-jobtitle-${idPrefix}" placeholder="Contoh: Head of Marketing" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />` : `<div class="hint">Job Title: <strong>${escapeAttr(entry.jobTitle)}</strong> (gak bisa diganti nama di sini — pakai "Ubah Job Title" di bagian Struktur buat pindahin ORANGnya ke title lain)</div>`}
+      <label style="margin-top:8px; display:block;">Department (Appraisal)</label>
+      <input type="text" id="pm-department-${idPrefix}" value="${entry ? escapeAttr(entry.department) : '-'}" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
+      <label style="margin-top:8px; display:block;">Tier</label>
+      <select id="pm-tier-${idPrefix}" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
+        ${tierChoices.map(tc => `<option value="${tc}" ${entry && entry.tier === tc ? "selected" : ""}>${tc || "(kosong)"}</option>`).join("")}
+      </select>
+      <label style="margin-top:8px; display:block;">Oversees (pisah koma kalau lebih dari 1)</label>
+      <input type="text" id="pm-oversees-${idPrefix}" value="${entry ? escapeAttr(entry.oversees) : ''}" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
+      <label style="margin-top:8px; display:flex; align-items:center; gap:8px;"><input type="checkbox" id="pm-ishr-${idPrefix}" ${entry && entry.isHrEvaluator ? "checked" : ""} /> Is HR Evaluator</label>
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="primary" onclick="doSavePositionMapEntry('${idPrefix}')">Simpan</button>
+        <button class="ghost" onclick="${entry ? "togglePositionMapEdit(null)" : "togglePositionMapAdd()"}">Batal</button>
+      </div>
+    </div>`;
+}
+
+function renderPositionMapEditorContent() {
+  const entries = state._positionMapEntries || [];
+  const searchTerm = (state._positionMapSearchTerm || "").toLowerCase();
+
+  return `<div class="card">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" placeholder="Cari Job Title..." value="${escapeAttr(state._positionMapSearchTerm || "")}" oninput="updatePositionMapSearch(this.value)" style="flex:1; min-width:180px; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
+        <button class="primary" onclick="togglePositionMapAdd()">➕ Tambah Job Title Baru</button>
+      </div>
+    </div>` +
+    (state._positionMapAdding ? positionMapEditForm(null, "new") : "") +
+    `<div class="card">
+      <div class="hint" style="margin-bottom:8px;">${entries.length} Job Title total${searchTerm ? ` (difilter)` : ""}</div>
+      ${entries.map((e, idx) => {
+        if (searchTerm && e.jobTitle.toLowerCase().indexOf(searchTerm) === -1) return "";
+        if (state._positionMapEditingIdx === idx) return positionMapEditForm(e, `edit-${idx}`);
+        return `
+        <div style="border:1.5px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:700;">${escapeAttr(e.jobTitle)} <span class="hint" style="display:inline; ${!e.holderCount ? "color:var(--text-muted);" : ""}">(${e.holderCount || "gak ada yang"} orang)</span></div>
+            <div class="hint" style="margin:0;">Tier: ${e.tier || "-"} · Dept: ${e.department || "-"} · Oversees: ${e.oversees || "-"} ${e.isHrEvaluator ? "· HR Evaluator" : ""}</div>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="secondary" onclick="togglePositionMapEdit(${idx})">✏️ Edit</button>
+            <button class="ghost" style="color:var(--red);" onclick="doDeletePositionMapEntry(${idx})">🗑️</button>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>`;
+}
+
+async function doSavePositionMapEntry(idPrefix) {
+  const jobTitleEl = document.getElementById(`pm-jobtitle-${idPrefix}`);
+  const jobTitle = jobTitleEl ? jobTitleEl.value.trim() : (state._positionMapEditingIdx !== null ? state._positionMapEntries[state._positionMapEditingIdx].jobTitle : "");
+  const department = document.getElementById(`pm-department-${idPrefix}`).value.trim();
+  const tier = document.getElementById(`pm-tier-${idPrefix}`).value;
+  const oversees = document.getElementById(`pm-oversees-${idPrefix}`).value.trim();
+  const isHrEvaluator = document.getElementById(`pm-ishr-${idPrefix}`).checked;
+  if (!jobTitle) { showToast("Job Title wajib diisi.", "error"); return; }
+
+  const res = await apiPost("savePositionMapEntry", { requesterId: state.user.staffId, jobTitle, department, tier, oversees, isHrEvaluator });
+  if (res.error || res.success === false) { showToast(`Gagal: ${friendlyError(res.error)}`, "error"); return; }
+  showToast("✅ Job Title disimpan.");
+  await renderOrgStructure();
+}
+
+async function doDeletePositionMapEntry(idx) {
+  const entry = state._positionMapEntries[idx];
+  const warn = entry.holderCount > 0 ? `⚠️ ${entry.holderCount} orang masih pegang Job Title ini — kalau dihapus, mereka jadi gak ke-mapping (Tier kosong) sampai Job Title-nya diganti atau baris ini dibikin lagi. ` : "";
+  if (!confirm(`${warn}Yakin hapus "${entry.jobTitle}" dari Config_PositionMap?`)) return;
+  const res = await apiPost("deletePositionMapEntry", { requesterId: state.user.staffId, jobTitle: entry.jobTitle });
+  if (res.error || res.success === false) { showToast(`Gagal: ${friendlyError(res.error)}`, "error"); return; }
+  showToast("✅ Dihapus.");
+  await renderOrgStructure();
+}
+
 async function renderDevTools() {
   if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
   const showMenuLink = availableScreens(state.user).length > 1;
@@ -3616,7 +3720,7 @@ async function renderDevTools() {
     ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card" style="background:var(--teal); border:none;">
       <h2 style="color:#fff;">🗂️ Struktur & Rantai Appraisal</h2>
-      <div class="hint" style="color:#EDE7DC; margin-bottom:10px;">Lihat & atur siapa nilai siapa, per Business Unit dan Department, dalam satu tempat — pengganti Staff Mapping lama.</div>
+      <div class="hint" style="color:#EDE7DC; margin-bottom:10px;">Lihat & atur siapa nilai siapa, Job Title & Tier default, semua dalam satu tempat — pengganti Staff Mapping lama.</div>
       <button class="primary" style="background:#fff; color:var(--teal);" onclick="navigateToScreen('orgStructure')">Buka Struktur & Rantai Appraisal</button>
     </div>
     <div class="card">

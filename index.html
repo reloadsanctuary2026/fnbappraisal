@@ -315,7 +315,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-229-org-structure-batch-save — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-231-orgstructure-search-bulk-export — LIVE</div>
 
 <script>
 // =================================================================
@@ -3327,21 +3327,25 @@ function orgEvaluatorOptionsFor(rowTier, bu, currentPrimaryId) {
     pool.map(c => `<option value="${c.staffId}" ${String(c.staffId) === String(currentPrimaryId) ? "selected" : ""}>${escapeAttr(c.name)} (${c.tier})</option>`).join("");
 }
 
-function orgPersonRow(s, rowTier, bu) {
+function orgPersonRow(s, rowTier, bu, checkedIds) {
   const hasPending = state._orgPendingChanges && Object.prototype.hasOwnProperty.call(state._orgPendingChanges, s.staffId);
   const currentValue = hasPending ? state._orgPendingChanges[s.staffId] : (s.primaryEvaluator ? s.primaryEvaluator.staffId : '');
+  const isChecked = checkedIds && checkedIds.has(s.staffId);
   return `
     <div id="org-row-${s.staffId}" style="border:1.5px solid ${hasPending ? "var(--amber)" : "var(--border)"}; border-radius:12px; padding:10px 12px; margin-bottom:8px; ${hasPending ? "background:var(--amber-bg);" : ""}">
       <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-        <div>
-          <div style="font-weight:700; font-size:13.5px;">${escapeAttr(s.name)}</div>
-          <div class="hint" style="margin:0;">${escapeAttr(s.jobTitle)}${rowTier !== 'Staff' ? ` · Oversees: ${(s.oversees || []).join(", ") || "-"}` : ""}</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" ${isChecked ? "checked" : ""} onchange="toggleOrgBulkCheck('${s.staffId}', this.checked)" style="width:18px; height:18px;" />
+          <div>
+            <div style="font-weight:700; font-size:13.5px;">${escapeAttr(s.name)}</div>
+            <div class="hint" style="margin:0;">${escapeAttr(s.jobTitle)}${rowTier !== 'Staff' ? ` · Oversees: ${(s.oversees || []).join(", ") || "-"}` : ""}</div>
+          </div>
         </div>
         <select data-staffid="${s.staffId}" style="min-width:220px; padding:6px; border-radius:8px; border:1.5px solid var(--border);" onchange="markOrgPendingChange('${s.staffId}', this.value)">
           ${orgEvaluatorOptionsFor(rowTier, bu, currentValue)}
         </select>
       </div>
-      ${(s.backupEvaluators || []).length ? `<div class="hint" style="margin-top:6px;">Cadangan pasif (gak dapet tugas aktif kecuali primary resign/deferred): ${s.backupEvaluators.map(b => escapeAttr(b.name)).join(", ")}</div>` : ""}
+      ${(s.backupEvaluators || []).length ? `<div class="hint" style="margin-top:6px;">Cadangan pasif (gak dapet tugas aktif kecuali primary resign/deferred): ${s.backupEvaluators.map(b => escapeAttr(b.name)).join(", ")} <a href="#" onclick="markOrgPendingChange('${s.staffId}', '${currentValue}'); return false;" style="color:var(--red); font-weight:600;">🧹 Bersihkan cadangan</a></div>` : ""}
       ${hasPending ? `<div class="hint" style="margin-top:6px; color:var(--amber); font-weight:600;">⏳ Belum disimpan</div>` : ""}
     </div>`;
 }
@@ -3352,6 +3356,11 @@ function renderOrgStructureBody() {
   const bu = res.businessUnits.find(b => b.name === activeUnit);
   const unitWarnings = res.warnings.filter(w => w.businessUnit === activeUnit);
   const pendingCount = state._orgPendingChanges ? Object.keys(state._orgPendingChanges).length : 0;
+  const searchTerm = (state._orgSearchTerm || "").toLowerCase();
+  const checkedIds = state._orgBulkChecked || new Set();
+  const bulkCount = checkedIds.size;
+
+  const matchesSearch = (name) => !searchTerm || name.toLowerCase().indexOf(searchTerm) !== -1;
 
   app.innerHTML = topbar("Struktur & Rantai Appraisal") +
     `<button class="ghost" onclick="navigateToScreen('devTools')">&larr; ${t("form_back")}</button>` +
@@ -3363,7 +3372,28 @@ function renderOrgStructureBody() {
           <button class="primary" id="org-save-all-btn" onclick="saveAllOrgChanges()">Simpan Semua (${pendingCount})</button>
         </div>
       </div>` : "") +
-    `<div class="card">${tabSwitcher(res.businessUnits.map(b => ({ key: b.name, label: b.label })), activeUnit, "switchOrgStructureUnit")}</div>` +
+    (bulkCount ? `
+      <div class="card" style="position:sticky; top:${pendingCount ? 78 : 8}px; z-index:49; background:var(--teal-dark); color:#fff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div style="font-weight:700;">☑️ ${bulkCount} orang dicentang</div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <select id="org-bulk-evaluator-select" style="padding:6px; border-radius:8px; border:none; min-width:200px;">
+              <option value="">(Otomatis)</option>
+              ${[...bu.candidates.leaders, ...bu.candidates.managements, ...bu.candidates.executives].map(c => `<option value="${c.staffId}">${escapeAttr(c.name)}</option>`).join("")}
+            </select>
+            <button class="primary" style="background:var(--coral);" onclick="applyOrgBulkEvaluator()">Terapkan ke Semua</button>
+            <button class="ghost" style="color:#fff; border-color:rgba(255,255,255,0.4);" onclick="clearOrgBulkSelection()">Batal</button>
+          </div>
+        </div>
+      </div>` : "") +
+    `<div class="card">
+      ${tabSwitcher(res.businessUnits.map(b => ({ key: b.name, label: b.label })), activeUnit, "switchOrgStructureUnit")}
+      <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <input type="text" placeholder="Cari nama..." value="${escapeAttr(state._orgSearchTerm || "")}" oninput="updateOrgSearchTerm(this.value)" style="flex:1; min-width:180px; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
+        <button class="secondary" onclick="doExportOrgStructure()" id="org-export-btn">📊 Export ke Excel</button>
+      </div>
+      <div id="org-export-note" class="hint" style="margin-top:6px;"></div>
+    </div>` +
     (unitWarnings.length ? `
       <div class="card" style="background:var(--amber-bg); border:1.5px solid var(--amber);">
         <h2 style="color:var(--amber); margin-top:0;">⚠️ ${unitWarnings.length} Peringatan Struktur di ${bu.label}</h2>
@@ -3373,13 +3403,61 @@ function renderOrgStructureBody() {
     `<div class="card">
       <h2>👑 Kepemimpinan (${bu.leadership.length} orang)</h2>
       <div class="hint" style="margin-bottom:10px;">Siapa yang menilai Leader/Management ini sendiri — di sinilah kasus seperti Head Bar/Restaurant Manager/Sous Chef yang sekarang nunjuk ke NIK tertentu bisa diganti.</div>
-      ${bu.leadership.map(l => orgPersonRow(l, l.tier, bu)).join("")}
+      ${bu.leadership.filter(l => matchesSearch(l.name)).map(l => orgPersonRow(l, l.tier, bu, checkedIds)).join("") || `<div class="hint">Gak ada yang cocok sama pencarian.</div>`}
     </div>` +
-    bu.departments.map(dept => `
+    bu.departments.map(dept => {
+      const filteredStaff = dept.staff.filter(s => matchesSearch(s.name));
+      if (searchTerm && !filteredStaff.length) return "";
+      return `
       <div class="card">
         <h2>${escapeAttr(dept.name)} (${dept.staff.length} staff)${dept.hasNoOverseer ? ` <span style="color:var(--red); font-size:12px; font-weight:400;">⚠️ gak ada overseer otomatis</span>` : ""}</h2>
-        ${dept.staff.map(s => orgPersonRow(s, 'Staff', bu)).join("")}
-      </div>`).join("");
+        ${filteredStaff.map(s => orgPersonRow(s, 'Staff', bu, checkedIds)).join("")}
+      </div>`;
+    }).join("");
+}
+
+function updateOrgSearchTerm(value) {
+  state._orgSearchTerm = value;
+  renderOrgStructureBody();
+}
+
+function toggleOrgBulkCheck(staffId, checked) {
+  state._orgBulkChecked = state._orgBulkChecked || new Set();
+  if (checked) state._orgBulkChecked.add(staffId);
+  else state._orgBulkChecked.delete(staffId);
+  renderOrgStructureBody();
+}
+
+function clearOrgBulkSelection() {
+  state._orgBulkChecked = new Set();
+  renderOrgStructureBody();
+}
+
+function applyOrgBulkEvaluator() {
+  const select = document.getElementById("org-bulk-evaluator-select");
+  const evaluatorId = select ? select.value : "";
+  const checkedIds = state._orgBulkChecked || new Set();
+  if (!checkedIds.size) return;
+  state._orgPendingChanges = state._orgPendingChanges || {};
+  checkedIds.forEach(staffId => { state._orgPendingChanges[staffId] = evaluatorId; });
+  state._orgBulkChecked = new Set(); // clear selection after applying — pending-changes bar takes over from here
+  renderOrgStructureBody();
+}
+
+async function doExportOrgStructure() {
+  const noteEl = document.getElementById("org-export-note");
+  const btn = document.getElementById("org-export-btn");
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.innerHTML = `<span class="btn-spinner dark"></span>${t("sm_export_generating")}`;
+  const res = await apiPost("exportOrgStructure", { requesterId: state.user.staffId, businessUnitKey: state._orgStructureUnit });
+  btn.disabled = false;
+  btn.textContent = originalLabel;
+  if (res.error || res.success === false) {
+    noteEl.textContent = `Gagal: ${friendlyError(res.error)}`;
+    return;
+  }
+  noteEl.innerHTML = `✅ ${res.rowCount} baris siap. <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka Excel-nya</a>`;
 }
 
 function markOrgPendingChange(staffId, evaluatorId) {

@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-18-247-scope-tier-override-panel-to-unit — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-19-248-unified-batch-save-tier-oversees-evaluator — LIVE</div>
 
 <script>
 // =================================================================
@@ -3374,8 +3374,11 @@ function orgEvaluatorOptionsFor(rowTier, bu, currentPrimaryId) {
 }
 
 function orgPersonRow(s, rowTier, bu, checkedIds) {
-  const hasPending = state._orgPendingChanges && Object.prototype.hasOwnProperty.call(state._orgPendingChanges, s.staffId);
-  const currentValue = hasPending ? state._orgPendingChanges[s.staffId] : (s.primaryEvaluator ? s.primaryEvaluator.staffId : '');
+  const pending = (state._orgPendingChanges && state._orgPendingChanges[s.staffId]) || {};
+  const hasPending = Object.keys(pending).length > 0;
+  const currentValue = pending.evaluatorId !== undefined ? pending.evaluatorId : (s.primaryEvaluator ? s.primaryEvaluator.staffId : '');
+  const effectiveTier = pending.tier !== undefined ? pending.tier : rowTier;
+  const effectiveOversees = pending.oversees !== undefined ? pending.oversees : (s.oversees || []);
   const isChecked = checkedIds && checkedIds.has(s.staffId);
   const isEditingJobTitle = state._orgEditingJobTitleFor === s.staffId;
   const isEditingOversees = state._orgEditingOverseesFor === s.staffId;
@@ -3389,7 +3392,7 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
   // Config_TierOverride mechanism, keeping their current Tier unchanged) is how that gets
   // fixed without touching the shared Job Title default everyone else still relies on.
   const overseesLine = rowTier !== 'Staff'
-    ? `Oversees: ${escapeAttr((s.oversees || []).join(", ") || "-")} <a href="#" onclick="toggleOrgOverseesEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600;">✏️</a>`
+    ? `Oversees: ${escapeAttr(effectiveOversees.join(", ") || "-")} <a href="#" onclick="toggleOrgOverseesEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600;">✏️</a>`
     : "";
   const notesHtml = [
     overseesLine,
@@ -3406,8 +3409,8 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
         <a href="#" onclick="toggleOrgJobTitleEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600; font-size:12px;">✏️ Ubah Job Title</a>
       </td>
       <td>
-        <select class="org-tier-select" id="org-tier-inline-${s.staffId}" onchange="doSetTierOverrideInline('${s.staffId}')" title="Tier">
-          ${tierChoices.map(tc => `<option value="${tc}" ${tc === rowTier ? "selected" : ""}>${tc}</option>`).join("")}
+        <select class="org-tier-select" id="org-tier-inline-${s.staffId}" onchange="markOrgPendingTier('${s.staffId}', this.value)" title="Tier">
+          ${tierChoices.map(tc => `<option value="${tc}" ${tc === effectiveTier ? "selected" : ""}>${tc}</option>`).join("")}
         </select>
       </td>
       <td>
@@ -3429,7 +3432,7 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
           <button class="primary" onclick="doUpdateJobTitle('${s.staffId}')">Simpan Job Title</button>
           <button class="ghost" onclick="toggleOrgJobTitleEdit(null)">Batal</button>
         </div>
-        <div class="hint" style="margin-top:6px; color:var(--red);">⚠️ Nulis LANGSUNG ke HR Sheet — Tier, Oversees, dan struktur KPI ikut berubah sesuai Job Title baru.</div>
+        <div class="hint" style="margin-top:6px; color:var(--red);">⚠️ Ini beda dari yang lain — nulis LANGSUNG ke HR Sheet begitu diklik (gak masuk antrian "Simpan Semua"), karena ganti Job Title reset total Tier/Oversees/struktur KPI orang ini ke default title baru.</div>
       </td>
     </tr>` : "";
 
@@ -3442,12 +3445,12 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
           <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
             ${bu.departments.map(d => `
               <label style="display:flex; align-items:center; gap:5px; background:#fff; padding:5px 10px; border-radius:8px; border:1.5px solid var(--border);">
-                <input type="checkbox" class="org-oversees-checkbox-${s.staffId}" value="${escapeAttr(d.name)}" ${(s.oversees || []).indexOf(d.name) !== -1 ? "checked" : ""} />
+                <input type="checkbox" class="org-oversees-checkbox-${s.staffId}" value="${escapeAttr(d.name)}" ${effectiveOversees.indexOf(d.name) !== -1 ? "checked" : ""} />
                 ${escapeAttr(d.name)}
               </label>`).join("")}
           </div>
           <div style="display:flex; gap:8px;">
-            <button class="primary" style="background:var(--teal);" onclick="doSetOverseesOverride('${s.staffId}', this)">Simpan Oversees</button>
+            <button class="primary" style="background:var(--teal);" onclick="markOrgPendingOversees('${s.staffId}', this)">Terapkan (belum disimpan)</button>
             <button class="ghost" onclick="toggleOrgOverseesEdit(null)">Batal</button>
           </div>
         </div>
@@ -3570,25 +3573,6 @@ function renderOrgStructureBody() {
     }).join("");
 }
 
-async function doSetTierOverrideInline(staffId) {
-  const select = document.getElementById(`org-tier-inline-${staffId}`);
-  const tierOverride = select ? select.value : "";
-  const warningText = (tierOverride === "Executive" || tierOverride === "HO")
-    ? `Yakin? "${tierOverride}" bikin orang ini LANGSUNG HILANG dari sistem appraisal otomatis (persis General Manager) — appraisal-nya harus manual di luar app mulai sekarang.`
-    : `Ubah Tier jadi "${tierOverride}"?`;
-  if (!confirm(warningText)) { await renderOrgStructure(); return; } // revert the dropdown visually by refetching real data
-
-  const reason = prompt("Alasan (opsional, buat referensi ke depannya):", "") || "Diubah langsung dari Struktur & Rantai Appraisal";
-  const res = await apiPost("setTierOverride", { requesterId: state.user.staffId, staffId, tierOverride, overseesOverride: "", reason });
-  if (res.error || res.success === false) {
-    showToast(`Gagal: ${friendlyError(res.error)}`, "error");
-    await renderOrgStructure();
-    return;
-  }
-  showToast(`✅ Tier diubah jadi "${tierOverride}".`);
-  await renderOrgStructure();
-}
-
 async function doClearTierOverride(staffId) {
   if (!confirm("Hapus override — orang ini balik ke Tier default sesuai Job Title-nya. Yakin?")) return;
   const res = await apiPost("setTierOverride", { requesterId: state.user.staffId, staffId, tierOverride: "", overseesOverride: "", reason: "" });
@@ -3608,25 +3592,6 @@ function toggleOrgJobTitleEdit(staffId) {
 function toggleOrgOverseesEdit(staffId) {
   state._orgEditingOverseesFor = staffId;
   renderOrgStructureBody();
-}
-
-async function doSetOverseesOverride(staffId, buttonEl) {
-  const row = buttonEl.closest('tr');
-  const checked = row.querySelectorAll(`.org-oversees-checkbox-${staffId}:checked`);
-  const overseesOverride = Array.from(checked).map(c => c.value).join(', ');
-  // Keep this person's CURRENT effective Tier unchanged — this action only touches
-  // Oversees. Reading it straight from the visible inline Tier dropdown means it works
-  // correctly whether that Tier came from the Job Title default or an existing override.
-  const tierSelect = document.getElementById(`org-tier-inline-${staffId}`);
-  const currentTier = tierSelect ? tierSelect.value : "";
-
-  const res = await apiPost("setTierOverride", { requesterId: state.user.staffId, staffId, tierOverride: currentTier, overseesOverride, reason: "Oversees disesuaikan per-orang lewat Struktur & Rantai Appraisal" });
-  if (res.error || res.success === false) {
-    showToast(`Gagal: ${friendlyError(res.error)}`, "error");
-    return;
-  }
-  showToast(overseesOverride ? `✅ Oversees diubah jadi "${overseesOverride}".` : "✅ Oversees balik ke default Job Title.");
-  await renderOrgStructure();
 }
 
 async function doUpdateJobTitle(staffId) {
@@ -3668,7 +3633,10 @@ function applyOrgBulkEvaluator() {
   const checkedIds = state._orgBulkChecked || new Set();
   if (!checkedIds.size) return;
   state._orgPendingChanges = state._orgPendingChanges || {};
-  checkedIds.forEach(staffId => { state._orgPendingChanges[staffId] = evaluatorId; });
+  checkedIds.forEach(staffId => {
+    state._orgPendingChanges[staffId] = state._orgPendingChanges[staffId] || {};
+    state._orgPendingChanges[staffId].evaluatorId = evaluatorId;
+  });
   state._orgBulkChecked = new Set(); // clear selection after applying — pending-changes bar takes over from here
   renderOrgStructureBody();
 }
@@ -3691,13 +3659,60 @@ async function doExportOrgStructure() {
 
 function markOrgPendingChange(staffId, evaluatorId) {
   state._orgPendingChanges = state._orgPendingChanges || {};
-  state._orgPendingChanges[staffId] = evaluatorId;
+  state._orgPendingChanges[staffId] = state._orgPendingChanges[staffId] || {};
+  state._orgPendingChanges[staffId].evaluatorId = evaluatorId;
   renderOrgStructureBody(); // cheap local re-render — no API call, no refetch
+}
+
+function markOrgPendingTier(staffId, tier) {
+  // The Executive/HO warning still needs a deliberate acknowledgment RIGHT NOW — deferring
+  // the SAVE to "Simpan Semua" doesn't mean deferring the warning too, since someone
+  // batching 10 changes should still notice "oh, this one removes them from appraisal
+  // entirely" at the moment they pick it, not buried in a batch confirmation later.
+  if (tier === "Executive" || tier === "HO") {
+    if (!confirm(`Yakin? "${tier}" bikin orang ini LANGSUNG HILANG dari sistem appraisal otomatis (persis General Manager) begitu "Simpan Semua" diklik — appraisal-nya harus manual di luar app mulai saat itu.`)) {
+      renderOrgStructureBody(); // revert the dropdown visually back to its actual current value
+      return;
+    }
+  }
+  state._orgPendingChanges = state._orgPendingChanges || {};
+  state._orgPendingChanges[staffId] = state._orgPendingChanges[staffId] || {};
+  state._orgPendingChanges[staffId].tier = tier;
+  renderOrgStructureBody();
+}
+
+function markOrgPendingOversees(staffId, buttonEl) {
+  const row = buttonEl.closest('tr');
+  const checked = row.querySelectorAll(`.org-oversees-checkbox-${staffId}:checked`);
+  const oversees = Array.from(checked).map(c => c.value);
+  state._orgPendingChanges = state._orgPendingChanges || {};
+  state._orgPendingChanges[staffId] = state._orgPendingChanges[staffId] || {};
+  state._orgPendingChanges[staffId].oversees = oversees;
+  state._orgEditingOverseesFor = null; // close the picker — selection is captured in pending state now
+  renderOrgStructureBody();
 }
 
 function discardOrgPendingChanges() {
   state._orgPendingChanges = {};
   renderOrgStructureBody();
+}
+
+/** Finds a person's current effective {tier, oversees} by searching the already-fetched
+ *  org structure data — needed so saving a Tier-only (or Oversees-only) pending change
+ *  doesn't accidentally wipe the OTHER field back to blank, since setTierOverride always
+ *  writes both together. */
+function findOrgPersonEffective(staffId) {
+  for (const bu of (state._orgStructureData ? state._orgStructureData.businessUnits : [])) {
+    const inLeadership = bu.leadership.find(l => String(l.staffId) === String(staffId));
+    if (inLeadership) return { tier: inLeadership.tier, oversees: inLeadership.oversees || [] };
+    for (const dept of bu.departments) {
+      const inDeptLeader = dept.leaders.find(l => String(l.staffId) === String(staffId));
+      if (inDeptLeader) return { tier: inDeptLeader.tier, oversees: inDeptLeader.oversees || [] };
+      const inStaff = dept.staff.find(s => String(s.staffId) === String(staffId));
+      if (inStaff) return { tier: 'Staff', oversees: [] };
+    }
+  }
+  return { tier: '', oversees: [] };
 }
 
 async function saveAllOrgChanges() {
@@ -3711,18 +3726,29 @@ async function saveAllOrgChanges() {
   const errors = [];
   const warningsCollected = [];
   for (const staffId of staffIds) {
-    const evaluatorId = changes[staffId];
-    const evaluatorStaffIds = evaluatorId ? [evaluatorId] : [];
-    const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
-    if (res.warnings && res.warnings.length) warningsCollected.push(...res.warnings);
-    if (res.success === false || res.error) errors.push(`${staffId}: ${friendlyError(res.error)}`);
+    const change = changes[staffId];
+
+    if (change.evaluatorId !== undefined) {
+      const evaluatorStaffIds = change.evaluatorId ? [change.evaluatorId] : [];
+      const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
+      if (res.warnings && res.warnings.length) warningsCollected.push(...res.warnings);
+      if (res.success === false || res.error) errors.push(`${staffId} (evaluator): ${friendlyError(res.error)}`);
+    }
+
+    if (change.tier !== undefined || change.oversees !== undefined) {
+      const effective = findOrgPersonEffective(staffId);
+      const tierOverride = change.tier !== undefined ? change.tier : effective.tier;
+      const overseesOverride = (change.oversees !== undefined ? change.oversees : effective.oversees).join(', ');
+      const res = await apiPost("setTierOverride", { requesterId: state.user.staffId, staffId, tierOverride, overseesOverride, reason: "Diubah lewat Struktur & Rantai Appraisal (batch save)" });
+      if (res.success === false || res.error) errors.push(`${staffId} (tier/oversees): ${friendlyError(res.error)}`);
+    }
   }
 
   state._orgPendingChanges = {};
   if (errors.length) {
     showToast(`⚠️ ${staffIds.length - errors.length} berhasil, ${errors.length} gagal: ${errors.slice(0, 3).join("; ")}`, "error");
   } else {
-    showToast(`✅ ${staffIds.length} perubahan disimpan.`);
+    showToast(`✅ ${staffIds.length} orang diupdate.`);
   }
   if (warningsCollected.length) {
     showToast(`⚠️ ${warningsCollected.length} peringatan relevansi: ${warningsCollected.slice(0, 2).join(" | ")}`, "error");

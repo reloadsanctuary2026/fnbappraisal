@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-19-248-unified-batch-save-tier-oversees-evaluator — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-19-249-granular-backup-add-remove — LIVE</div>
 
 <script>
 // =================================================================
@@ -3373,15 +3373,95 @@ function orgEvaluatorOptionsFor(rowTier, bu, currentPrimaryId) {
     pool.map(c => `<option value="${c.staffId}" ${String(c.staffId) === String(currentPrimaryId) ? "selected" : ""}>${escapeAttr(c.name)} (${c.tier})</option>`).join("");
 }
 
+/** Finds who among a list of evaluator IDs is the PRIMARY (lowest tier rank), matching
+ *  the exact same rule the backend uses (getEvaluatorSlotsForEmployees, v151) — needed so
+ *  the UI can correctly re-derive "who's primary now" after a backup is added or removed,
+ *  not just after the main dropdown is swapped. */
+function resolvePrimaryFromList(ids, bu) {
+  if (!ids || !ids.length) return '';
+  const RANK = { Staff: 1, Leader: 2, Management: 3, Executive: 4, HO: 5, HR: 99 };
+  const tierOf = (id) => {
+    if (bu.candidates.leaders.some(c => String(c.staffId) === String(id))) return 'Leader';
+    if (bu.candidates.managements.some(c => String(c.staffId) === String(id))) return 'Management';
+    const exec = bu.candidates.executives.find(c => String(c.staffId) === String(id));
+    return exec ? (exec.actualTier || 'Executive') : '';
+  };
+  return ids.reduce((best, id) => (RANK[tierOf(id)] || 99) < (RANK[tierOf(best)] || 99) ? id : best, ids[0]);
+}
+
+function nameForId(id, bu) {
+  const all = [...bu.candidates.leaders, ...bu.candidates.managements, ...bu.candidates.executives];
+  const found = all.find(c => String(c.staffId) === String(id));
+  return found ? found.name : id;
+}
+
+/** Same search as findOrgPersonEffective but returns the raw evaluatorStaffIds list too —
+ *  needed as the starting point when adding/removing a single backup without touching the
+ *  others. */
+function findOrgPersonRaw(staffId) {
+  for (const bu of (state._orgStructureData ? state._orgStructureData.businessUnits : [])) {
+    const inLeadership = bu.leadership.find(l => String(l.staffId) === String(staffId));
+    if (inLeadership) return inLeadership;
+    for (const dept of bu.departments) {
+      const inDeptLeader = dept.leaders.find(l => String(l.staffId) === String(staffId));
+      if (inDeptLeader) return inDeptLeader;
+      const inStaff = dept.staff.find(s => String(s.staffId) === String(staffId));
+      if (inStaff) return inStaff;
+    }
+  }
+  return { evaluatorStaffIds: [] };
+}
+
+function currentEffectiveEvaluatorList(staffId) {
+  const pending = (state._orgPendingChanges && state._orgPendingChanges[staffId]) || {};
+  if (pending.evaluators !== undefined) return pending.evaluators;
+  if (pending.evaluatorId !== undefined) return pending.evaluatorId ? [pending.evaluatorId] : [];
+  const raw = findOrgPersonRaw(staffId);
+  return raw.evaluatorStaffIds || [];
+}
+
+function toggleOrgAddBackup(staffId) {
+  state._orgAddingBackupFor = staffId;
+  renderOrgStructureBody();
+}
+
+function addOrgBackup(staffId) {
+  const select = document.getElementById(`org-add-backup-select-${staffId}`);
+  const newId = select ? select.value : '';
+  if (!newId) return;
+  const current = currentEffectiveEvaluatorList(staffId);
+  if (current.indexOf(newId) !== -1) { state._orgAddingBackupFor = null; renderOrgStructureBody(); return; } // already in the list
+  state._orgPendingChanges = state._orgPendingChanges || {};
+  state._orgPendingChanges[staffId] = state._orgPendingChanges[staffId] || {};
+  state._orgPendingChanges[staffId].evaluators = [...current, newId];
+  delete state._orgPendingChanges[staffId].evaluatorId; // superseded by the full-list field
+  state._orgAddingBackupFor = null;
+  renderOrgStructureBody();
+}
+
+function removeOrgBackup(staffId, idToRemove) {
+  const current = currentEffectiveEvaluatorList(staffId);
+  state._orgPendingChanges = state._orgPendingChanges || {};
+  state._orgPendingChanges[staffId] = state._orgPendingChanges[staffId] || {};
+  state._orgPendingChanges[staffId].evaluators = current.filter(id => String(id) !== String(idToRemove));
+  delete state._orgPendingChanges[staffId].evaluatorId;
+  renderOrgStructureBody();
+}
+
 function orgPersonRow(s, rowTier, bu, checkedIds) {
   const pending = (state._orgPendingChanges && state._orgPendingChanges[s.staffId]) || {};
   const hasPending = Object.keys(pending).length > 0;
-  const currentValue = pending.evaluatorId !== undefined ? pending.evaluatorId : (s.primaryEvaluator ? s.primaryEvaluator.staffId : '');
+  const rawEvaluatorList = (s.evaluatorStaffIds && s.evaluatorStaffIds.length) ? s.evaluatorStaffIds : (s.primaryEvaluator ? [s.primaryEvaluator.staffId] : []);
+  const effectiveEvaluatorList = pending.evaluators !== undefined ? pending.evaluators
+    : (pending.evaluatorId !== undefined ? (pending.evaluatorId ? [pending.evaluatorId] : []) : rawEvaluatorList);
+  const currentValue = resolvePrimaryFromList(effectiveEvaluatorList, bu);
+  const backupIds = effectiveEvaluatorList.filter(id => String(id) !== String(currentValue));
   const effectiveTier = pending.tier !== undefined ? pending.tier : rowTier;
   const effectiveOversees = pending.oversees !== undefined ? pending.oversees : (s.oversees || []);
   const isChecked = checkedIds && checkedIds.has(s.staffId);
   const isEditingJobTitle = state._orgEditingJobTitleFor === s.staffId;
   const isEditingOversees = state._orgEditingOverseesFor === s.staffId;
+  const isAddingBackup = state._orgAddingBackupFor === s.staffId;
   const jobTitleOptions = (state._orgAllJobTitles || [])
     .map(jt => `<option value="${escapeAttr(jt.jobTitle)}" ${jt.jobTitle === s.jobTitle ? "selected" : ""}>${escapeAttr(jt.jobTitle)} (${jt.tier})</option>`).join("");
   const tierChoices = ['Staff', 'Leader', 'Management', 'Executive', 'HO', 'HR'];
@@ -3394,9 +3474,16 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
   const overseesLine = rowTier !== 'Staff'
     ? `Oversees: ${escapeAttr(effectiveOversees.join(", ") || "-")} <a href="#" onclick="toggleOrgOverseesEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600;">✏️</a>`
     : "";
+  // Backups can now be added/removed one at a time — not just "swap primary" or "clear
+  // everything" — since real cases (Floor Supervisors, Kitchen trio) need fine-grained
+  // control over exactly who's on the list, not all-or-nothing.
+  const backupNamesLine = backupIds.length
+    ? `Cadangan pasif: ${backupIds.map(id => `${escapeAttr(nameForId(id, bu))} <a href="#" onclick="removeOrgBackup('${s.staffId}', '${id}'); return false;" style="color:var(--red); font-weight:700;" title="Hapus dari cadangan">❌</a>`).join(", ")}`
+    : "";
+  const addBackupLink = `<a href="#" onclick="toggleOrgAddBackup('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600;">➕ Tambah cadangan</a>`;
   const notesHtml = [
     overseesLine,
-    (s.backupEvaluators || []).length ? `Cadangan pasif: ${s.backupEvaluators.map(b => escapeAttr(b.name)).join(", ")} <a href="#" onclick="markOrgPendingChange('${s.staffId}', '${currentValue}'); return false;" style="color:var(--red); font-weight:600;">🧹</a>` : "",
+    [backupNamesLine, addBackupLink].filter(Boolean).join(" · "),
     hasPending ? `<span style="color:var(--amber); font-weight:700;">⏳ Belum disimpan</span>` : "",
   ].filter(Boolean).join("<br>");
 
@@ -3458,7 +3545,22 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
       </td>
     </tr>` : "";
 
-  return mainRow + editRow + overseesEditRow;
+  const addBackupRow = isAddingBackup ? `
+    <tr ${hasPending ? 'class="org-pending-row"' : ""}>
+      <td></td>
+      <td colspan="4">
+        <div style="padding:8px; background:var(--sand); border-radius:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <select id="org-add-backup-select-${s.staffId}" style="flex:1; min-width:200px; padding:6px; border-radius:8px; border:1.5px solid var(--border);">
+            ${orgEvaluatorOptionsFor(rowTier, bu, "").replace('<option value="">(Otomatis)</option>', "")}
+          </select>
+          <button class="primary" style="background:var(--teal);" onclick="addOrgBackup('${s.staffId}')">Tambah (belum disimpan)</button>
+          <button class="ghost" onclick="toggleOrgAddBackup(null)">Batal</button>
+        </div>
+        <div class="hint" style="margin-top:6px;">Orang ini jadi cadangan pasif — cuma dapet tugas aktif kalau evaluator utama resign/kontrak deferred.</div>
+      </td>
+    </tr>` : "";
+
+  return mainRow + editRow + overseesEditRow + addBackupRow;
 }
 
 function orgTableWrap(rowsHtml) {
@@ -3728,8 +3830,8 @@ async function saveAllOrgChanges() {
   for (const staffId of staffIds) {
     const change = changes[staffId];
 
-    if (change.evaluatorId !== undefined) {
-      const evaluatorStaffIds = change.evaluatorId ? [change.evaluatorId] : [];
+    if (change.evaluators !== undefined || change.evaluatorId !== undefined) {
+      const evaluatorStaffIds = change.evaluators !== undefined ? change.evaluators : (change.evaluatorId ? [change.evaluatorId] : []);
       const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
       if (res.warnings && res.warnings.length) warningsCollected.push(...res.warnings);
       if (res.success === false || res.error) errors.push(`${staffId} (evaluator): ${friendlyError(res.error)}`);

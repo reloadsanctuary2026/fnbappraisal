@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-251-checklist-hides-inactive-stages — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-252-simplify-checklist-for-back-office — LIVE</div>
 
 <script>
 // =================================================================
@@ -2448,7 +2448,7 @@ async function renderMyEvaluations(slotFilter) {
           <div class="dept" style="margin-top:4px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
             ${[
               { label: "Self", done: s.selfDone, active: !s.activeStages || s.activeStages.self },
-              { label: "Leader/Mgmt", done: s.leaderDone, active: !s.activeStages || s.activeStages.leader },
+              { label: "Leader/Mgmt", done: s.leaderDone, active: (!s.activeStages || s.activeStages.leader) && s.businessUnit !== 'backoffice' },
               { label: "HR", done: s.hrDone, active: !s.activeStages || s.activeStages.hr },
               { label: "Executive", done: s.executiveDone, active: true }, // final approval — always happens, not gated by resolveEvaluationStages the way Self/Leader/HR are
             ].filter(item => item.active).map(item => `<span>${item.done ? "✅" : "❌"} ${item.label}</span>`).join('<span style="color:var(--border);">|</span>')}
@@ -5701,7 +5701,7 @@ async function renderMyAppraisalStatus(target) {
       <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:14px;">
         ${[
           { label: "Self", done: res.selfDone, active: !res.activeStages || res.activeStages.self },
-          { label: "Leader/Mgmt", done: res.leaderDone, active: !res.activeStages || res.activeStages.leader },
+          { label: "Leader/Mgmt", done: res.leaderDone, active: (!res.activeStages || res.activeStages.leader) && res.businessUnit !== 'backoffice' },
           { label: "HR", done: res.hrDone, active: !res.activeStages || res.activeStages.hr },
           { label: "Executive", done: res.executiveDone, active: true },
         ].filter(item => item.active).map(item => checklistRow(item.label, item.done)).join('<span style="color:var(--border);">|</span>')}

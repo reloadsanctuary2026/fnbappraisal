@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-257-fix-rangemode-scoping-bug — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-258-recompute-forgotten-hr-scores-tool — LIVE</div>
 
 <script>
 // =================================================================
@@ -3940,6 +3940,43 @@ async function doDeletePositionMapEntry(idx) {
   await renderOrgStructure();
 }
 
+async function doRecomputeForgottenHrScores(btnEl) {
+  const monthInput = document.getElementById("recompute-hr-month").value.trim();
+  const resultEl = document.getElementById("recompute-hr-result");
+  btnEl.disabled = true;
+  const originalLabel = btnEl.textContent;
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Menghitung ulang...`;
+  resultEl.innerHTML = "";
+
+  const res = await apiPost("recomputeForgottenHrScores", { requesterId: state.user.staffId, month: monthInput || undefined });
+  btnEl.disabled = false;
+  btnEl.textContent = originalLabel;
+
+  if (res.error || res.success === false) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
+    return;
+  }
+
+  const autoFixed = res.autoFixed || [];
+  const needsReview = res.needsManualReview || [];
+  if (!autoFixed.length && !needsReview.length) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Gak ada yang skor HR-nya 0.0 bulan ini.</div>`;
+    return;
+  }
+  resultEl.innerHTML = `
+    ${autoFixed.length ? `
+      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
+        <strong style="color:var(--teal);">✅ ${autoFixed.length} langsung dibenerin otomatis:</strong>
+        ${autoFixed.map(a => `<div class="hint" style="margin-top:4px;">${escapeAttr(a.name)}: ${a.oldScore} → <strong>${a.newScore}</strong></div>`).join("")}
+      </div>` : ""}
+    ${needsReview.length ? `
+      <div style="background:#fff; border-radius:8px; padding:10px;">
+        <strong style="color:var(--red);">⚠️ ${needsReview.length} UDAH di-Approve, perlu kamu review manual:</strong>
+        ${needsReview.map(n => `<div class="hint" style="margin-top:4px;">${escapeAttr(n.name)} (skor sekarang: ${n.oldScore})</div>`).join("")}
+      </div>` : ""}
+  `;
+}
+
 async function renderDevTools() {
   if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
   const showMenuLink = availableScreens(state.user).length > 1;
@@ -3949,6 +3986,15 @@ async function renderDevTools() {
       <h2 style="color:#fff;">🗂️ Struktur & Rantai Appraisal</h2>
       <div class="hint" style="color:#EDE7DC; margin-bottom:10px;">Lihat & atur siapa nilai siapa, Job Title & Tier default, semua dalam satu tempat — pengganti Staff Mapping lama.</div>
       <button class="primary" style="background:#fff; color:var(--teal);" onclick="navigateToScreen('orgStructure')">Buka Struktur & Rantai Appraisal</button>
+    </div>
+    <div class="card" style="background:var(--coral); border:none;">
+      <h2 style="color:#fff;">🔧 Benerin Skor HR yang Kelupaan (0.0)</h2>
+      <div class="hint" style="color:#fff; margin-bottom:10px;">Cari semua orang bulan ini yang skor HR-nya PERSIS 0.0 (kemungkinan besar lupa isi, bukan nilai jujur), lalu hitung ulang Final Score-nya TANPA bobot HR itu. Yang UDAH di-Approve Executive gak disentuh otomatis — cuma dikasih daftar buat kamu review manual.</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="recompute-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
+        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRecomputeForgottenHrScores(this)">Cari & Benerin</button>
+      </div>
+      <div id="recompute-hr-result" style="margin-top:10px;"></div>
     </div>
     <div class="card">
       <h2>🔀 Toggle Tahap Evaluasi (Self/Leader/HR)</h2>

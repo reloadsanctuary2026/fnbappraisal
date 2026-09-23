@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-254-remove-badge-for-back-office — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-255-compliance-shows-missing-names — LIVE</div>
 
 <script>
 // =================================================================
@@ -5141,6 +5141,13 @@ async function doSaveActionItem(actionId) {
 }
 
 
+function toggleComplianceMissing(staffId) {
+  state._complianceExpanded = state._complianceExpanded || new Set();
+  if (state._complianceExpanded.has(staffId)) state._complianceExpanded.delete(staffId);
+  else state._complianceExpanded.add(staffId);
+  renderReview();
+}
+
 function switchReviewViewMode(mode) {
   state._reviewViewMode = mode;
   renderReview();
@@ -5296,18 +5303,24 @@ async function renderReview() {
       const groupLabel = { Leader: "Leader", Management: "Management", HR: "HR" };
       const rowHtml = (p) => {
         const barColor = p.percentage >= 100 ? "var(--green)" : p.percentage >= 50 ? "var(--amber)" : "var(--red)";
+        const hasMissing = (p.missingNames || []).length > 0;
+        const isExpanded = state._complianceExpanded && state._complianceExpanded.has(p.staffId);
         return `
-          <div class="staff-row" style="cursor:default; display:block;">
+          <div class="staff-row" style="cursor:${hasMissing ? "pointer" : "default"}; display:block;" ${hasMissing ? `onclick="toggleComplianceMissing('${p.staffId}')"` : ""}>
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div>
                 <div class="name">${p.name}</div>
                 ${(p.oversees || []).length ? `<div class="cell-sub">${p.oversees.join(", ")}</div>` : ""}
               </div>
-              <span class="badge" style="background:${p.percentage >= 100 ? "var(--green-bg)" : p.percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${p.doneTargets}/${p.totalTargets} (${p.percentage}%)</span>
+              <span class="badge" style="background:${p.percentage >= 100 ? "var(--green-bg)" : p.percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${p.doneTargets}/${p.totalTargets} (${p.percentage}%)${hasMissing ? (isExpanded ? " ▲" : " ▼") : ""}</span>
             </div>
             <div style="width:100%; height:6px; background:var(--sand); border-radius:4px; margin-top:8px; overflow:hidden;">
               <div style="width:${p.percentage}%; height:100%; background:${barColor};"></div>
             </div>
+            ${isExpanded ? `
+              <div class="hint" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+                <strong>${p.missingNames.length} orang belum dinilai:</strong> ${p.missingNames.join(", ")}
+              </div>` : ""}
           </div>`;
       };
       bodyHtml = `

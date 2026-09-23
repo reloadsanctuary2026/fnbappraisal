@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-256-categorize-missing-smooth-toggle — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-257-fix-rangemode-scoping-bug — LIVE</div>
 
 <script>
 // =================================================================
@@ -5259,6 +5259,7 @@ async function renderReview(skipFetch) {
   const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? t("review_title_all") : t("review_title_team");
   const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational || state.user.isManagement;
   const viewMode = state._reviewViewMode || "list";
+  const rangeMode = !!state._reviewRangeMode; // used further down in the body regardless of which branch below runs — must be declared here, not inside the fetch-only branch
 
   let res, progressRes, selfComplianceRes;
   if (skipFetch && state._reviewCache) {
@@ -5269,7 +5270,6 @@ async function renderReview(skipFetch) {
     ({ res, progressRes, selfComplianceRes } = state._reviewCache);
   } else {
     app.innerHTML = topbar(title) + `<div class="loading">${t("form_loading")}</div>`;
-    const rangeMode = !!state._reviewRangeMode;
     const effectiveEndMonth = rangeMode ? (state._reviewEndMonth || state.month) : state.month;
     [res, progressRes, selfComplianceRes] = await Promise.all([
       apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month, endMonth: effectiveEndMonth }),

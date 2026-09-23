@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-258-recompute-forgotten-hr-scores-tool — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-259-merge-stage-toggle-trim-ui-text — LIVE</div>
 
 <script>
 // =================================================================
@@ -3487,13 +3487,21 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
     hasPending ? `<span style="color:var(--amber); font-weight:700;">⏳ Belum disimpan</span>` : "",
   ].filter(Boolean).join("<br>");
 
+  const stages = pending.stages !== undefined ? pending.stages : (s.activeStages || { self: true, leader: true, hr: true });
+  const stageCheckbox = (key, label, title) => `<label title="${title}" style="display:flex; align-items:center; gap:2px; cursor:pointer;"><input type="checkbox" ${stages[key] ? "checked" : ""} onchange="markOrgPendingStage('${s.staffId}','${key}',this.checked)" style="width:13px; height:13px;" />${label}</label>`;
+
   const mainRow = `
     <tr id="org-row-${s.staffId}" ${hasPending ? 'class="org-pending-row"' : ""}>
       <td><input type="checkbox" ${isChecked ? "checked" : ""} onchange="toggleOrgBulkCheck('${s.staffId}', this.checked)" style="width:16px; height:16px;" /></td>
       <td>
         <div style="font-weight:700;">${escapeAttr(s.name)}</div>
         <div class="hint" style="margin:0; white-space:nowrap;">${escapeAttr(s.jobTitle)}</div>
-        <a href="#" onclick="toggleOrgJobTitleEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600; font-size:12px;">✏️ Ubah Job Title</a>
+        <a href="#" onclick="toggleOrgJobTitleEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600; font-size:12px;">✏️ Job Title</a>
+        <div style="display:flex; gap:8px; margin-top:4px; font-size:11px; color:var(--text-muted);">
+          ${stageCheckbox("self", "S", "Self Appraisal")}
+          ${stageCheckbox("leader", "L", "Leader Appraisal")}
+          ${stageCheckbox("hr", "H", "HR Appraisal")}
+        </div>
       </td>
       <td>
         <select class="org-tier-select" id="org-tier-inline-${s.staffId}" onchange="markOrgPendingTier('${s.staffId}', this.value)" title="Tier">
@@ -3541,7 +3549,7 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
             <button class="ghost" onclick="toggleOrgOverseesEdit(null)">Batal</button>
           </div>
         </div>
-        <div class="hint" style="margin-top:6px;">Cuma buat ORANG INI — Job Title lain yang sama gak ikut berubah. Gak centang apa-apa = balik ke default Job Title (Oversees bareng semua yang pegang title sama).</div>
+        <div class="hint" style="margin-top:6px;">Cuma buat orang ini. Kosongin = ikut default Job Title.</div>
       </td>
     </tr>` : "";
 
@@ -3556,7 +3564,7 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
           <button class="primary" style="background:var(--teal);" onclick="addOrgBackup('${s.staffId}')">Tambah (belum disimpan)</button>
           <button class="ghost" onclick="toggleOrgAddBackup(null)">Batal</button>
         </div>
-        <div class="hint" style="margin-top:6px;">Orang ini jadi cadangan pasif — cuma dapet tugas aktif kalau evaluator utama resign/kontrak deferred.</div>
+        <div class="hint" style="margin-top:6px;">Aktif cuma kalau evaluator utama resign/deferred.</div>
       </td>
     </tr>` : "";
 
@@ -3658,7 +3666,7 @@ function renderOrgStructureBody() {
       <div class="card"><div class="hint" style="color:var(--green);">✅ Gak ada peringatan struktur di ${bu.label}.</div></div>`)) +
     (state._orgDepartmentFilter ? "" : `<div class="card">
       <h2>👑 Kepemimpinan — Company-wide / Gak Spesifik 1 Department (${bu.unmatchedLeadership.length} orang)</h2>
-      <div class="hint" style="margin-bottom:10px;">Leader/Management yang Oversees-nya gak nempel ke 1 department spesifik (misal HR Manager yang oversees "ALL"). Yang oversees department tertentu (kayak Purchasing Manager → Finance & Accounting) sekarang muncul LANGSUNG di kartu department-nya di bawah.</div>
+      <div class="hint" style="margin-bottom:10px;">Yang oversees-nya gak nempel ke 1 department spesifik (misal "ALL").</div>
       ${orgTableWrap(bu.unmatchedLeadership.filter(l => matchesSearch(l.name)).map(l => orgPersonRow(l, l.tier, bu, checkedIds)).join("")) || `<div class="hint">Gak ada yang cocok sama pencarian.</div>`}
     </div>`) +
     bu.departments.filter(d => !state._orgDepartmentFilter || d.name === state._orgDepartmentFilter).map(dept => {
@@ -3759,6 +3767,14 @@ async function doExportOrgStructure() {
   noteEl.innerHTML = `✅ ${res.rowCount} baris siap. <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka Excel-nya</a>`;
 }
 
+function markOrgPendingStage(staffId, key, checked) {
+  state._orgPendingChanges = state._orgPendingChanges || {};
+  const existing = state._orgPendingChanges[staffId] || {};
+  const current = existing.stages || findOrgPersonRaw(staffId).activeStages || { self: true, leader: true, hr: true };
+  state._orgPendingChanges[staffId] = { ...existing, stages: { ...current, [key]: checked } };
+  renderOrgStructureBody();
+}
+
 function markOrgPendingChange(staffId, evaluatorId) {
   state._orgPendingChanges = state._orgPendingChanges || {};
   state._orgPendingChanges[staffId] = state._orgPendingChanges[staffId] || {};
@@ -3843,6 +3859,14 @@ async function saveAllOrgChanges() {
       const overseesOverride = (change.oversees !== undefined ? change.oversees : effective.oversees).join(', ');
       const res = await apiPost("setTierOverride", { requesterId: state.user.staffId, staffId, tierOverride, overseesOverride, reason: "Diubah lewat Struktur & Rantai Appraisal (batch save)" });
       if (res.success === false || res.error) errors.push(`${staffId} (tier/oversees): ${friendlyError(res.error)}`);
+    }
+
+    if (change.stages !== undefined) {
+      const res = await apiPost("saveEvaluationStageOverride", {
+        requesterId: state.user.staffId, scopeType: "StaffID", scopeValue: staffId,
+        selfActive: change.stages.self, leaderActive: change.stages.leader, hrActive: change.stages.hr,
+      });
+      if (res.success === false || res.error) errors.push(`${staffId} (tahap): ${friendlyError(res.error)}`);
     }
   }
 
@@ -3984,12 +4008,12 @@ async function renderDevTools() {
     ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card" style="background:var(--teal); border:none;">
       <h2 style="color:#fff;">🗂️ Struktur & Rantai Appraisal</h2>
-      <div class="hint" style="color:#EDE7DC; margin-bottom:10px;">Lihat & atur siapa nilai siapa, Job Title & Tier default, semua dalam satu tempat — pengganti Staff Mapping lama.</div>
+      <div class="hint" style="color:#EDE7DC; margin-bottom:10px;">Siapa nilai siapa, Tier, Job Title, dan tahap evaluasi — semua di 1 tempat.</div>
       <button class="primary" style="background:#fff; color:var(--teal);" onclick="navigateToScreen('orgStructure')">Buka Struktur & Rantai Appraisal</button>
     </div>
     <div class="card" style="background:var(--coral); border:none;">
       <h2 style="color:#fff;">🔧 Benerin Skor HR yang Kelupaan (0.0)</h2>
-      <div class="hint" style="color:#fff; margin-bottom:10px;">Cari semua orang bulan ini yang skor HR-nya PERSIS 0.0 (kemungkinan besar lupa isi, bukan nilai jujur), lalu hitung ulang Final Score-nya TANPA bobot HR itu. Yang UDAH di-Approve Executive gak disentuh otomatis — cuma dikasih daftar buat kamu review manual.</div>
+      <div class="hint" style="color:#fff; margin-bottom:10px;">Cari yang skor HR-nya PERSIS 0.0 (kemungkinan lupa isi), hitung ulang tanpa bobot HR. Yang udah di-Approve gak disentuh otomatis.</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <input type="text" id="recompute-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
         <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRecomputeForgottenHrScores(this)">Cari & Benerin</button>
@@ -3997,13 +4021,12 @@ async function renderDevTools() {
       <div id="recompute-hr-result" style="margin-top:10px;"></div>
     </div>
     <div class="card">
-      <h2>🔀 Toggle Tahap Evaluasi (Self/Leader/HR)</h2>
-      <div class="hint" style="margin-bottom:10px;">Default-nya: semua posisi 3 tahap aktif, KECUALI department HR (otomatis cuma Self+Leader). Di sini bisa override manual per Job Title, Department, atau per-orang (NIK) kapan aja.</div>
+      <h2>🔀 Tahap Evaluasi per Job Title / Department</h2>
+      <div class="hint" style="margin-bottom:10px;">Default: 3 tahap aktif, kecuali HR (Self+Leader aja). Override per Job Title/Department di sini — per-orang, atur langsung di Struktur & Rantai Appraisal.</div>
       <div class="row-flex" style="margin-bottom:8px;">
         <select id="stage-scope-type" onchange="updateStageScopeInput()">
           <option value="JobTitle">Job Title</option>
           <option value="Department">Department</option>
-          <option value="StaffId">NIK (per-orang)</option>
         </select>
         <input type="text" id="stage-scope-value" list="job-title-datalist" placeholder="Ketik buat cari Job Title..." style="flex:1;" />
         <button class="secondary" style="flex:0 0 auto;" onclick="doLoadStageStatus()">Cek</button>

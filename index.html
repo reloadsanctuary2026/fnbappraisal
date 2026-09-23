@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-255-compliance-shows-missing-names — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-256-categorize-missing-smooth-toggle — LIVE</div>
 
 <script>
 // =================================================================
@@ -5145,7 +5145,7 @@ function toggleComplianceMissing(staffId) {
   state._complianceExpanded = state._complianceExpanded || new Set();
   if (state._complianceExpanded.has(staffId)) state._complianceExpanded.delete(staffId);
   else state._complianceExpanded.add(staffId);
-  renderReview();
+  renderReview(true);
 }
 
 function switchReviewViewMode(mode) {
@@ -5255,19 +5255,29 @@ function renderSelfAppraisalComplianceCard(res) {
     </div>`;
 }
 
-async function renderReview() {
+async function renderReview(skipFetch) {
   const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? t("review_title_all") : t("review_title_team");
   const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational || state.user.isManagement;
   const viewMode = state._reviewViewMode || "list";
 
-  app.innerHTML = topbar(title) + `<div class="loading">${t("form_loading")}</div>`;
-  const rangeMode = !!state._reviewRangeMode;
-  const effectiveEndMonth = rangeMode ? (state._reviewEndMonth || state.month) : state.month;
-  const [res, progressRes, selfComplianceRes] = await Promise.all([
-    apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month, endMonth: effectiveEndMonth }),
-    canSeeCompliance ? apiGet("getEvaluatorProgress", { requesterId: state.user.staffId }) : Promise.resolve(null),
-    canSeeCompliance ? apiGet("getSelfAppraisalComplianceStatus", { requesterId: state.user.staffId }) : Promise.resolve(null),
-  ]);
+  let res, progressRes, selfComplianceRes;
+  if (skipFetch && state._reviewCache) {
+    // FIX (22/09/2026): expand/collapse toggles (like "who's missing" in compliance) don't
+    // need fresh server data — re-fetching on every click caused a loading flicker for a
+    // purely local UI change. Anything that actually changes the underlying data (month,
+    // filters, tabs) still goes through the real fetch below.
+    ({ res, progressRes, selfComplianceRes } = state._reviewCache);
+  } else {
+    app.innerHTML = topbar(title) + `<div class="loading">${t("form_loading")}</div>`;
+    const rangeMode = !!state._reviewRangeMode;
+    const effectiveEndMonth = rangeMode ? (state._reviewEndMonth || state.month) : state.month;
+    [res, progressRes, selfComplianceRes] = await Promise.all([
+      apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month, endMonth: effectiveEndMonth }),
+      canSeeCompliance ? apiGet("getEvaluatorProgress", { requesterId: state.user.staffId }) : Promise.resolve(null),
+      canSeeCompliance ? apiGet("getSelfAppraisalComplianceStatus", { requesterId: state.user.staffId }) : Promise.resolve(null),
+    ]);
+    state._reviewCache = { res, progressRes, selfComplianceRes };
+  }
   if (res.error) {
     app.innerHTML = topbar(title) + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
@@ -5303,7 +5313,7 @@ async function renderReview() {
       const groupLabel = { Leader: "Leader", Management: "Management", HR: "HR" };
       const rowHtml = (p) => {
         const barColor = p.percentage >= 100 ? "var(--green)" : p.percentage >= 50 ? "var(--amber)" : "var(--red)";
-        const hasMissing = (p.missingNames || []).length > 0;
+        const hasMissing = (p.missingOverdue || []).length > 0 || (p.missingNewHire || []).length > 0;
         const isExpanded = state._complianceExpanded && state._complianceExpanded.has(p.staffId);
         return `
           <div class="staff-row" style="cursor:${hasMissing ? "pointer" : "default"}; display:block;" ${hasMissing ? `onclick="toggleComplianceMissing('${p.staffId}')"` : ""}>
@@ -5318,8 +5328,9 @@ async function renderReview() {
               <div style="width:${p.percentage}%; height:100%; background:${barColor};"></div>
             </div>
             ${isExpanded ? `
-              <div class="hint" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
-                <strong>${p.missingNames.length} orang belum dinilai:</strong> ${p.missingNames.join(", ")}
+              <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
+                ${(p.missingOverdue || []).length ? `<div class="hint" style="color:var(--red);"><strong>${p.missingOverdue.length} beneran belum dinilai:</strong> ${p.missingOverdue.join(", ")}</div>` : ""}
+                ${(p.missingNewHire || []).length ? `<div class="hint" style="${(p.missingOverdue || []).length ? "margin-top:6px;" : ""}"><strong>${p.missingNewHire.length} baru join bulan ini (belum masuk siklus):</strong> ${p.missingNewHire.join(", ")}</div>` : ""}
               </div>` : ""}
           </div>`;
       };

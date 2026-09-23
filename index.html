@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-19-249-granular-backup-add-remove — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-250-remove-sc-evalwizard-split-team-hr-menu — LIVE</div>
 
 <script>
 // =================================================================
@@ -1404,6 +1404,8 @@ function render() {
   if (state.screen === "history") return renderMyAppraisalHistory(state.user.staffId);
   if (state.screen === "self") return renderAppraisalForm({ evaluatorType: "self", target: state.user });
   if (state.screen === "myEvaluations") return renderMyEvaluations();
+  if (state.screen === "myEvaluationsTeam") return renderMyEvaluations("leader");
+  if (state.screen === "myEvaluationsHR") return renderMyEvaluations("hr");
   if (state.screen === "review") return renderReview();
   if (state.screen === "feedback") return renderStaffFeedback();
   if (state.screen === "historical") return renderHistoricalInput();
@@ -1529,8 +1531,7 @@ function renderFaq() {
       HR: `
         <p><strong>1.</strong> Tanggal 18–27: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department. Tombol "Samakan dgn Leader/Mgmt" muncul kalau Leader/Management-nya udah isi duluan.</p>
         <p><strong>2.</strong> <strong>Review Everyone's Records</strong> — lihat semua hasil appraisal, lintas department & tier (read-only).</p>
-        <p><strong>3.</strong> <strong>Calculate Service Charge</strong> — input Total SC bulanan, sistem otomatis hitung deduction & pool distribution.</p>
-        <p><strong>4.</strong> <strong>Track Pending Follow-Ups</strong> — reminder buat kasus "Extend Probation/Kontrak" yang udah jatuh tempo, perlu ditindaklanjuti.</p>`,
+        <p><strong>3.</strong> <strong>Track Pending Follow-Ups</strong> — reminder buat kasus "Extend Probation/Kontrak" yang udah jatuh tempo, perlu ditindaklanjuti.</p>`,
     },
     en: {
       Staff: `
@@ -1557,8 +1558,7 @@ function renderFaq() {
       HR: `
         <p><strong>1.</strong> Days 18–27: fill in <strong>HR Appraisal</strong> for EVERY tier (Staff/Leader/Management), across every department. A "Match Leader/Mgmt" button appears if the Leader/Management already filled theirs in first.</p>
         <p><strong>2.</strong> <strong>Review Everyone's Records</strong> — view every appraisal result, across every department & tier (read-only).</p>
-        <p><strong>3.</strong> <strong>Calculate Service Charge</strong> — enter the monthly Total SC, the system automatically calculates deductions & pool distribution.</p>
-        <p><strong>4.</strong> <strong>Track Pending Follow-Ups</strong> — reminders for "Extend Probation/Contract" cases that are due and need follow-up.</p>`,
+        <p><strong>3.</strong> <strong>Track Pending Follow-Ups</strong> — reminders for "Extend Probation/Contract" cases that are due and need follow-up.</p>`,
     },
   };
   const tierFlow = tierFlowByLang[state.lang] || tierFlowByLang.id;
@@ -2131,10 +2131,8 @@ function availableScreensGrouped(user) {
     add("gm", t("menu_approve_final"));
     add("trainingNeeds", t("menu_training_needs"));
     add("feedback", t("menu_read_feedback"));
-    add("sc", t("menu_calc_sc"));
     add("historical", t("menu_input_historical"));
     if (user.hasStaffMappingAccess) add("staffMapping", t("menu_staff_mapping"));
-    add("evalWizard", t("menu_eval_wizard"));
     return [
       { name: "MyTeams", items },
       { name: "DevTools", items: [{ key: "devTools", label: "🛠️ Dev Tools (Superadmin)" }] },
@@ -2156,7 +2154,7 @@ function availableScreensGrouped(user) {
 
   const teamItems = [];
   if (user.isLeader || user.isManagement || user.isExecutive) {
-    teamItems.push({ key: "myEvaluations", label: user.appraiseLabel || t("menu_team_appraisal") });
+    teamItems.push({ key: "myEvaluationsTeam", label: user.appraiseLabel || t("menu_team_appraisal") });
   }
   if (user.isLeader || user.isManagement) {
     teamItems.push({ key: "review", label: t("menu_review_team") });
@@ -2179,9 +2177,8 @@ function availableScreensGrouped(user) {
 
   if (user.isHR) {
     groups.push({ name: "MyHR", items: [
-      { key: "myEvaluations", label: user.appraiseLabel || t("menu_appraise_all") },
+      { key: "myEvaluationsHR", label: user.appraiseLabel || t("menu_appraise_all") },
       { key: "review", label: t("menu_review_all") },
-      { key: "sc", label: t("menu_calc_sc") },
       { key: "feedback", label: t("menu_read_feedback") },
       { key: "trainingNeeds", label: t("menu_training_needs") },
     ]});
@@ -2201,9 +2198,6 @@ function availableScreensGrouped(user) {
   const settingsItems = [];
   if (user.hasStaffMappingAccess) {
     settingsItems.push({ key: "staffMapping", label: t("menu_staff_mapping") });
-  }
-  if (user.isHR || user.isExecutive || user.isAdminOperational) {
-    settingsItems.push({ key: "evalWizard", label: t("menu_eval_wizard") });
   }
   if (settingsItems.length) groups.push({ name: "MySettings", items: settingsItems });
 
@@ -2409,14 +2403,21 @@ function logout() {
 // (leader/hr) for THIS viewer, so the frontend doesn't need to know the
 // tier rules itself.
 // =================================================================
-async function renderMyEvaluations() {
+async function renderMyEvaluations(slotFilter) {
   app.innerHTML = topbar(state.user.appraiseLabel || "Team Appraisal") + `<div class="loading">Memuat daftar...</div>`;
   const res = await apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId });
   if (res.error) {
     app.innerHTML = topbar(state.user.appraiseLabel || "Team Appraisal") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
     return;
   }
-  const list = res.targets || [];
+  let list = res.targets || [];
+  // FIX (22/09/2026): MyTeams and MyHR used to both point at the exact same unfiltered
+  // list — someone who's both a person's assigned Leader AND a company-wide HR evaluator
+  // (Yonatha, for his own HR team) saw every target duplicated under both entry points,
+  // with no way to tell "my direct team" apart from "HR buffer duty for the rest of the
+  // company". Filtering by `slot` here is what actually separates them now.
+  if (slotFilter) list = list.filter(t => t.slot === slotFilter);
+  state._myEvalSlotFilter = slotFilter; // remembered so re-renders (search/sort/filter) keep respecting it
   list.sort((a, b) => {
     if (a.status === b.status) return a.name.localeCompare(b.name);
     return a.status === "Not started" ? -1 : 1;

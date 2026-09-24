@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-261-floor-negative-scores-at-zero — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-262-warn-evaluator-on-negative-score-floor — LIVE</div>
 
 <script>
 // =================================================================
@@ -6044,6 +6044,9 @@ async function confirmAndSubmit(evaluatorType) {
       return;
     }
     if (res.success) {
+      if (res.wasFlooredFromNegative) {
+        alert("⚠️ PERHATIAN: Skor akhir jadi 0 karena poin deduksi (Section D) lebih besar dari skor dasar yang didapat. Kalau ini gak disengaja, silakan submit ulang dengan deduksi yang lebih sesuai.");
+      }
       showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
       state.scores = {};
       state._pendingBonusEntries = null;

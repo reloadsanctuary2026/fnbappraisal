@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-259-merge-stage-toggle-trim-ui-text — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-260-remove-staff-mapping — LIVE</div>
 
 <script>
 // =================================================================
@@ -522,7 +522,6 @@ const translations = {
     menu_appraise_all: "Appraise All Staff",
     menu_calc_sc: "Calculate Service Charge",
     menu_input_historical: "Input Data Historis",
-    menu_staff_mapping: "Staff Mapping",
     menu_eval_wizard: "🧩 Buat / Edit Struktur KPI Set",
     settings_title: "Pengaturan Akun",
     settings_back: "&larr; Kembali",
@@ -957,7 +956,6 @@ const translations = {
     menu_appraise_all: "Appraise All Staff",
     menu_calc_sc: "Calculate Service Charge",
     menu_input_historical: "Enter Historical Data",
-    menu_staff_mapping: "Staff Mapping",
     menu_eval_wizard: "🧩 Buat / Edit Struktur KPI Set",
     settings_title: "Account Settings",
     settings_back: "&larr; Back",
@@ -1410,7 +1408,6 @@ function render() {
   if (state.screen === "feedback") return renderStaffFeedback();
   if (state.screen === "historical") return renderHistoricalInput();
   if (state.screen === "settings") return renderSettings();
-  if (state.screen === "staffMapping") return renderStaffMapping();
   if (state.screen === "devTools") return renderDevTools();
   if (state.screen === "orgStructure") return renderOrgStructure();
   if (state.screen === "evalWizard") return renderEvaluationWizard();
@@ -1485,7 +1482,6 @@ function renderFaq() {
       feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal, lengkap dengan Issue Summary & Action Tracker — Executive, HR, dan Admin Operational bisa lihat halaman ini.",
       historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan buat perhitungan Service Charge.",
       settings: "Ganti PIN sendiri dan lihat profil kamu — Nama, NIK, Job Title, Department, Tier.",
-      staffMapping: "Lihat siapa dinilai siapa untuk semua Staff/Leader/Management — dihitung otomatis dari Config_PositionMap, bukan diketik manual.",
       sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
     },
     en: {
@@ -1499,7 +1495,6 @@ function renderFaq() {
       feedback: "Read confidential feedback staff wrote via the 'Feedback to Management' field during Self Appraisal, complete with an Issue Summary & Action Tracker — Executive, HR, and Admin Operational can view this page.",
       historical: "Enter Leader appraisal scores from BEFORE this system existed — for historical performance tracking, not for Service Charge calculations.",
       settings: "Change your own PIN and view your profile — Name, Employee ID, Job Title, Department, Tier.",
-      staffMapping: "See who evaluates whom for every Staff/Leader/Management — calculated automatically from Config_PositionMap, not typed in manually.",
       sc: "Enter the monthly Total Service Charge — once entered, the system automatically calculates deductions from Underperformers and distributes the pool evenly to Performers.",
     },
   };
@@ -2132,7 +2127,6 @@ function availableScreensGrouped(user) {
     add("trainingNeeds", t("menu_training_needs"));
     add("feedback", t("menu_read_feedback"));
     add("historical", t("menu_input_historical"));
-    if (user.hasStaffMappingAccess) add("staffMapping", t("menu_staff_mapping"));
     return [
       { name: "MyTeams", items },
       { name: "DevTools", items: [{ key: "devTools", label: "🛠️ Dev Tools (Superadmin)" }] },
@@ -2195,12 +2189,6 @@ function availableScreensGrouped(user) {
 
   // "Pengaturan Akun" moved to a persistent topbar icon (⚙️), not a menu item — it's
   // universal and always-accessible, doesn't need to live inside role-specific menus.
-  const settingsItems = [];
-  if (user.hasStaffMappingAccess) {
-    settingsItems.push({ key: "staffMapping", label: t("menu_staff_mapping") });
-  }
-  if (settingsItems.length) groups.push({ name: "MySettings", items: settingsItems });
-
   if (user.isSuperAdmin) {
     groups.push({ name: "DevTools", items: [
       { key: "devTools", label: "🛠️ Dev Tools (Superadmin)" },
@@ -4367,413 +4355,6 @@ async function doImportKpiFromWorkbook() {
     btn.disabled = false;
     btn.textContent = originalLabel;
   }
-}
-
-async function doExportStaffMapping() {
-  const noteEl = document.getElementById("staff-mapping-export-note");
-  noteEl.textContent = t("sm_export_generating");
-  const res = await apiPost("exportStaffMapping", { requesterId: state.user.staffId, businessUnitFilter: state._staffMappingUnitFilter || "" });
-  if (res.error || res.success === false) {
-    noteEl.textContent = t("sm_export_failed_prefix") + " " + friendlyError(res.error);
-    return;
-  }
-  noteEl.innerHTML = `${t("sm_export_ready_prefix")} (${res.rowCount} ${t("sm_export_ready_suffix")} <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">${t("sm_export_open_link")}</a> ${t("sm_export_next_step")}`;
-}
-
-function switchStaffMappingUnit(unit) {
-  state._staffMappingUnitFilter = unit;
-  renderStaffMapping();
-}
-
-async function renderStaffMapping() {
-  app.innerHTML = topbar("Staff Mapping") + `<div class="loading">${t("form_loading")}</div>`;
-  const res = await apiGet("getStaffMapping", { requesterId: state.user.staffId, businessUnitFilter: state._staffMappingUnitFilter || "" });
-  const showMenuLink = availableScreens(state.user).length > 1;
-
-  if (!res.found) {
-    app.innerHTML = topbar("Staff Mapping") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
-    return;
-  }
-
-  state._staffMappingUnitFilter = res.currentUnit; // keep in sync with whatever the backend actually resolved (first load = requester's own unit)
-
-  const rows = res.rows || [];
-  state._staffMappingCandidates = res.candidates || { leaders: [], managements: [], executives: [] };
-  state._staffMappingSortCriteria = [];
-
-  const deptKeys = [...new Set([
-    ...rows.filter(r => r.department !== "-").map(r => r.department),
-    ...rows.flatMap(r => r.oversees || []),
-  ])].sort();
-  const tierKeys = ["Staff", "Leader", "Management"];
-
-  // Which of the Leader/Management/Executive columns actually apply, based on the
-  // TARGET's own tier — generalized to mirror the backend's isValidSuperiorTierForTarget
-  // (evaluator's tier rank same-or-higher than the target's; Staff targets require
-  // STRICTLY higher, never a Staff peer). This used to be a fixed pairs list (Staff:
-  // Leader/Management only, Leader: Management only, Management: none) before same-tier
-  // (a Management managing another Management, e.g. Gym's Operational Manager over the FOH
-  // Manager) and skip-level (an Executive evaluating a Leader directly, e.g. Gym's Fitness
-  // Manager over the Head Coach) became real needs. Executive-tier ROWS still get no
-  // columns at all — Executive stays purely informational/never assignable as a target,
-  // unchanged. Whichever checklist(s) get checked here really do control who's allowed to
-  // submit that person's appraisal (see getEvaluatorSlotsForEmployees on the backend) —
-  // this isn't just a display, it's the actual access control.
-  const TIER_RANK = { Staff: 1, Leader: 2, Management: 3, Executive: 4 };
-  const COLUMN_TIER = { leader: "Leader", management: "Management", executive: "Executive" };
-  const isColumnApplicable = (targetTier, columnKey) => {
-    if (targetTier === "Executive" || !targetTier) return false;
-    const targetRank = TIER_RANK[targetTier] || 0;
-    const columnRank = TIER_RANK[COLUMN_TIER[columnKey]] || 0;
-    if (targetTier === "Staff") return columnRank > targetRank;
-    return columnRank >= targetRank;
-  };
-
-  // Builds one checklist popover (trigger button + hidden panel). `scope` keeps row vs.
-  // bulk IDs from colliding; `rowStaffId` is '' for the bulk bar (no single target yet).
-  const buildChecklistColumn = (scope, rowStaffId, columnKey, candidates, selectedIds, autoLabel) => {
-    const domId = `superior-${scope}-${rowStaffId || "bulk"}-${columnKey}`;
-    const selectedNames = candidates.filter(c => selectedIds.includes(String(c.staffId))).map(c => c.name);
-    const isOverridden = selectedNames.length > 0;
-    // Joining every selected name used to make the closed trigger button balloon in width
-    // once 2-3+ people were picked ("Malik Atma Setiawan, Ida Bagus Made Widyadnyana Putra,
-    // I Putu Eva Sanjaya" as ONE line). Collapse to a count instead once there's more than
-    // one — the full names are still right there, fully readable, the moment the panel
-    // opens; nothing is lost, just kept out of the closed button.
-    const triggerLabel = isOverridden
-      ? (selectedNames.length === 1 ? selectedNames[0] : `${selectedNames.length} ${t("sm_bulk_selected_suffix")}`)
-      : (autoLabel || t("sm_auto_label"));
-    return `
-      <div class="superior-ms" data-row-staffid="${rowStaffId}" data-column="${columnKey}">
-        <button type="button" class="superior-ms-trigger ${isOverridden ? "is-overridden" : ""}" id="trigger-${domId}" data-auto-label="${escapeAttr(autoLabel || t("sm_auto_label"))}" onclick="toggleSuperiorPanel('${domId}')">
-          <span class="ms-label">${triggerLabel}</span><span class="ms-chevron">▾</span>
-        </button>
-        <div class="superior-ms-panel hidden" id="panel-${domId}">
-          ${candidates.length ? candidates.map(c => `
-            <label class="ms-option">
-              <input type="checkbox" value="${c.staffId}" data-name="${escapeAttr(c.name)}" ${selectedIds.includes(String(c.staffId)) ? "checked" : ""} onchange="onSuperiorCheckboxChange('${scope}', '${rowStaffId}')">
-              <span>${c.name}</span>
-            </label>`).join("") : `<div class="hint" style="padding:8px;">${t("sm_no_candidates")}</div>`}
-        </div>
-      </div>`;
-  };
-
-  const rowHtml = (r) => {
-    const colCell = (columnKey, candidates, autoLabel) => isColumnApplicable(r.tier, columnKey)
-      ? `<div class="col-${columnKey}">${buildChecklistColumn("row", r.staffId, columnKey, candidates, (r.evaluatorStaffIds || []).map(String), autoLabel)}</div>`
-      : `<div class="col-${columnKey} col-na">—</div>`;
-
-    return `
-      <div class="mapping-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-name="${escapeAttr(r.name)}" data-tier="${r.tier}" data-jobtitle="${escapeAttr(r.jobTitle)}" data-department="${escapeAttr(r.department)}" data-oversees="${escapeAttr((r.oversees || []).join(','))}">
-        <div class="col-name">
-          <input type="checkbox" class="mapping-checkbox" data-staffid="${r.staffId}" onchange="onStaffMappingCheckboxChange(this)">
-          <div>
-            <div class="cell-name">${r.name}</div>
-            ${r.department !== "-" ? `<div class="cell-sub">${r.department}</div>` : ""}
-          </div>
-        </div>
-        <div class="col-jobtitle">${r.jobTitle}</div>
-        <div class="col-tier"><span class="tier-pill">${r.tier}</span></div>
-        ${colCell("leader", state._staffMappingCandidates.leaders, r.autoLeaderLabel)}
-        ${colCell("management", state._staffMappingCandidates.managements, r.autoManagementLabel)}
-        ${colCell("executive", state._staffMappingCandidates.executives, r.autoExecutiveLabel)}
-        <div class="mapping-save-flash" id="superior-save-note-${r.staffId}" style="grid-column: 1 / -1; margin-left: 26px;"></div>
-      </div>`;
-  };
-
-  app.innerHTML = topbar("Staff Mapping") + `
-    ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
-    <div class="card">
-      <h2>Staff Mapping</h2>
-      ${res.canSwitchUnits ? `
-        <div class="row-flex" style="margin-bottom:10px;">
-          ${[["fnb", "F&B"], ["gym", "Gym"], ["backoffice", "Back Office"]].map(([key, label]) => `
-            <button class="${res.currentUnit === key ? "primary" : "secondary"}" style="flex:1;" onclick="switchStaffMappingUnit('${key}')">${label}</button>`).join("")}
-        </div>
-      ` : ""}
-      <div class="hint" style="margin-bottom:10px;">${rows.length} ${t("sm_hint")}</div>
-      <button class="secondary" onclick="doExportStaffMapping()" style="margin-bottom:6px;">${t("sm_export_excel_btn")}</button>
-      <div class="hint" id="staff-mapping-export-note" style="margin-bottom:10px;"></div>
-      <input type="text" placeholder="${t("sm_search_placeholder")}" oninput="updateStaffMappingFilter('search', this.value)" style="margin-bottom:10px;" />
-      <div class="row-flex" style="margin-bottom:4px;">
-        <select onchange="updateStaffMappingFilter('tier', this.value)">
-          <option value="">${t("sm_all_tier")}</option>
-          ${tierKeys.map(t => `<option value="${t}">${t}</option>`).join("")}
-        </select>
-        <select onchange="updateStaffMappingFilter('department', this.value)">
-          <option value="">${t("sm_all_department")}</option>
-          ${deptKeys.map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
-        </select>
-      </div>
-    </div>
-    <div class="bulk-bar" id="staff-mapping-bulk-bar">
-      <div class="bulk-top-row">
-        <span class="bulk-count" id="staff-mapping-bulk-count">0 ${t("sm_bulk_selected_suffix")}</span>
-        <div class="bulk-checklists" id="staff-mapping-bulk-checklists"></div>
-        <button class="bulk-apply" onclick="applyBulkStaffSuperior()">${t("sm_bulk_apply_btn")}</button>
-        <button class="bulk-cancel" onclick="clearStaffMappingSelection()">${t("sm_bulk_cancel_btn")}</button>
-      </div>
-      <div class="bulk-warn" id="staff-mapping-bulk-warn" style="display:none;"></div>
-    </div>
-    <div class="card">
-      <div class="mapping-row head">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <input type="checkbox" class="mapping-checkbox" id="mapping-select-all" onchange="toggleStaffMappingSelectAll(this.checked)">
-          <span class="sortable-th" onclick="sortStaffMappingList('name')" id="sort-th-name">${t("sm_col_name")}<span class="sort-arrow" id="sort-arrow-name"></span></span>
-        </div>
-        <div class="sortable-th" onclick="sortStaffMappingList('jobTitle')" id="sort-th-jobTitle">${t("sm_col_jobtitle")}<span class="sort-arrow" id="sort-arrow-jobTitle"></span></div>
-        <div class="sortable-th" onclick="sortStaffMappingList('tier')" id="sort-th-tier">Tier<span class="sort-arrow" id="sort-arrow-tier"></span></div>
-        <div>Leader</div>
-        <div>Management</div>
-        <div>Executive</div>
-      </div>
-      <div id="staff-mapping-list-container">
-        ${rows.map(rowHtml).join("")}
-      </div>
-      <div class="hint" id="staff-mapping-empty-note" style="display:none; text-align:center; padding:16px 0;">${t("sm_no_match")}</div>
-    </div>
-  `;
-
-  // Close any open checklist popover on an outside click — attached once per render since
-  // the whole screen HTML gets replaced each time renderStaffMapping runs.
-  document.addEventListener("click", staffMappingOutsideClickHandler);
-}
-
-function staffMappingOutsideClickHandler(e) {
-  if (e.target.closest(".superior-ms")) return;
-  document.querySelectorAll(".superior-ms-panel").forEach(p => p.classList.add("hidden"));
-}
-
-/** Panels used to be position:absolute relative to their trigger, which looked fine until
- *  a row near the bottom of a .card opened one — .card has overflow:hidden (for its
- *  rounded corners), which silently clipped the panel instead of letting it show fully.
- *  Fixed positioning computed from the trigger's actual on-screen rect escapes that
- *  clipping entirely (fixed elements aren't contained by an ancestor's overflow), and lets
- *  the panel flip to open UPWARD instead of down when there isn't enough room below. */
-function toggleSuperiorPanel(domId) {
-  const panel = document.getElementById(`panel-${domId}`);
-  const trigger = document.getElementById(`trigger-${domId}`);
-  if (!panel || !trigger) return;
-  const willOpen = panel.classList.contains("hidden");
-  document.querySelectorAll(".superior-ms-panel").forEach(p => p.classList.add("hidden"));
-  if (!willOpen) return;
-
-  const rect = trigger.getBoundingClientRect();
-  const panelWidth = Math.min(Math.max(rect.width, 220), 320);
-  let left = rect.left;
-  const maxLeft = window.innerWidth - panelWidth - 8;
-  if (left > maxLeft) left = Math.max(8, maxLeft);
-
-  const assumedPanelHeight = 260; // matches the CSS max-height cap
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const openUpward = spaceBelow < assumedPanelHeight + 12 && rect.top > assumedPanelHeight;
-
-  panel.style.left = `${left}px`;
-  panel.style.width = `${panelWidth}px`;
-  panel.style.top = openUpward ? "" : `${rect.bottom + 4}px`;
-  panel.style.bottom = openUpward ? `${window.innerHeight - rect.top + 4}px` : "";
-  panel.classList.remove("hidden");
-}
-
-/** Fires on ANY checkbox change within one of a row's (up to 2) applicable checklist
- *  columns — reads every currently-checked box across all of that row's columns (they're
- *  grouped by data-row-staffid) and saves the union as that person's full override set in
- *  one call, so ticking a Leader box and a Management box for the same person both persist
- *  together instead of overwriting each other. */
-async function onSuperiorCheckboxChange(scope, rowStaffId) {
-  if (scope === "bulk") return; // bulk saves explicitly via the "Terapkan" button instead
-  const checked = Array.from(document.querySelectorAll(`.superior-ms[data-row-staffid="${rowStaffId}"] input[type=checkbox]:checked`)).map(cb => cb.value);
-  const noteEl = document.getElementById(`superior-save-note-${rowStaffId}`);
-  if (noteEl) { noteEl.textContent = t("sm_saving"); noteEl.style.color = "var(--text-muted)"; }
-  const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId: rowStaffId, evaluatorStaffIds: checked });
-  if (res.error || res.success === false) {
-    if (noteEl) { noteEl.textContent = t("sm_save_failed_prefix") + " " + friendlyError(res.error); noteEl.style.color = "var(--red)"; }
-    return;
-  }
-  if (noteEl && res.warnings && res.warnings.length) {
-    noteEl.textContent = "⚠️ " + res.warnings.join(" ");
-    noteEl.style.color = "var(--amber)";
-  } else if (noteEl) {
-    noteEl.textContent = "";
-  }
-  document.querySelectorAll(`.superior-ms[data-row-staffid="${rowStaffId}"]`).forEach(msEl => {
-    const panel = msEl.querySelector(".superior-ms-panel");
-    const trigger = msEl.querySelector(".superior-ms-trigger");
-    const label = trigger.querySelector(".ms-label");
-    const checkedNames = Array.from(panel.querySelectorAll("input[type=checkbox]:checked")).map(cb => cb.dataset.name);
-    if (checkedNames.length) {
-      label.textContent = checkedNames.join(", ");
-      trigger.classList.add("is-overridden");
-    } else {
-      label.textContent = trigger.dataset.autoLabel;
-      trigger.classList.remove("is-overridden");
-    }
-  });
-  if (noteEl) { noteEl.textContent = t("sm_saved"); noteEl.style.color = "var(--green)"; setTimeout(() => { if (noteEl) noteEl.textContent = ""; }, 2000); }
-}
-
-function toggleStaffMappingSelectAll(checked) {
-  document.querySelectorAll("#staff-mapping-list-container .mapping-row").forEach(row => {
-    if (row.style.display !== "none") {
-      const cb = row.querySelector(".mapping-checkbox");
-      if (cb) { cb.checked = checked; row.classList.toggle("selected", checked); }
-    }
-  });
-  updateStaffMappingBulkBar();
-}
-
-function onStaffMappingCheckboxChange(checkbox) {
-  checkbox.closest(".mapping-row").classList.toggle("selected", checkbox.checked);
-  updateStaffMappingBulkBar();
-}
-
-/** Bulk bar shows the same Leader/Management/Executive checklists as each row — Executive
- *  used to be excluded here since it was purely informational everywhere, but it's now a
- *  real assignable option too (see isColumnApplicable in renderStaffMapping, for skip-level
- *  cases like an Executive evaluating a Leader directly). Checking boxes here doesn't save
- *  immediately (unlike per-row) — it waits for "Terapkan" since it's about to overwrite
- *  MULTIPLE people at once. */
-function updateStaffMappingBulkBar() {
-  const checked = Array.from(document.querySelectorAll(".mapping-checkbox[data-staffid]:checked"));
-  const bar = document.getElementById("staff-mapping-bulk-bar");
-  if (!checked.length) { bar.style.display = "none"; return; }
-
-  const container = document.getElementById("staff-mapping-bulk-checklists");
-  // Only (re)build the checklist markup the first time the bar opens from empty — rebuilding
-  // on every checkbox click would wipe out selections the person already made in the panel.
-  if (!container.dataset.built) {
-    const buildBulkColumn = (columnKey, label, candidates) => `
-      <div class="superior-ms" data-row-staffid="" data-column="${columnKey}">
-        <button type="button" class="superior-ms-trigger" id="trigger-superior-bulk-bulk-${columnKey}" onclick="toggleSuperiorPanel('superior-bulk-bulk-${columnKey}')">
-          <span class="ms-label">${label}</span><span class="ms-chevron">▾</span>
-        </button>
-        <div class="superior-ms-panel hidden" id="panel-superior-bulk-bulk-${columnKey}">
-          ${candidates.map(c => `
-            <label class="ms-option">
-              <input type="checkbox" value="${c.staffId}" data-name="${escapeAttr(c.name)}" onchange="onSuperiorCheckboxChange('bulk','')">
-              <span>${c.name}</span>
-            </label>`).join("")}
-        </div>
-      </div>`;
-    container.innerHTML =
-      buildBulkColumn("leader", "+ Leader", state._staffMappingCandidates.leaders) +
-      buildBulkColumn("management", "+ Management", state._staffMappingCandidates.managements) +
-      buildBulkColumn("executive", "+ Executive", state._staffMappingCandidates.executives);
-    container.dataset.built = "true";
-  }
-
-  document.getElementById("staff-mapping-bulk-count").textContent = `${checked.length} ${t("sm_bulk_selected_suffix")}`;
-  bar.style.display = "flex";
-}
-
-function clearStaffMappingSelection() {
-  document.querySelectorAll(".mapping-checkbox").forEach(cb => { cb.checked = false; });
-  document.querySelectorAll(".mapping-row.selected").forEach(row => row.classList.remove("selected"));
-  const container = document.getElementById("staff-mapping-bulk-checklists");
-  if (container) { container.innerHTML = ""; delete container.dataset.built; }
-  updateStaffMappingBulkBar();
-}
-
-async function applyBulkStaffSuperior() {
-  const checked = Array.from(document.querySelectorAll(".mapping-checkbox[data-staffid]:checked"));
-  if (!checked.length) return;
-  const evaluatorStaffIds = Array.from(document.querySelectorAll("#staff-mapping-bulk-checklists input[type=checkbox]:checked")).map(cb => cb.value);
-  const applyBtn = document.querySelector(".bulk-bar .bulk-apply");
-  applyBtn.disabled = true;
-  applyBtn.textContent = `${t("sm_bulk_saving_prefix")} 0/${checked.length}...`;
-  let done = 0;
-  const allWarnings = [];
-  for (const cb of checked) {
-    const staffId = cb.dataset.staffid;
-    const res = await apiPost("setStaffSuperior", { requesterId: state.user.staffId, staffId, evaluatorStaffIds });
-    if (res.warnings && res.warnings.length) allWarnings.push(...res.warnings);
-    done++;
-    applyBtn.textContent = `${t("sm_bulk_saving_prefix")} ${done}/${checked.length}...`;
-  }
-  showToast(`✅ ${checked.length} ${t("sm_bulk_updated_toast")}`);
-  if (allWarnings.length) {
-    showToast(`⚠️ ${allWarnings.length} assignment kelihatan gak nyambung department — cek lagi: ${allWarnings.slice(0, 2).join(" | ")}${allWarnings.length > 2 ? " ..." : ""}`, "error");
-  }
-  renderStaffMapping();
-}
-
-function updateStaffMappingFilter(key, value) {
-  state._staffMappingFilters = state._staffMappingFilters || {};
-  state._staffMappingFilters[key] = value;
-  const f = state._staffMappingFilters;
-  let visibleCount = 0;
-  document.querySelectorAll("#staff-mapping-list-container .mapping-row").forEach(row => {
-    let show = true;
-    if (f.search && !row.dataset.search.includes(f.search.toLowerCase())) show = false;
-    if (f.tier && row.dataset.tier !== f.tier) show = false;
-    if (f.department) {
-      const oversees = (row.dataset.oversees || "").split(",").filter(Boolean);
-      const matchesDept = row.dataset.department === f.department || oversees.includes(f.department);
-      if (!matchesDept) show = false;
-    }
-    row.style.display = show ? "" : "none";
-    if (show) visibleCount++;
-  });
-  const emptyNote = document.getElementById("staff-mapping-empty-note");
-  if (emptyNote) emptyNote.style.display = visibleCount === 0 ? "" : "none";
-}
-
-/** Click-to-sort on the table headers, STACKING criteria instead of replacing them —
- *  clicking Tier then Job Title sorts by Tier first, and within each Tier group by Job
- *  Title, both active together. Cycles per column on repeat clicks: unsorted -> ascending
- *  -> descending -> back to unsorted (removed from the stack entirely), so there's always
- *  a way to cancel out of a sort instead of being stuck flipping between asc/desc forever.
- *  A brand-new column starts at ascending and is appended as the next (lower-priority)
- *  tiebreaker. */
-function sortStaffMappingList(column) {
-  const container = document.getElementById("staff-mapping-list-container");
-  if (!container) return;
-  state._staffMappingSortCriteria = state._staffMappingSortCriteria || [];
-  const criteria = state._staffMappingSortCriteria;
-  const existingIdx = criteria.findIndex(c => c.column === column);
-  if (existingIdx === -1) {
-    criteria.push({ column, dir: "asc" });
-  } else if (criteria[existingIdx].dir === "asc") {
-    criteria[existingIdx].dir = "desc";
-  } else {
-    criteria.splice(existingIdx, 1); // 3rd click on the same column — cancel it entirely
-  }
-
-  const keyMap = { name: "name", tier: "tier", jobTitle: "jobtitle" };
-  const rows = Array.from(container.querySelectorAll(":scope > .mapping-row"));
-  if (criteria.length) {
-    rows.sort((a, b) => {
-      for (const c of criteria) {
-        const key = keyMap[c.column];
-        const cmp = (a.dataset[key] || "").localeCompare(b.dataset[key] || "");
-        if (cmp !== 0) return c.dir === "asc" ? cmp : -cmp;
-      }
-      return 0;
-    });
-    rows.forEach(r => container.appendChild(r));
-  }
-
-  ["name", "tier", "jobTitle"].forEach(c => {
-    const arrowEl = document.getElementById(`sort-arrow-${c}`);
-    const thEl = document.getElementById(`sort-th-${c}`);
-    if (!arrowEl || !thEl) return;
-    const idx = criteria.findIndex(x => x.column === c);
-    if (idx === -1) {
-      arrowEl.innerHTML = "";
-      thEl.classList.remove("active");
-    } else {
-      const dirArrow = criteria[idx].dir === "asc" ? "▲" : "▼";
-      const priorityBadge = criteria.length > 1 ? `<sup>${idx + 1}</sup>` : "";
-      arrowEl.innerHTML = ` ${dirArrow}${priorityBadge}`;
-      thEl.classList.add("active");
-    }
-  });
-}
-
-async function doSetStaffSuperior(staffId) {
-  // Superseded by onSuperiorCheckboxChange (the single <select> this used to drive was
-  // replaced by the 3-column checklist). Kept as a no-op stub only in case anything stale
-  // still references it.
 }
 
 async function renderHistoricalInput() {

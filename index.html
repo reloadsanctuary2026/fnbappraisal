@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-262-warn-evaluator-on-negative-score-floor — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-263-backoffice-rule-priority-fix — LIVE</div>
 
 <script>
 // =================================================================
@@ -4016,7 +4016,7 @@ async function renderDevTools() {
     </div>
     <div class="card">
       <h2>🔀 Tahap Evaluasi per Job Title / Department</h2>
-      <div class="hint" style="margin-bottom:10px;">Default: 3 tahap aktif, kecuali HR (Self+Leader aja). Override per Job Title/Department di sini — per-orang, atur langsung di Struktur & Rantai Appraisal.</div>
+      <div class="hint" style="margin-bottom:10px;">Buat F&B/Gym aja — SELURUH Back Office otomatis Self+Leader (gak bisa ditimpa di sini, cuma per-orang di Struktur & Rantai Appraisal).</div>
       <div class="row-flex" style="margin-bottom:8px;">
         <select id="stage-scope-type" onchange="updateStageScopeInput()">
           <option value="JobTitle">Job Title</option>

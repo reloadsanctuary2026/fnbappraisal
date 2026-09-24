@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-260-remove-staff-mapping — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-261-floor-negative-scores-at-zero — LIVE</div>
 
 <script>
 // =================================================================
@@ -3971,11 +3971,17 @@ async function doRecomputeForgottenHrScores(btnEl) {
 
   const autoFixed = res.autoFixed || [];
   const needsReview = res.needsManualReview || [];
-  if (!autoFixed.length && !needsReview.length) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Gak ada yang skor HR-nya 0.0 bulan ini.</div>`;
+  const negativeScoresFixed = res.negativeScoresFixed || [];
+  if (!autoFixed.length && !needsReview.length && !negativeScoresFixed.length) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Gak ada skor HR 0.0 atau skor negatif bulan ini.</div>`;
     return;
   }
   resultEl.innerHTML = `
+    ${negativeScoresFixed.length ? `
+      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
+        <strong style="color:var(--red);">🔴 ${negativeScoresFixed.length} skor NEGATIF dibenerin ke 0:</strong>
+        ${negativeScoresFixed.map(n => `<div class="hint" style="margin-top:4px;">${escapeAttr(n.name)} (${n.evaluatorType}): ${n.oldValue} → 0</div>`).join("")}
+      </div>` : ""}
     ${autoFixed.length ? `
       <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
         <strong style="color:var(--teal);">✅ ${autoFixed.length} langsung dibenerin otomatis:</strong>
@@ -4000,8 +4006,8 @@ async function renderDevTools() {
       <button class="primary" style="background:#fff; color:var(--teal);" onclick="navigateToScreen('orgStructure')">Buka Struktur & Rantai Appraisal</button>
     </div>
     <div class="card" style="background:var(--coral); border:none;">
-      <h2 style="color:#fff;">🔧 Benerin Skor HR yang Kelupaan (0.0)</h2>
-      <div class="hint" style="color:#fff; margin-bottom:10px;">Cari yang skor HR-nya PERSIS 0.0 (kemungkinan lupa isi), hitung ulang tanpa bobot HR. Yang udah di-Approve gak disentuh otomatis.</div>
+      <h2 style="color:#fff;">🔧 Benerin Skor Bermasalah (0.0 / Negatif)</h2>
+      <div class="hint" style="color:#fff; margin-bottom:10px;">Cari skor HR PERSIS 0.0 (lupa isi) dan skor NEGATIF di evaluator manapun (deduksi kebablasan) — dibenerin otomatis. Yang udah di-Approve gak disentuh, cuma direview manual.</div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <input type="text" id="recompute-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
         <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRecomputeForgottenHrScores(this)">Cari & Benerin</button>

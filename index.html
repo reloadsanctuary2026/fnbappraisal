@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-263-backoffice-rule-priority-fix — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-264-stage-override-shows-backoffice-locked — LIVE</div>
 
 <script>
 // =================================================================
@@ -432,6 +432,7 @@ function findLabel(options, value) {
 
 function friendlyError(code) {
   const map = {
+    backoffice_override_has_no_effect: "Ini Back Office — otomatis Self+Leader, override di sini gak akan ngefek.",
     decision_required: "Decision belum dipilih.",
     one_on_one_status_required: "1-on-1 Status belum dipilih.",
     notes_required: "Catatan belum diisi.",
@@ -2928,22 +2929,25 @@ async function doLoadStageStatus() {
   // For NIK specifically, the backend resolves the REAL default (respects the
   // HR-department auto-exception) instead of guessing from the raw text here.
   const fallbackDefault = res.defaultStages || { self: true, leader: true, hr: !(scopeType === "Department" && /human resources|\bhr\b/i.test(scopeValue)) };
-  const self = res.hasOverride ? res.self : fallbackDefault.self;
-  const leader = res.hasOverride ? res.leader : fallbackDefault.leader;
-  const hr = res.hasOverride ? res.hr : fallbackDefault.hr;
+  const self = res.isBackOfficeLocked ? true : (res.hasOverride ? res.self : fallbackDefault.self);
+  const leader = res.isBackOfficeLocked ? true : (res.hasOverride ? res.leader : fallbackDefault.leader);
+  const hr = res.isBackOfficeLocked ? false : (res.hasOverride ? res.hr : fallbackDefault.hr);
 
   resultsEl.innerHTML = `
     ${res.name ? `<div style="font-weight:700; margin-bottom:4px;">${res.name}</div>` : ""}
-    <div class="hint" style="margin-bottom:8px;">${res.hasOverride ? "🔧 Ada override manual aktif." : "⚙️ Belum ada override — pakai aturan otomatis."}</div>
+    ${res.isBackOfficeLocked
+      ? `<div class="hint" style="margin-bottom:8px; color:var(--red); font-weight:600;">🔒 Ini Back Office — otomatis Self+Leader, HR mati. Gak bisa ditimpa di sini, cuma per-orang di Struktur & Rantai Appraisal.</div>`
+      : `<div class="hint" style="margin-bottom:8px;">${res.hasOverride ? "🔧 Ada override manual aktif." : "⚙️ Belum ada override — pakai aturan otomatis."}</div>`}
     <div class="row-flex" style="margin-bottom:6px;">
-      <label style="flex:1;"><input type="checkbox" id="stage-self" ${self ? "checked" : ""} /> Self</label>
-      <label style="flex:1;"><input type="checkbox" id="stage-leader" ${leader ? "checked" : ""} /> Leader/Management</label>
-      <label style="flex:1;"><input type="checkbox" id="stage-hr" ${hr ? "checked" : ""} /> HR</label>
+      <label style="flex:1;"><input type="checkbox" id="stage-self" ${self ? "checked" : ""} ${res.isBackOfficeLocked ? "disabled" : ""} /> Self</label>
+      <label style="flex:1;"><input type="checkbox" id="stage-leader" ${leader ? "checked" : ""} ${res.isBackOfficeLocked ? "disabled" : ""} /> Leader/Management</label>
+      <label style="flex:1;"><input type="checkbox" id="stage-hr" ${hr ? "checked" : ""} ${res.isBackOfficeLocked ? "disabled" : ""} /> HR</label>
     </div>
+    ${res.isBackOfficeLocked ? "" : `
     <div class="row-flex">
       <button class="primary" onclick="doSaveStageOverride('${scopeType}', '${escapeAttr(scopeValue)}')">Simpan Override</button>
       ${res.hasOverride ? `<button class="ghost" onclick="doClearStageOverride('${scopeType}', '${escapeAttr(scopeValue)}')">Reset ke Otomatis</button>` : ""}
-    </div>
+    </div>`}
     <div class="hint" id="stage-save-note" style="margin-top:8px;"></div>
   `;
 }

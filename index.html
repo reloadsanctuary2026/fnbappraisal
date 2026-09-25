@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-22-264-stage-override-shows-backoffice-locked — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-265-dedupe-report-menu-items — LIVE</div>
 
 <script>
 // =================================================================
@@ -2162,30 +2162,22 @@ function availableScreensGrouped(user) {
   }
   if (teamItems.length) groups.push({ name: "MyTeams", items: teamItems });
 
-  if (user.isExecutive) {
-    groups.push({ name: "MyReport", items: [
+  // FIX (23/09/2026): isExecutive / isHR / isAdminOperational are NOT mutually exclusive —
+  // someone can hold more than one (Yonatha: HR + Tier-overridden to Executive) — so all
+  // their applicable items (role-specific ones plus the shared trio) are collected into ONE
+  // group instead of each role-check independently pushing its own identical copy of
+  // review/feedback/trainingNeeds.
+  if (user.isHR || user.isExecutive || user.isAdminOperational) {
+    const reportGroupItems = [];
+    if (user.isHR) reportGroupItems.push({ key: "myEvaluationsHR", label: user.appraiseLabel || t("menu_appraise_all") });
+    if (user.isAdminOperational) reportGroupItems.push({ key: "historical", label: t("menu_input_historical") });
+    reportGroupItems.push(
       { key: "review", label: t("menu_review_all") },
       { key: "feedback", label: t("menu_read_feedback") },
       { key: "trainingNeeds", label: t("menu_training_needs") },
-    ]});
-  }
-
-  if (user.isHR) {
-    groups.push({ name: "MyHR", items: [
-      { key: "myEvaluationsHR", label: user.appraiseLabel || t("menu_appraise_all") },
-      { key: "review", label: t("menu_review_all") },
-      { key: "feedback", label: t("menu_read_feedback") },
-      { key: "trainingNeeds", label: t("menu_training_needs") },
-    ]});
-  }
-
-  if (user.isAdminOperational) {
-    groups.push({ name: "MyOperational", items: [
-      { key: "historical", label: t("menu_input_historical") },
-      { key: "review", label: t("menu_review_all") },
-      { key: "feedback", label: t("menu_read_feedback") },
-      { key: "trainingNeeds", label: t("menu_training_needs") },
-    ]});
+    );
+    const groupName = user.isHR ? "MyHR" : user.isExecutive ? "MyReport" : "MyOperational";
+    groups.push({ name: groupName, items: reportGroupItems });
   }
 
   // "Pengaturan Akun" moved to a persistent topbar icon (⚙️), not a menu item — it's

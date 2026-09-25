@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-265-dedupe-report-menu-items — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-268-bulk-recopy-leader-to-hr-tool — LIVE</div>
 
 <script>
 // =================================================================
@@ -432,6 +432,9 @@ function findLabel(options, value) {
 
 function friendlyError(code) {
   const map = {
+    record_not_found: "Gak ketemu record buat NIK dan bulan itu.",
+    not_currently_approved: "Record ini belum/gak lagi berstatus Approved — gak ada yang perlu di-revert.",
+    reason_required: "Alasan wajib diisi.",
     backoffice_override_has_no_effect: "Ini Back Office — otomatis Self+Leader, override di sini gak akan ngefek.",
     decision_required: "Decision belum dipilih.",
     one_on_one_status_required: "1-on-1 Status belum dipilih.",
@@ -3948,6 +3951,104 @@ async function doDeletePositionMapEntry(idx) {
   await renderOrgStructure();
 }
 
+async function doFindSuspiciousHrScores(btnEl) {
+  const month = document.getElementById("suspicious-hr-month").value.trim();
+  const threshold = document.getElementById("suspicious-hr-threshold").value.trim();
+  const resultEl = document.getElementById("suspicious-hr-result");
+  btnEl.disabled = true;
+  const originalLabel = btnEl.textContent;
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Mencari...`;
+
+  const res = await apiGet("findSuspiciousHrScores", { requesterId: state.user.staffId, month: month || undefined, threshold: threshold || undefined });
+  btnEl.disabled = false;
+  btnEl.textContent = originalLabel;
+
+  if (res.error || res.success === false) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
+    return;
+  }
+  const flagged = res.flagged || [];
+  if (!flagged.length) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Gak ada yang selisihnya ≥ ${res.threshold} bulan ini.</div>`;
+    return;
+  }
+  resultEl.innerHTML = `
+    <div style="background:#fff; border-radius:8px; padding:10px;">
+      <strong style="color:var(--red);">⚠️ ${flagged.length} orang selisih HR-nya ≥ ${res.threshold} poin dari rata-rata Self+Leader:</strong>
+      ${flagged.map(f => `
+        <div class="hint" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border); color:var(--text);">
+          <strong>${escapeAttr(f.name)}</strong> (NIK ${f.staffId}) — Self ${f.selfTotal.toFixed(1)}, Leader ${f.leaderTotal.toFixed(1)}, <span style="color:var(--red); font-weight:700;">HR ${f.hrTotal.toFixed(1)}</span> — selisih ${f.deviation}
+        </div>`).join("")}
+    </div>`;
+}
+
+async function doBulkRecopyLeaderToHr(btnEl) {
+  const month = document.getElementById("bulk-recopy-month").value.trim();
+  const resultEl = document.getElementById("bulk-recopy-result");
+  btnEl.disabled = true;
+  const originalLabel = btnEl.textContent;
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Menyamakan ulang...`;
+  resultEl.innerHTML = "";
+
+  const res = await apiPost("bulkRecopyLeaderToHr", { requesterId: state.user.staffId, month: month || undefined });
+  btnEl.disabled = false;
+  btnEl.textContent = originalLabel;
+
+  if (res.error || res.success === false) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
+    return;
+  }
+  const fixed = res.fixed || [];
+  const skippedApproved = res.skippedApproved || [];
+  const skippedNoLeaderCopy = res.skippedNoLeaderCopy || [];
+  if (!fixed.length && !skippedApproved.length && !skippedNoLeaderCopy.length) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Gak ada yang kena bug ini bulan tersebut.</div>`;
+    return;
+  }
+  resultEl.innerHTML = `
+    ${fixed.length ? `
+      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
+        <strong style="color:var(--teal);">✅ ${fixed.length} berhasil disamakan ulang:</strong>
+        ${fixed.map(f => `<div class="hint" style="margin-top:4px;">${escapeAttr(f.name)}</div>`).join("")}
+      </div>` : ""}
+    ${skippedApproved.length ? `
+      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
+        <strong style="color:var(--red);">⚠️ ${skippedApproved.length} udah di-Approve, perlu revert dulu:</strong>
+        ${skippedApproved.map(s => `<div class="hint" style="margin-top:4px;">${escapeAttr(s.name)}</div>`).join("")}
+      </div>` : ""}
+    ${skippedNoLeaderCopy.length ? `
+      <div style="background:#fff; border-radius:8px; padding:10px;">
+        <strong>ℹ️ ${skippedNoLeaderCopy.length} dilewatin (bukan hasil "Samakan", kemungkinan genuinely diisi manual):</strong>
+        ${skippedNoLeaderCopy.map(s => `<div class="hint" style="margin-top:4px;">${escapeAttr(s.name)}</div>`).join("")}
+      </div>` : ""}
+  `;
+}
+
+async function doRevertApproval(btnEl) {
+  const staffId = document.getElementById("revert-approval-staffid").value.trim();
+  const month = document.getElementById("revert-approval-month").value.trim();
+  const reason = document.getElementById("revert-approval-reason").value.trim();
+  const resultEl = document.getElementById("revert-approval-result");
+  if (!staffId || !month || !reason) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">NIK, bulan, dan alasan wajib diisi semua.</div>`;
+    return;
+  }
+  if (!confirm(`Yakin buka kunci Approval buat NIK ${staffId}, bulan ${month}? Record-nya bakal balik ke "Pending" — perlu di-Approve ulang setelah dibenerin.`)) return;
+
+  btnEl.disabled = true;
+  const originalLabel = btnEl.textContent;
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Memproses...`;
+  const res = await apiPost("revertApproval", { requesterId: state.user.staffId, staffId, month, reason });
+  btnEl.disabled = false;
+  btnEl.textContent = originalLabel;
+
+  if (res.error || res.success === false) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
+    return;
+  }
+  resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ ${escapeAttr(res.staffName || staffId)} bulan ${month} udah balik ke "Pending" — sekarang bisa dibenerin/direcompute, terus di-Approve ulang.</div>`;
+}
+
 async function doRecomputeForgottenHrScores(btnEl) {
   const monthInput = document.getElementById("recompute-hr-month").value.trim();
   const resultEl = document.getElementById("recompute-hr-result");
@@ -4009,6 +4110,36 @@ async function renderDevTools() {
         <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRecomputeForgottenHrScores(this)">Cari & Benerin</button>
       </div>
       <div id="recompute-hr-result" style="margin-top:10px;"></div>
+    </div>
+    <div class="card" style="background:var(--teal); border:none;">
+      <h2 style="color:#fff;">🩹 Perbaiki Massal — Samakan Ulang HR yang Ke-0</h2>
+      <div class="hint" style="color:#fff; margin-bottom:10px;">Khusus buat korban bug "Samakan dgn Leader/Mgmt" (v188) — samakan ULANG semua yang HR-nya 0 gara-gara bug itu, pakai fungsi yang udah bener. Cuma nyentuh yang emang hasil "Samakan" (bukan yang genuinely diisi manual jadi 0), dan gak nyentuh yang udah di-Approve.</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="bulk-recopy-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
+        <button class="primary" style="background:#fff; color:var(--teal);" onclick="doBulkRecopyLeaderToHr(this)">Cari & Samakan Ulang</button>
+      </div>
+      <div id="bulk-recopy-result" style="margin-top:10px;"></div>
+    </div>
+    <div class="card" style="background:var(--red); border:none;">
+      <h2 style="color:#fff;">🔓 Revert Approval (per NIK)</h2>
+      <div class="hint" style="color:#fff; margin-bottom:10px;">Buka kunci record yang UDAH di-Approve, biar bisa diedit/dihitung ulang. Skor & data lain gak diubah — cuma status Approval-nya doang yang dibuka. Wajib ada alasan, tercatat permanen (siapa, kapan, kenapa).</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <input type="text" id="revert-approval-staffid" placeholder="NIK" style="flex:1; min-width:100px; padding:8px; border-radius:8px; border:none;" />
+        <input type="text" id="revert-approval-month" placeholder="YYYY-MM" style="flex:1; min-width:100px; padding:8px; border-radius:8px; border:none;" />
+      </div>
+      <input type="text" id="revert-approval-reason" placeholder="Alasan (wajib diisi)" style="width:100%; padding:8px; border-radius:8px; border:none; margin-bottom:8px;" />
+      <button class="primary" style="background:#fff; color:var(--red);" onclick="doRevertApproval(this)">Revert Approval</button>
+      <div id="revert-approval-result" style="margin-top:10px;"></div>
+    </div>
+    <div class="card" style="background:var(--amber); border:none;">
+      <h2 style="color:#fff;">🔍 Cari Skor HR yang Jomplang</h2>
+      <div class="hint" style="color:#fff; margin-bottom:10px;">Cari HR yang beda JAUH dari rata-rata Self+Leader (bukan cuma yang PERSIS 0) — misal Self 74.8, Leader 84.2, tapi HR cuma 5.0. Ini CUMA nampilin daftarnya, gak ngubah data apapun — kamu yang mutusin per orang.</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="suspicious-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:140px; padding:8px; border-radius:8px; border:none;" />
+        <input type="text" id="suspicious-hr-threshold" placeholder="Selisih min. (default 20)" style="flex:1; min-width:140px; padding:8px; border-radius:8px; border:none;" />
+        <button class="primary" style="background:#fff; color:var(--amber);" onclick="doFindSuspiciousHrScores(this)">Cari</button>
+      </div>
+      <div id="suspicious-hr-result" style="margin-top:10px;"></div>
     </div>
     <div class="card">
       <h2>🔀 Tahap Evaluasi per Job Title / Department</h2>
@@ -5346,7 +5477,7 @@ async function renderMyAppraisalStatus(target) {
         <table class="mini">
           <tr><td>Skor Self</td><td>${Number(d.selfTotal || 0).toFixed(1)}</td></tr>
           <tr><td>Skor Leader/Management</td><td>${Number(d.leaderTotal || 0).toFixed(1)}</td></tr>
-          <tr><td>Skor HR</td><td>${Number(d.hrTotal || 0).toFixed(1)}</td></tr>
+          <tr><td>Skor HR</td><td>${Number(d.hrTotal || 0) === 0 ? `<span style="color:var(--red); font-weight:700;">⚠️ Belum diisi lengkap</span>` : Number(d.hrTotal).toFixed(1)}</td></tr>
           <tr><td>Skor Akhir</td><td>${Number(d.finalScore || 0).toFixed(1)}</td></tr>
         </table>
         <div class="hint" style="font-weight:700; color:var(--teal); margin:14px 0 6px;">Breakdown per Section (biar tau bagian mana yang lemah)</div>
@@ -5421,7 +5552,7 @@ async function renderMyAppraisalHistory(staffId) {
       <div class="staff-row" style="cursor:default;">
         <div>
           <div class="name">${monthLabelID(h.month)}</div>
-          <div class="dept">${h.selfTotal === "" && h.hrTotal === "" ? `📜 Data Historis (cuma Leader Appraisal) · Leader ${Number(h.leaderTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}` : `Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}`}</div>
+          <div class="dept">${h.selfTotal === "" && h.hrTotal === "" ? `📜 Data Historis (cuma Leader Appraisal) · Leader ${Number(h.leaderTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}` : `Self ${Number(h.selfTotal||0).toFixed(1)} · Leader/Mgmt ${Number(h.leaderTotal||0).toFixed(1)} · HR ${Number(h.hrTotal||0) === 0 ? "⚠️ belum lengkap" : Number(h.hrTotal||0).toFixed(1)} · Final ${Number(h.finalScore||0).toFixed(1)}`}</div>
           ${h.selfTotal === "" && h.hrTotal === "" ? "" : `<div class="dept" style="margin-top:2px; font-size:11px;">${
             h.customSectionBreakdown && h.customSectionBreakdown.length
               ? h.customSectionBreakdown.map(s => `${s.labelId} ${Number(s.blended || 0).toFixed(1)}/${s.weightPct}`).join(" · ")
@@ -6225,7 +6356,7 @@ async function renderGm() {
                 <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.leaderEvaluatorName || "-"})</span></div>
-                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span></div>
+                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0) === 0 ? `<span style="color:var(--red); font-weight:700;">⚠️ Belum diisi lengkap</span>` : Number(s.hrTotal).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span></div>
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">${t("gm_decision_label_inline")} <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>

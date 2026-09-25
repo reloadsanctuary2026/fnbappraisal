@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-268-bulk-recopy-leader-to-hr-tool — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-271-consolidate-override-tools-devtools — LIVE</div>
 
 <script>
 // =================================================================
@@ -4092,6 +4092,80 @@ async function doRecomputeForgottenHrScores(btnEl) {
   `;
 }
 
+function updateOverrideMode() {
+  const mode = document.getElementById("override-mode").value;
+  const descEl = document.getElementById("override-mode-desc");
+  const controlsEl = document.getElementById("override-mode-controls");
+
+  if (mode === "window") {
+    descEl.textContent = t("dt_override_desc");
+    controlsEl.innerHTML = `
+      <label>${t("dt_nik_label")}</label>
+      <div class="row-flex">
+        <input type="text" id="override-nik-input" placeholder="${t("dt_nik_placeholder")}" style="flex:1;" />
+        <button class="secondary" style="flex:0 0 auto;" onclick="doLoadAccessOverrideStatus()">${t("dt_search_btn")}</button>
+      </div>
+      <div id="access-override-results" style="margin-top:12px;"></div>`;
+  } else if (mode === "quota") {
+    descEl.textContent = "Tiap orang cuma boleh submit 1x per slot per bulan. Kalau ada yang submit dengan struktur KPI yang udah ketinggalan (misal Job Title-nya baru di-redirect/di-migrasi ke struktur baru SETELAH dia submit), pakai ini buat kasih jatah submit 1x lagi — data lama otomatis KETIMPA begitu dia submit ulang, bukan numpuk. Ini CUMA buka kuncinya; data lama TETAP ada sampai orangnya beneran submit ulang.";
+    controlsEl.innerHTML = `
+      <label>NIK Staff</label>
+      <input type="text" id="reset-submission-nik" placeholder="Contoh: 1198" />
+      <label style="margin-top:8px; display:block;">Slot</label>
+      <select id="reset-submission-slot" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
+        <option value="self">Self</option>
+        <option value="leader">Leader</option>
+        <option value="hr">HR</option>
+      </select>
+      <button class="primary" id="reset-submission-btn" style="margin-top:8px;" onclick="doResetSubmissionCount()">Reset Jatah Submit</button>
+      <div id="reset-submission-result" class="hint" style="margin-top:8px;"></div>`;
+  }
+}
+
+function updateScoreHealthMode() {
+  const mode = document.getElementById("score-health-mode").value;
+  const descEl = document.getElementById("score-health-desc");
+  const controlsEl = document.getElementById("score-health-controls");
+  document.getElementById("score-health-result").innerHTML = "";
+
+  if (mode === "autofix") {
+    descEl.textContent = "Cari skor HR PERSIS 0.0 (lupa isi) dan skor NEGATIF di evaluator manapun (deduksi kebablasan) — dibenerin otomatis. Yang udah di-Approve gak disentuh, cuma direview manual.";
+    controlsEl.innerHTML = `
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="recompute-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
+        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRecomputeForgottenHrScores(this)">Cari & Benerin</button>
+      </div>
+      <div id="recompute-hr-result" style="margin-top:10px;"></div>`;
+  } else if (mode === "bulkrecopy") {
+    descEl.textContent = "Khusus buat korban bug \"Samakan dgn Leader/Mgmt\" (v188) — samakan ULANG semua yang HR-nya 0 gara-gara bug itu, pakai fungsi yang udah bener. Cuma nyentuh yang emang hasil \"Samakan\", dan gak nyentuh yang udah di-Approve.";
+    controlsEl.innerHTML = `
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="bulk-recopy-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
+        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doBulkRecopyLeaderToHr(this)">Cari & Samakan Ulang</button>
+      </div>
+      <div id="bulk-recopy-result" style="margin-top:10px;"></div>`;
+  } else if (mode === "detect") {
+    descEl.textContent = "Cari HR yang beda JAUH dari rata-rata Self+Leader (bukan cuma yang PERSIS 0) — misal Self 74.8, Leader 84.2, tapi HR cuma 5.0. Ini CUMA nampilin daftarnya, gak ngubah data apapun — kamu yang mutusin per orang.";
+    controlsEl.innerHTML = `
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="suspicious-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:140px; padding:8px; border-radius:8px; border:none;" />
+        <input type="text" id="suspicious-hr-threshold" placeholder="Selisih min. (default 20)" style="flex:1; min-width:140px; padding:8px; border-radius:8px; border:none;" />
+        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doFindSuspiciousHrScores(this)">Cari</button>
+      </div>
+      <div id="suspicious-hr-result" style="margin-top:10px;"></div>`;
+  } else if (mode === "revert") {
+    descEl.textContent = "Buka kunci record yang UDAH di-Approve, biar bisa diedit/dihitung ulang. Skor & data lain gak diubah — cuma status Approval-nya doang yang dibuka. Wajib ada alasan, tercatat permanen.";
+    controlsEl.innerHTML = `
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+        <input type="text" id="revert-approval-staffid" placeholder="NIK" style="flex:1; min-width:100px; padding:8px; border-radius:8px; border:none;" />
+        <input type="text" id="revert-approval-month" placeholder="YYYY-MM" style="flex:1; min-width:100px; padding:8px; border-radius:8px; border:none;" />
+      </div>
+      <input type="text" id="revert-approval-reason" placeholder="Alasan (wajib diisi)" style="width:100%; padding:8px; border-radius:8px; border:none; margin-bottom:8px;" />
+      <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRevertApproval(this)">Revert Approval</button>
+      <div id="revert-approval-result" style="margin-top:10px;"></div>`;
+  }
+}
+
 async function renderDevTools() {
   if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
   const showMenuLink = availableScreens(state.user).length > 1;
@@ -4103,43 +4177,17 @@ async function renderDevTools() {
       <button class="primary" style="background:#fff; color:var(--teal);" onclick="navigateToScreen('orgStructure')">Buka Struktur & Rantai Appraisal</button>
     </div>
     <div class="card" style="background:var(--coral); border:none;">
-      <h2 style="color:#fff;">🔧 Benerin Skor Bermasalah (0.0 / Negatif)</h2>
-      <div class="hint" style="color:#fff; margin-bottom:10px;">Cari skor HR PERSIS 0.0 (lupa isi) dan skor NEGATIF di evaluator manapun (deduksi kebablasan) — dibenerin otomatis. Yang udah di-Approve gak disentuh, cuma direview manual.</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="recompute-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
-        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRecomputeForgottenHrScores(this)">Cari & Benerin</button>
-      </div>
-      <div id="recompute-hr-result" style="margin-top:10px;"></div>
-    </div>
-    <div class="card" style="background:var(--teal); border:none;">
-      <h2 style="color:#fff;">🩹 Perbaiki Massal — Samakan Ulang HR yang Ke-0</h2>
-      <div class="hint" style="color:#fff; margin-bottom:10px;">Khusus buat korban bug "Samakan dgn Leader/Mgmt" (v188) — samakan ULANG semua yang HR-nya 0 gara-gara bug itu, pakai fungsi yang udah bener. Cuma nyentuh yang emang hasil "Samakan" (bukan yang genuinely diisi manual jadi 0), dan gak nyentuh yang udah di-Approve.</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="bulk-recopy-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
-        <button class="primary" style="background:#fff; color:var(--teal);" onclick="doBulkRecopyLeaderToHr(this)">Cari & Samakan Ulang</button>
-      </div>
-      <div id="bulk-recopy-result" style="margin-top:10px;"></div>
-    </div>
-    <div class="card" style="background:var(--red); border:none;">
-      <h2 style="color:#fff;">🔓 Revert Approval (per NIK)</h2>
-      <div class="hint" style="color:#fff; margin-bottom:10px;">Buka kunci record yang UDAH di-Approve, biar bisa diedit/dihitung ulang. Skor & data lain gak diubah — cuma status Approval-nya doang yang dibuka. Wajib ada alasan, tercatat permanen (siapa, kapan, kenapa).</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-        <input type="text" id="revert-approval-staffid" placeholder="NIK" style="flex:1; min-width:100px; padding:8px; border-radius:8px; border:none;" />
-        <input type="text" id="revert-approval-month" placeholder="YYYY-MM" style="flex:1; min-width:100px; padding:8px; border-radius:8px; border:none;" />
-      </div>
-      <input type="text" id="revert-approval-reason" placeholder="Alasan (wajib diisi)" style="width:100%; padding:8px; border-radius:8px; border:none; margin-bottom:8px;" />
-      <button class="primary" style="background:#fff; color:var(--red);" onclick="doRevertApproval(this)">Revert Approval</button>
-      <div id="revert-approval-result" style="margin-top:10px;"></div>
-    </div>
-    <div class="card" style="background:var(--amber); border:none;">
-      <h2 style="color:#fff;">🔍 Cari Skor HR yang Jomplang</h2>
-      <div class="hint" style="color:#fff; margin-bottom:10px;">Cari HR yang beda JAUH dari rata-rata Self+Leader (bukan cuma yang PERSIS 0) — misal Self 74.8, Leader 84.2, tapi HR cuma 5.0. Ini CUMA nampilin daftarnya, gak ngubah data apapun — kamu yang mutusin per orang.</div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="suspicious-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:140px; padding:8px; border-radius:8px; border:none;" />
-        <input type="text" id="suspicious-hr-threshold" placeholder="Selisih min. (default 20)" style="flex:1; min-width:140px; padding:8px; border-radius:8px; border:none;" />
-        <button class="primary" style="background:#fff; color:var(--amber);" onclick="doFindSuspiciousHrScores(this)">Cari</button>
-      </div>
-      <div id="suspicious-hr-result" style="margin-top:10px;"></div>
+      <h2 style="color:#fff;">🩺 Pusat Kesehatan Skor</h2>
+      <div class="hint" style="color:#fff; margin-bottom:10px;">Semua alat cari & benerin skor bermasalah, di 1 tempat — pilih yang mau dipakai:</div>
+      <select id="score-health-mode" onchange="updateScoreHealthMode()" style="width:100%; padding:8px; border-radius:8px; border:none; margin-bottom:12px; font-weight:600;">
+        <option value="autofix">🔧 Cari & Benerin Otomatis (skor 0.0 / Negatif)</option>
+        <option value="bulkrecopy">🩹 Perbaiki Massal — Samakan Ulang HR yang Ke-0</option>
+        <option value="detect">🔍 Cari Skor HR yang Jomplang (gak diubah otomatis)</option>
+        <option value="revert">🔓 Revert Approval (per NIK)</option>
+      </select>
+      <div id="score-health-desc" class="hint" style="color:#fff; margin-bottom:10px;"></div>
+      <div id="score-health-controls"></div>
+      <div id="score-health-result" style="margin-top:10px;"></div>
     </div>
     <div class="card">
       <h2>🔀 Tahap Evaluasi per Job Title / Department</h2>
@@ -4157,14 +4205,14 @@ async function renderDevTools() {
       <div id="stage-toggle-results"></div>
     </div>
     <div class="card">
-      <h2>${t("dt_override_title")}</h2>
-      <div class="hint" style="margin-bottom:10px;">${t("dt_override_desc")}</div>
-      <label>${t("dt_nik_label")}</label>
-      <div class="row-flex">
-        <input type="text" id="override-nik-input" placeholder="${t("dt_nik_placeholder")}" style="flex:1;" />
-        <button class="secondary" style="flex:0 0 auto;" onclick="doLoadAccessOverrideStatus()">${t("dt_search_btn")}</button>
-      </div>
-      <div id="access-override-results" style="margin-top:12px;"></div>
+      <h2>🔓 Override & Pengecualian</h2>
+      <div class="hint" style="margin-bottom:10px;">Katup darurat per-orang buat 2 jenis pembatas normal — pilih yang mau dibuka:</div>
+      <select id="override-mode" onchange="updateOverrideMode()" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border); margin-bottom:12px; font-weight:600;">
+        <option value="window">🗓️ Buka Jendela Waktu (Access Override)</option>
+        <option value="quota">🔓 Reset Jatah Submit (1x Limit)</option>
+      </select>
+      <div id="override-mode-desc" class="hint" style="margin-bottom:10px;"></div>
+      <div id="override-mode-controls"></div>
     </div>
     <div class="card">
       <h2>${t("dt_health_check_title")}</h2>
@@ -4180,20 +4228,6 @@ async function renderDevTools() {
       <button class="secondary" id="maint-findStaleKpiStructures-btn" style="margin-top:8px;" onclick="doFindStaleKpiStructures(this)">🔍 Cari Submission dengan Struktur KPI Ketinggalan</button>
       <div id="stale-kpi-results" style="margin-top:10px;"></div>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
-    </div>
-    <div class="card">
-      <h2>🔓 Reset Jatah Submit (Self/Leader/HR)</h2>
-      <div class="hint" style="margin-bottom:10px;">Tiap orang cuma boleh submit 1x per slot per bulan. Kalau ada yang submit dengan struktur KPI yang udah ketinggalan (misal Job Title-nya baru di-redirect/di-migrasi ke struktur baru SETELAH dia submit), pakai ini buat kasih jatah submit 1x lagi — data lama otomatis KETIMPA begitu dia submit ulang, bukan numpuk. Ini CUMA buka kuncinya; data lama TETAP ada sampai orangnya beneran submit ulang.</div>
-      <label>NIK Staff</label>
-      <input type="text" id="reset-submission-nik" placeholder="Contoh: 1198" />
-      <label style="margin-top:8px; display:block;">Slot</label>
-      <select id="reset-submission-slot" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
-        <option value="self">Self</option>
-        <option value="leader">Leader</option>
-        <option value="hr">HR</option>
-      </select>
-      <button class="primary" id="reset-submission-btn" style="margin-top:8px;" onclick="doResetSubmissionCount()">Reset Jatah Submit</button>
-      <div id="reset-submission-result" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
       <h2>🚑 Restore Struktur dari Audit Log</h2>
@@ -4222,6 +4256,8 @@ async function renderDevTools() {
       <div class="hint">${t("dt_backend_version_label")} ${state.user._debugVersion || "-"}</div>
     </div>`;
   loadStageDatalists();
+  updateScoreHealthMode();
+  updateOverrideMode();
 }
 
 /** Populates the Job Title / Department datalists once per screen load, reading
@@ -6293,19 +6329,15 @@ async function renderGm() {
         </div>` : ""}
         <label>${t("gm_notes_label")}</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
-        ${!isEdit ? `
         <div style="margin-top:14px; padding:14px; background:#fff; border:1.5px solid var(--border); border-radius:12px;">
           <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:4px;">${t("gm_calibration_title")}</div>
           <div class="hint" style="margin-bottom:10px;">${t("gm_calibration_desc")}</div>
           <div id="calibration-suggestion-${s.staffId}" style="margin-bottom:12px;"></div>
-          <label>${t("gm_calibration_adj_label")}</label>
-          <input type="number" id="calibration-adj-${s.staffId}" placeholder="${t("gm_calibration_adj_placeholder")}" />
-          <div class="hint" style="margin:6px 0;">— atau —</div>
-          <label>Langsung set Final Score jadi (skor sekarang: ${s.finalScore != null ? Number(s.finalScore).toFixed(1) : "-"})</label>
+          <label>Set Final Score jadi (skor sekarang: ${s.finalScore != null ? Number(s.finalScore).toFixed(1) : "-"})</label>
           <input type="number" id="calibration-target-${s.staffId}" data-current-final="${s.finalScore != null ? Number(s.finalScore) : ""}" placeholder="Contoh: 80" />
           <label>${t("gm_calibration_reason_label")}</label>
           <input type="text" id="calibration-reason-${s.staffId}" placeholder="${t("gm_calibration_reason_placeholder")}" />
-        </div>` : ""}
+        </div>
         <button class="primary" style="margin-top:10px;" onclick="${isEdit ? `submitDecisionEdit('${s.staffId}')` : `submitDecision('${s.staffId}')`}">${isEdit ? t("gm_save_changes_btn") : t("gm_confirm_approval_btn")}</button>
       </div>`;
   };
@@ -6626,6 +6658,22 @@ async function submitDecisionEdit(staffId) {
     payload.mutationToPosition = mutationToPosition;
   }
 
+  const calibrationTargetEl = document.getElementById(`calibration-target-${staffId}`);
+  const calibrationReasonEl = document.getElementById(`calibration-reason-${staffId}`);
+  let calibrationAdjustment = 0;
+  if (calibrationTargetEl && calibrationTargetEl.value !== "") {
+    const currentFinal = Number(calibrationTargetEl.dataset.currentFinal) || 0;
+    const targetFinal = Number(calibrationTargetEl.value);
+    calibrationAdjustment = Number((targetFinal - currentFinal).toFixed(2));
+  }
+  if (calibrationAdjustment !== 0) {
+    const calibrationReason = calibrationReasonEl ? calibrationReasonEl.value.trim() : "";
+    if (!calibrationReason) { showToast(t("gm_calibration_reason_required"), "error"); return; }
+    if (!confirm(`Set Final Score jadi ${(Number(calibrationTargetEl.dataset.currentFinal) || 0) + calibrationAdjustment}?\n\nAlasan: ${calibrationReason}\n\n${t("gm_calibration_confirm_note")}`)) return;
+    payload.calibrationAdjustment = calibrationAdjustment;
+    payload.calibrationReason = calibrationReason;
+  }
+
   const res = await apiPost("editDecision", payload);
   if (res.error || res.success === false) { showToast(t("gm_save_edit_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
   showToast(t("gm_edit_success_toast"));
@@ -6655,14 +6703,13 @@ async function submitDecision(staffId) {
     payload.mutationToPosition = mutationToPosition;
   }
 
-  const calibrationAdjEl = document.getElementById(`calibration-adj-${staffId}`);
   const calibrationTargetEl = document.getElementById(`calibration-target-${staffId}`);
   const calibrationReasonEl = document.getElementById(`calibration-reason-${staffId}`);
-  // "Set directly to X" wins if both are filled — it's computed FROM the delta field's
-  // underlying mechanism (calibrationAdjustment is still what's actually sent and stored,
-  // preserving the exact same audit trail: original score always recoverable as
-  // FinalScore - CalibrationAdjustment), just without making the person do the subtraction.
-  let calibrationAdjustment = calibrationAdjEl ? Number(calibrationAdjEl.value) || 0 : 0;
+  // calibrationAdjustment is still what's actually sent and stored (preserves the exact
+  // same audit trail: original score always recoverable as FinalScore - CalibrationAdjustment)
+  // — computed here from the target value so the person filling this in never has to do the
+  // subtraction themselves.
+  let calibrationAdjustment = 0;
   if (calibrationTargetEl && calibrationTargetEl.value !== "") {
     const currentFinal = Number(calibrationTargetEl.dataset.currentFinal) || 0;
     const targetFinal = Number(calibrationTargetEl.value);

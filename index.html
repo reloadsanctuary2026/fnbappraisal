@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-274-fix-effectiveendmonth-scoping-bug — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-275-executive-summary-report — LIVE</div>
 
 <script>
 // =================================================================
@@ -5223,10 +5223,11 @@ async function renderReview(skipFetch) {
         <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">${t("review_underperform_only_btn")}</button>
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div class="hint">${total} ${t("review_record_count_suffix")}</div>
-          <div style="display:flex; gap:8px;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="secondary" id="review-export-excel-btn" onclick="doGenerateReviewExport('xlsx')">📊 Excel</button>
             <button class="secondary" id="review-export-pdf-btn" onclick="doGenerateReviewExport('pdf')">📄 PDF</button>
             <button class="primary" id="review-export-both-btn" onclick="doGenerateReviewExportBoth()">📄📊 Export Keduanya</button>
+            <button class="primary" style="background:var(--coral);" onclick="openExecutiveSummaryReport()">📈 Laporan Ringkasan Eksekutif</button>
           </div>
         </div>
         <div class="hint" id="review-export-note"></div>
@@ -5377,6 +5378,96 @@ async function doGenerateSectionAudit() {
     btn.disabled = false;
     btn.innerHTML = originalLabel;
   }
+}
+
+const RELOAD_LOGO_BASE64 = "data:image/png;base64,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";
+
+async function openExecutiveSummaryReport() {
+  const endMonth = state._reviewEndMonth || state.month;
+  const res = await apiGet("getExecutiveSummaryReport", { requesterId: state.user.staffId, month: state.month, endMonth });
+  if (res.error || res.success === false) { showToast("Gagal memuat laporan: " + friendlyError(res.error)); return; }
+
+  const monthLabel = (m) => monthLabelID ? monthLabelID(m) : m;
+  const rangeLabel = res.rangeStart === res.rangeEnd ? monthLabel(res.rangeStart) : `${monthLabel(res.rangeStart)} — ${monthLabel(res.rangeEnd)}`;
+
+  const personRow = (p, showTrend) => `
+    <tr>
+      <td style="font-weight:600;">${escapeAttr(p.name)}</td>
+      <td>${escapeAttr(p.department)}</td>
+      ${showTrend
+        ? `<td>${p.firstScore.toFixed(1)} → ${p.lastScore.toFixed(1)}</td><td style="font-weight:700; color:${p.delta > 0 ? '#0E7C5A' : '#B8352B'};">${p.delta > 0 ? '+' : ''}${p.delta.toFixed(1)}</td>`
+        : `<td colspan="2" style="font-weight:700; color:#B8352B;">${p.finalScore.toFixed(1)}</td>`}
+    </tr>`;
+
+  const deptRows = res.departmentSummary.map(d => `
+    <tr>
+      <td style="font-weight:600;">${escapeAttr(d.department)}</td>
+      <td style="text-align:center;">${d.headcount}</td>
+      <td style="text-align:center; font-weight:700;">${d.averageScore.toFixed(1)}</td>
+      <td style="text-align:center; color:${d.underperformCount > 0 ? '#B8352B' : '#0E7C5A'};">${d.underperformCount}</td>
+    </tr>`).join("");
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Laporan Ringkasan Eksekutif — ${rangeLabel}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #F5EBDC; color: #2B2420; margin: 0; padding: 32px; }
+  .sheet { max-width: 860px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 48px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+  .header { display:flex; align-items:center; gap:16px; border-bottom: 3px solid #0E4749; padding-bottom: 20px; margin-bottom: 28px; }
+  .header img { width: 56px; height: 56px; }
+  .header h1 { font-size: 22px; color: #0E4749; margin: 0; }
+  .header .sub { color: #6B5D4F; font-size: 14px; margin-top: 2px; }
+  h2 { color: #0E4749; font-size: 17px; border-left: 4px solid #FF6B4A; padding-left: 10px; margin-top: 36px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
+  th { background: #0E4749; color: #fff; text-align: left; padding: 8px 10px; }
+  td { padding: 8px 10px; border-bottom: 1px solid #eee; }
+  .stat-row { display:flex; gap:16px; margin-top:16px; }
+  .stat-box { flex:1; background:#F5EBDC; border-radius:10px; padding:14px; text-align:center; }
+  .stat-box .num { font-size:26px; font-weight:800; color:#0E4749; }
+  .stat-box .label { font-size:12px; color:#6B5D4F; }
+  .empty { color: #999; font-style: italic; font-size: 13px; margin-top: 8px; }
+  .print-btn { position: fixed; top: 20px; right: 20px; background: #FF6B4A; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  @media print { .print-btn { display: none; } body { background: #fff; padding: 0; } .sheet { box-shadow: none; border-radius: 0; } }
+</style></head>
+<body>
+  <button class="print-btn" onclick="window.print()">🖨️ Cetak / Simpan PDF</button>
+  <div class="sheet">
+    <div class="header">
+      <img src="${RELOAD_LOGO_BASE64}" />
+      <div>
+        <h1>Laporan Ringkasan Eksekutif — Reload 360°</h1>
+        <div class="sub">Periode: ${rangeLabel} · Dibuat: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+      </div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-box"><div class="num">${res.totalPeople}</div><div class="label">Total Karyawan Dinilai</div></div>
+      <div class="stat-box"><div class="num">${res.mostImproved.length}</div><div class="label">Paling Meningkat</div></div>
+      <div class="stat-box"><div class="num">${res.underperformList.length}</div><div class="label">Perlu Perhatian</div></div>
+    </div>
+
+    <h2>📊 Ringkasan per Department</h2>
+    <table><thead><tr><th>Department</th><th style="text-align:center;">Jumlah</th><th style="text-align:center;">Rata-rata</th><th style="text-align:center;">Underperform</th></tr></thead>
+      <tbody>${deptRows || '<tr><td colspan="4" class="empty">Belum ada data.</td></tr>'}</tbody></table>
+
+    <h2>🌟 Paling Meningkat</h2>
+    ${res.mostImproved.length ? `<table><thead><tr><th>Nama</th><th>Department</th><th>Awal → Akhir</th><th>Perubahan</th></tr></thead>
+      <tbody>${res.mostImproved.map(p => personRow(p, true)).join("")}</tbody></table>` : `<div class="empty">Belum ada yang menunjukkan peningkatan pada periode ini.</div>`}
+
+    <h2>📉 Paling Menurun</h2>
+    ${res.mostDeclined.length ? `<table><thead><tr><th>Nama</th><th>Department</th><th>Awal → Akhir</th><th>Perubahan</th></tr></thead>
+      <tbody>${res.mostDeclined.map(p => personRow(p, true)).join("")}</tbody></table>` : `<div class="empty">Tidak ada yang mengalami penurunan pada periode ini.</div>`}
+
+    <h2>⚠️ Perlu Perhatian (Underperform)</h2>
+    ${res.underperformList.length ? `<table><thead><tr><th>Nama</th><th>Department</th><th colspan="2">Skor</th></tr></thead>
+      <tbody>${res.underperformList.map(p => personRow(p, false)).join("")}</tbody></table>` : `<div class="empty">Tidak ada yang berstatus Underperform pada periode ini. ✅</div>`}
+  </div>
+</body></html>`;
+
+  const reportWindow = window.open("", "_blank");
+  if (!reportWindow) { showToast("Popup diblokir — izinkan popup buat lihat laporannya."); return; }
+  reportWindow.document.write(html);
+  reportWindow.document.close();
 }
 
 async function doGenerateReviewExportBoth() {

@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-273-month-range-always-visible-calendars — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-274-fix-effectiveendmonth-scoping-bug — LIVE</div>
 
 <script>
 // =================================================================
@@ -5073,6 +5073,7 @@ async function renderReview(skipFetch) {
   const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational || state.user.isManagement;
   const viewMode = state._reviewViewMode || "list";
   const rangeMode = !!(state._reviewEndMonth && state._reviewEndMonth !== state.month); // automatic — true whenever the two month pickers differ, no manual toggle to keep in sync
+  const effectiveEndMonth = state._reviewEndMonth || state.month; // used further down in the body regardless of which branch below runs — must be declared here, not inside the fetch-only branch
 
   let res, progressRes, selfComplianceRes;
   if (skipFetch && state._reviewCache) {
@@ -5083,7 +5084,6 @@ async function renderReview(skipFetch) {
     ({ res, progressRes, selfComplianceRes } = state._reviewCache);
   } else {
     app.innerHTML = topbar(title) + `<div class="loading">${t("form_loading")}</div>`;
-    const effectiveEndMonth = rangeMode ? (state._reviewEndMonth || state.month) : state.month;
     [res, progressRes, selfComplianceRes] = await Promise.all([
       apiGet("getReviewData", { reviewerId: state.user.staffId, month: state.month, endMonth: effectiveEndMonth }),
       canSeeCompliance ? apiGet("getEvaluatorProgress", { requesterId: state.user.staffId }) : Promise.resolve(null),

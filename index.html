@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-272-combined-export-both-button — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-273-month-range-always-visible-calendars — LIVE</div>
 
 <script>
 // =================================================================
@@ -4995,12 +4995,6 @@ function changeReviewEndMonth(value) {
   renderReview();
 }
 
-function toggleReviewRangeMode(checked) {
-  state._reviewRangeMode = checked;
-  if (checked && !state._reviewEndMonth) state._reviewEndMonth = state.month;
-  renderReview();
-}
-
 /** "Berapa Staff/Leader/Management saya yang belum isi Self Appraisal bulan ini, dan
  *  siapa saja" — a different question from the evaluator-progress card below it (which
  *  tracks whether Leaders/Management/HR have finished EVALUATING others). Scoped to
@@ -5078,7 +5072,7 @@ async function renderReview(skipFetch) {
   const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? t("review_title_all") : t("review_title_team");
   const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational || state.user.isManagement;
   const viewMode = state._reviewViewMode || "list";
-  const rangeMode = !!state._reviewRangeMode; // used further down in the body regardless of which branch below runs — must be declared here, not inside the fetch-only branch
+  const rangeMode = !!(state._reviewEndMonth && state._reviewEndMonth !== state.month); // automatic — true whenever the two month pickers differ, no manual toggle to keep in sync
 
   let res, progressRes, selfComplianceRes;
   if (skipFetch && state._reviewCache) {
@@ -5280,25 +5274,16 @@ async function renderReview(skipFetch) {
   app.innerHTML = topbar(title) + `
     ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
     <div class="card">
-      <label style="display:flex; align-items:center; gap:8px; margin-bottom:${rangeMode ? "10px" : "0"};">
-        <input type="checkbox" ${rangeMode ? "checked" : ""} onchange="toggleReviewRangeMode(this.checked)" style="width:auto;" />
-        <span style="font-weight:600; color:var(--text);">${t("review_range_checkbox")}</span>
-      </label>
-      ${rangeMode ? `
-        <div class="row-flex">
-          <div style="flex:1;">
-            <label>${t("review_month_start_label")}</label>
-            <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
-          </div>
-          <div style="flex:1;">
-            <label>${t("review_month_end_label")}</label>
-            <input type="month" id="month-end-picker" value="${effectiveEndMonth}" min="${state.month}" onchange="changeReviewEndMonth(this.value)" />
-          </div>
+      <div class="row-flex">
+        <div style="flex:1;">
+          <label>${t("review_month_start_label")}</label>
+          <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
         </div>
-      ` : `
-        <label>${t("review_month_label")}</label>
-        <input type="month" id="month-picker" value="${state.month}" onchange="changeReviewMonth(this.value)" />
-      `}
+        <div style="flex:1;">
+          <label>${t("review_month_end_label")}</label>
+          <input type="month" id="month-end-picker" value="${effectiveEndMonth}" min="${state.month}" onchange="changeReviewEndMonth(this.value)" />
+        </div>
+      </div>
     </div>
     ${toggleHtml}
     ${bodyHtml}
@@ -5407,7 +5392,7 @@ async function doGenerateReviewExportBoth() {
   bothBtn.innerHTML = `<span class="btn-spinner dark"></span>Membuat 2 file...`;
   noteEl.textContent = "";
 
-  const endMonth = state._reviewRangeMode ? (state._reviewEndMonth || state.month) : state.month;
+  const endMonth = state._reviewEndMonth || state.month; // end picker is always visible now, no toggle gating it
 
   const downloadOne = async (format) => {
     const res = await apiPost("generateReviewExportFile", { requesterId: state.user.staffId, month: state.month, endMonth, format });
@@ -5462,7 +5447,7 @@ async function doGenerateReviewExport(format) {
   btn.innerHTML = `<span class="btn-spinner dark"></span>Membuat file...`;
   noteEl.textContent = "";
 
-  const endMonth = state._reviewRangeMode ? (state._reviewEndMonth || state.month) : state.month;
+  const endMonth = state._reviewEndMonth || state.month; // end picker is always visible now, no toggle gating it
   try {
     const res = await apiPost("generateReviewExportFile", { requesterId: state.user.staffId, month: state.month, endMonth, format });
     if (res.error || res.success === false) {

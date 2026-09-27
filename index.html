@@ -324,7 +324,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-23-275-executive-summary-report — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-24-276-sso-from-launcher — LIVE</div>
 
 <script>
 // =================================================================
@@ -7085,6 +7085,33 @@ setTimeout(() => { if (!deferredInstallPrompt) showInstallBanner("manual"); }, 3
  *  normal actions use, so a stale/expired token just falls through to a normal login
  *  screen instead of silently failing later. */
 async function tryResumeSession() {
+  // SSO handoff from Launcher — same NIK+PIN system, same HR Sheet, already authenticated
+  // there. A token in the URL takes priority over whatever's saved locally, since it means
+  // someone specifically just arrived from Launcher wanting to skip logging in again here.
+  const urlParams = new URLSearchParams(window.location.search);
+  const ssoToken = urlParams.get("ssoToken");
+  const ssoStaffId = urlParams.get("ssoStaffId");
+  if (ssoToken && ssoStaffId) {
+    // Strip these from the address bar immediately — a session token sitting in a visible
+    // URL is a token anyone glancing at the screen, or a browser history entry, could reuse.
+    window.history.replaceState({}, "", window.location.pathname);
+    app.innerHTML = `<div class="loading" style="padding:40px; text-align:center;">Menghubungkan dari Launcher...</div>`;
+    try {
+      const res = await apiGet("resumeSession", { token: ssoToken, staffId: ssoStaffId });
+      if (res.found) {
+        localStorage.setItem("appraisalSession", JSON.stringify({ token: ssoToken, staffId: ssoStaffId }));
+        state.user = res;
+        await refreshUnreadCount();
+        goToRoleMenu();
+        return;
+      }
+      // Token invalid/expired/already used — fall through to the normal flow below rather
+      // than getting stuck, so a stale Launcher link still lands on a working login screen.
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   const saved = localStorage.getItem("appraisalSession");
   if (!saved) { render(); return; }
   let parsed;

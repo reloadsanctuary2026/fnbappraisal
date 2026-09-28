@@ -310,6 +310,11 @@
     .superior-ms-panel { max-width: none; }
   }
   .loading { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
+  .loading::before {
+    content: ""; display: block; width: 28px; height: 28px; margin: 0 auto 14px;
+    border-radius: 50%; border: 3px solid rgba(14,71,73,0.15); border-top-color: var(--teal);
+    animation: spin 0.8s linear infinite;
+  }
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
     background: var(--teal); color: #fff; padding: 13px 22px; border-radius: 14px;
@@ -324,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-24-278-comprehensive-report — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-24-279-animate-all-loading-states — LIVE</div>
 
 <script>
 // =================================================================
@@ -1745,7 +1750,7 @@ function applyNotificationFilters() {
  *  appraisal window could have changed since it was sent. */
 async function doGoEvaluateFromNotification(staffId, notificationId, btnEl) {
   const originalLabel = btnEl ? btnEl.textContent : "";
-  if (btnEl) { btnEl.disabled = true; btnEl.textContent = t("notif_evaluate_loading"); }
+  if (btnEl) { btnEl.disabled = true; btnEl.innerHTML = '<span class="btn-spinner"></span>' + t("notif_evaluate_loading"); }
   try {
     const res = await apiGet("getNotificationActionTarget", { evaluatorId: state.user.staffId, targetId: staffId });
     if (!res.found) {
@@ -1762,7 +1767,7 @@ async function doGoEvaluateFromNotification(staffId, notificationId, btnEl) {
 async function doResetStaffPin(staffId, notificationId, btnEl) {
   const resultEl = document.getElementById(`pin-reset-result-${notificationId}`);
   if (btnEl) btnEl.disabled = true;
-  if (resultEl) { resultEl.textContent = t("notif_reset_processing"); resultEl.style.color = "var(--text-muted)"; }
+  if (resultEl) { resultEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("notif_reset_processing"); resultEl.style.color = "var(--text-muted)"; }
   const res = await apiPost("resetStaffPin", { requesterId: state.user.staffId, staffId });
   if (res.error || res.success === false) {
     if (resultEl) { resultEl.textContent = t("notif_reset_failed_prefix") + " " + friendlyError(res.error); resultEl.style.color = "var(--red)"; }
@@ -1956,8 +1961,7 @@ async function doSuperAdminLogin() {
   const btn = document.getElementById("superadmin-login-btn");
   errorEl.textContent = "";
   btn.disabled = true;
-  btn.textContent = "Memproses...";
-
+  btn.innerHTML = '<span class="btn-spinner"></span>' + "Memproses...";
   try {
     const res = await apiGet("superAdminLogin", { username, password });
     if (!res.found) {
@@ -2003,7 +2007,7 @@ async function doLoginStep1() {
   const btn = document.getElementById("login-step1-btn");
   errEl.textContent = "";
   btn.disabled = true;
-  btn.textContent = t("login_connecting");
+  btn.innerHTML = '<span class="btn-spinner"></span>' + t("login_connecting");
   btn.style.opacity = "0.7";
   try {
     // Explicit fallback to "" (not just relying on state.businessUnit directly) — passing
@@ -2079,7 +2083,7 @@ async function completeLogin(nik, pin) {
   const errEl = document.getElementById("login-error");
   const btn = document.getElementById("login-step2-btn");
   if (errEl) errEl.textContent = "";
-  if (btn) { btn.disabled = true; btn.textContent = t("login_connecting"); btn.style.opacity = "0.7"; }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>' + t("login_connecting"); btn.style.opacity = "0.7"; }
   try {
     // Same "" fallback as doLoginStep1 above — see that comment for why null/undefined
     // must never be passed through directly here.
@@ -2690,7 +2694,7 @@ async function doUploadPhoto() {
     return;
   }
 
-  noteEl.textContent = "Memproses foto...";
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + "Memproses foto...";
   noteEl.style.color = "var(--text-muted)";
 
   try {
@@ -2717,7 +2721,7 @@ async function doUploadPhoto() {
       reader.readAsDataURL(file);
     });
 
-    noteEl.textContent = "Mengupload...";
+    noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + "Mengupload...";
     const res = await apiPost("uploadOwnPhoto", { staffId: state.user.staffId, base64Data: resizedBase64, mimeType: "image/jpeg" });
     if (res.error || res.success === false) {
       noteEl.textContent = "Gagal upload: " + friendlyError(res.error);
@@ -2748,7 +2752,7 @@ async function doChangeOwnPin() {
   const confirmed = confirm(`Yakin ganti PIN jadi ${newPin}?\n\nCatat/hafalin dulu sebelum lanjut — PIN ini yang bakal dipakai buat login berikutnya.`);
   if (!confirmed) { noteEl.textContent = ""; return; }
 
-  noteEl.textContent = "Menyimpan...";
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + "Menyimpan...";
   noteEl.style.color = "var(--text-muted)";
   const res = await apiPost("changeOwnPin", { staffId: state.user.staffId, currentPin, newPin });
   if (res.error || res.success === false) {
@@ -2855,7 +2859,7 @@ async function doSaveTrainingNeed() {
   if (!staffId) { noteEl.textContent = t("tn_select_person_first"); noteEl.style.color = "var(--red)"; return; }
   if (!topic) { noteEl.textContent = t("tn_topic_required"); noteEl.style.color = "var(--red)"; return; }
 
-  noteEl.textContent = t("sm_saving");
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("sm_saving");
   noteEl.style.color = "var(--text-muted)";
   const res = await apiPost("saveTrainingNeed", { requesterId: state.user.staffId, staffId, topic, priority, notes });
   if (res.error || res.success === false) {
@@ -2953,7 +2957,7 @@ async function doSaveStageOverride(scopeType, scopeValue) {
   const hrActive = document.getElementById("stage-hr").checked;
   if (!selfActive && !leaderActive && !hrActive) { noteEl.textContent = "Minimal 1 tahap harus aktif."; noteEl.style.color = "var(--red)"; return; }
 
-  noteEl.textContent = t("sm_saving");
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("sm_saving");
   const res = await apiPost("saveEvaluationStageOverride", { requesterId: state.user.staffId, scopeType, scopeValue, selfActive, leaderActive, hrActive });
   if (res.error || res.success === false) { noteEl.textContent = friendlyError(res.error); noteEl.style.color = "var(--red)"; return; }
   showToast("✅ Override tersimpan.");
@@ -3066,7 +3070,7 @@ async function wizardSetJobTitle(jt) {
 
   if (!jt) return;
   const noteEl = document.getElementById("wizard-existing-note");
-  if (noteEl) noteEl.textContent = t("form_loading");
+  if (noteEl) noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("form_loading");
   const res = await apiGet("getEvaluationStructureStatus", { requesterId: state.user.staffId, jobTitle: jt });
   if (res.found && res.isCustomStructure && res.sections) {
     // Existing structure found — load it into the wizard so re-opening an already-
@@ -3275,7 +3279,7 @@ async function wizardGoToStep(n) {
 async function wizardSave() {
   const w = state._wizard;
   const noteEl = document.getElementById("wizard-save-note");
-  noteEl.textContent = t("sm_saving");
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("sm_saving");
   const res = await apiPost("saveSectionStructure", { requesterId: state.user.staffId, jobTitle: w.jobTitle, sections: w.sections });
   if (res.error || res.success === false) {
     const errorLabels = {
@@ -4887,7 +4891,7 @@ async function changeFeedbackMonth(month) {
 
 async function doExportFeedbackReport() {
   const noteEl = document.getElementById("feedback-export-note");
-  noteEl.textContent = "Membuat sheet export...";
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + "Membuat sheet export...";
   const res = await apiPost("exportFeedbackReport", { requesterId: state.user.staffId, month: state._feedbackMonth });
   if (res.error || res.success === false) {
     noteEl.textContent = "Gagal export: " + friendlyError(res.error);
@@ -5329,7 +5333,7 @@ function updateReviewFilter(key, value) {
 
 async function doExportDecisionLog() {
   const noteEl = document.getElementById("decision-log-export-note");
-  noteEl.textContent = t("gm_export_decision_generating");
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("gm_export_decision_generating");
   const res = await apiPost("exportDecisionLog", {});
   if (res.error || res.success === false) {
     noteEl.textContent = t("gm_export_decision_failed_prefix") + " " + friendlyError(res.error);

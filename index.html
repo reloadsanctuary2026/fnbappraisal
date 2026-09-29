@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-24-281-merge-reset-with-override-fix-naming — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-24-282-sync-stale-leader-copies-tool — LIVE</div>
 
 <script>
 // =================================================================
@@ -3985,6 +3985,42 @@ async function doFindSuspiciousHrScores(btnEl) {
     </div>`;
 }
 
+async function doSyncStaleLeaderCopies(btnEl) {
+  const month = document.getElementById("stale-sync-month").value.trim();
+  const resultEl = document.getElementById("stale-sync-result");
+  btnEl.disabled = true;
+  const originalLabel = btnEl.textContent;
+  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Nyari & nyamain ulang...`;
+  resultEl.innerHTML = "";
+
+  const res = await apiPost("syncStaleLeaderCopies", { requesterId: state.user.staffId, month: month || undefined });
+  btnEl.disabled = false;
+  btnEl.textContent = originalLabel;
+
+  if (res.error || res.success === false) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
+    return;
+  }
+  const fixed = res.fixed || [];
+  const skippedApproved = res.skippedApproved || [];
+  if (!fixed.length && !skippedApproved.length) {
+    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Semua HR yang pernah "Samakan" masih sinkron sama Leader-nya. Gak ada yang ketinggalan.</div>`;
+    return;
+  }
+  resultEl.innerHTML = `
+    ${fixed.length ? `
+      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
+        <strong style="color:var(--teal);">✅ ${fixed.length} berhasil disamakan ulang (Leader-nya emang udah berubah):</strong>
+        ${fixed.map(f => `<div class="hint" style="margin-top:4px;">${escapeAttr(f.name)}</div>`).join("")}
+      </div>` : ""}
+    ${skippedApproved.length ? `
+      <div style="background:#fff; border-radius:8px; padding:10px;">
+        <strong style="color:var(--red);">⚠️ ${skippedApproved.length} ketinggalan TAPI udah di-Approve, perlu Revert dulu:</strong>
+        ${skippedApproved.map(s => `<div class="hint" style="margin-top:4px;">${escapeAttr(s.name)}</div>`).join("")}
+      </div>` : ""}
+  `;
+}
+
 async function doBulkRecopyLeaderToHr(btnEl) {
   const month = document.getElementById("bulk-recopy-month").value.trim();
   const resultEl = document.getElementById("bulk-recopy-result");
@@ -4147,6 +4183,14 @@ function updateScoreHealthMode() {
         <button class="primary" style="background:#fff; color:var(--coral);" onclick="doBulkRecopyLeaderToHr(this)">Cari & Samakan Ulang</button>
       </div>
       <div id="bulk-recopy-result" style="margin-top:10px;"></div>`;
+  } else if (mode === "stalesync") {
+    descEl.textContent = "Cari SEMUA yang HR-nya pernah pakai \"Samakan dgn Leader/Mgmt\" TAPI Leader-nya udah berubah/resubmit sejak itu — gak peduli angka HR-nya kelihatan wajar atau enggak. Beda sama mode 2 (yang cuma nyari HR=0), ini nyari yang KETINGGALAN.";
+    controlsEl.innerHTML = `
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="text" id="stale-sync-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
+        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doSyncStaleLeaderCopies(this)">Cari & Samakan Ulang</button>
+      </div>
+      <div id="stale-sync-result" style="margin-top:10px;"></div>`;
   } else if (mode === "detect") {
     descEl.textContent = "Cari HR yang beda JAUH dari rata-rata Self+Leader (bukan cuma yang PERSIS 0) — misal Self 74.8, Leader 84.2, tapi HR cuma 5.0. Ini CUMA nampilin daftarnya, gak ngubah data apapun — kamu yang mutusin per orang.";
     controlsEl.innerHTML = `
@@ -4185,8 +4229,9 @@ async function renderDevTools() {
       <select id="score-health-mode" onchange="updateScoreHealthMode()" style="width:100%; padding:8px; border-radius:8px; border:none; margin-bottom:12px; font-weight:600;">
         <option value="autofix">1️⃣ Benerin Skor Kosong/Minus (Otomatis)</option>
         <option value="bulkrecopy">2️⃣ Samakan Ulang HR (Korban Bug Lama)</option>
-        <option value="detect">3️⃣ Cek Skor HR yang Aneh (Cuma Lihat Doang)</option>
-        <option value="revert">4️⃣ Revert Approval</option>
+        <option value="stalesync">3️⃣ Samakan Ulang HR yang Ketinggalan (Leader Berubah)</option>
+        <option value="detect">4️⃣ Cek Skor HR yang Aneh (Cuma Lihat Doang)</option>
+        <option value="revert">5️⃣ Revert Approval</option>
       </select>
       <div id="score-health-desc" class="hint" style="color:#fff; margin-bottom:10px;"></div>
       <div id="score-health-controls"></div>

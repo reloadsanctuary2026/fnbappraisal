@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-24-279-animate-all-loading-states — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-24-281-merge-reset-with-override-fix-naming — LIVE</div>
 
 <script>
 // =================================================================
@@ -4183,10 +4183,10 @@ async function renderDevTools() {
       <h2 style="color:#fff;">🩺 Pusat Kesehatan Skor</h2>
       <div class="hint" style="color:#fff; margin-bottom:10px;">Semua alat cari & benerin skor bermasalah, di 1 tempat — pilih yang mau dipakai:</div>
       <select id="score-health-mode" onchange="updateScoreHealthMode()" style="width:100%; padding:8px; border-radius:8px; border:none; margin-bottom:12px; font-weight:600;">
-        <option value="autofix">🔧 Cari & Benerin Otomatis (skor 0.0 / Negatif)</option>
-        <option value="bulkrecopy">🩹 Perbaiki Massal — Samakan Ulang HR yang Ke-0</option>
-        <option value="detect">🔍 Cari Skor HR yang Jomplang (gak diubah otomatis)</option>
-        <option value="revert">🔓 Revert Approval (per NIK)</option>
+        <option value="autofix">1️⃣ Benerin Skor Kosong/Minus (Otomatis)</option>
+        <option value="bulkrecopy">2️⃣ Samakan Ulang HR (Korban Bug Lama)</option>
+        <option value="detect">3️⃣ Cek Skor HR yang Aneh (Cuma Lihat Doang)</option>
+        <option value="revert">4️⃣ Revert Approval</option>
       </select>
       <div id="score-health-desc" class="hint" style="color:#fff; margin-bottom:10px;"></div>
       <div id="score-health-controls"></div>
@@ -4453,7 +4453,7 @@ async function doResetSubmissionCount() {
   try {
     const res = await apiPost("resetSubmissionCountUI", { requesterId: state.user.staffId, staffId, slot });
     if (res.success) {
-      noteEl.innerHTML = `✅ Jatah submit "${slot}" buat ${res.staffName} (NIK ${res.staffId}) udah direset — dia (atau evaluatornya) bisa isi ulang sekarang. Data LAMA baru ketimpa begitu dia beneran submit ulang.`;
+      noteEl.innerHTML = `✅ Jatah submit "${slot}" buat ${res.staffName} (NIK ${res.staffId}) udah direset, DAN jendela waktunya udah otomatis dibuka juga — dia (atau evaluatornya) bisa langsung isi ulang sekarang, gak perlu buka Access Override manual lagi. Data LAMA baru ketimpa begitu dia beneran submit ulang.`;
       nikInput.value = "";
     } else if (res.error === 'not_found') {
       noteEl.textContent = `${res.staffName || 'Orang ini'} belum pernah submit slot "${slot}" bulan ini — gak ada yang perlu direset.`;

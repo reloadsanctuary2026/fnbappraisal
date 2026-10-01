@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-09-24-282-sync-stale-leader-copies-tool — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-01-283-fix-missing-changegmmonth — LIVE</div>
 
 <script>
 // =================================================================
@@ -6448,6 +6448,12 @@ async function confirmAndSubmit(evaluatorType) {
 // =================================================================
 // Executive Approval dashboard (approve only — no Service Charge here)
 // =================================================================
+function changeGmMonth(value) {
+  if (!value) return;
+  state.month = value;
+  renderGm();
+}
+
 async function renderGm() {
   app.innerHTML = topbar("Approve Final Decisions") + `<div class="loading">Memuat data...</div>`;
   const final = await apiGet("getFinalAppraisal", { requesterId: state.user.staffId, month: state.month });

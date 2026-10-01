@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-01-283-fix-missing-changegmmonth — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-02-284-redesign-decision-multiselect-3tier-status — LIVE</div>
 
 <script>
 // =================================================================
@@ -435,8 +435,21 @@ function findLabel(options, value) {
   return match ? match.label : (value || "-");
 }
 
+function findDecisionLabels(options, decisionValue) {
+  if (!decisionValue) return "-";
+  let values = decisionValue;
+  if (typeof decisionValue === "string") {
+    try { values = JSON.parse(decisionValue); } catch (e) { values = [decisionValue]; } // old single-string value, or malformed
+  }
+  if (!Array.isArray(values)) values = [values];
+  if (!values.length) return "-";
+  return values.map(v => findLabel(options, v)).join(" + ");
+}
+
 function friendlyError(code) {
   const map = {
+    not_extended_must_be_alone: "\"Not Extended\" gak bisa digabung sama pilihan lain — pilih itu doang, atau batalin centangnya.",
+    training_notes_required: "Isi dulu apa yang perlu di-training/coaching.",
     record_not_found: "Gak ketemu record buat NIK dan bulan itu.",
     not_currently_approved: "Record ini belum/gak lagi berstatus Approved — gak ada yang perlu di-revert.",
     reason_required: "Alasan wajib diisi.",
@@ -5224,7 +5237,7 @@ async function renderReview(skipFetch) {
     const total = rows.length;
     const finalizedRows = rows.filter(r => r.finalScore !== null); // stats only count REAL records — a placeholder for someone not yet finalized isn't a score of 0, it's simply not data yet
     const avgScore = finalizedRows.length ? finalizedRows.reduce((s, r) => s + Number(r.finalScore || 0), 0) / finalizedRows.length : 0;
-    const performerCount = finalizedRows.filter(r => r.status === "Performer").length;
+    const performerCount = finalizedRows.filter(r => r.status !== "Underperform").length;
     const underperformCount = finalizedRows.length - performerCount;
     const approvedCount = finalizedRows.filter(r => r.approvalStatus === "Approved").length;
 
@@ -5309,7 +5322,7 @@ async function renderReview(skipFetch) {
                     ${r.calibrationAdjustment ? `<div class="dept" style="color:var(--gold); font-weight:700;">⚖️ Calibration ${r.calibrationAdjustment > 0 ? "+" : ""}${r.calibrationAdjustment}</div>` : ""}
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
-                    ${r.finalScore === null ? `<span class="badge pending">Belum Final</span>` : statusBadge(r.status === 'Performer', r.status === 'Performer' ? t("review_stat_performer") : t("review_stat_underperform"))}
+                    ${r.finalScore === null ? `<span class="badge pending">Belum Final</span>` : statusBadge(r.status !== 'Underperform', r.status)}
                     <span style="color:var(--text-muted); font-size:16px;">›</span>
                   </div>
                 </div>`).join("")}
@@ -5710,7 +5723,7 @@ async function renderMyAppraisalStatus(target) {
       const oRes = await apiGet("getOneOnOneOptions", {});
       state.oneOnOneOptions = oRes.options || [];
     }
-    const decisionLabel = findLabel(state.decisionOptionsByTier[res.tier], d.decision);
+    const decisionLabel = findDecisionLabels(state.decisionOptionsByTier[res.tier], d.decision);
     const oneOnOneLabel = findLabel(state.oneOnOneOptions, d.oneOnOneStatus);
     decisionBlock = `
       <div class="card">
@@ -5799,9 +5812,9 @@ async function renderMyAppraisalHistory(staffId) {
               ? h.customSectionBreakdown.map(s => `${s.labelId} ${Number(s.blended || 0).toFixed(1)}/${s.weightPct}`).join(" · ")
               : `Section A ${Number(h.sectionABlend||0).toFixed(1)}/30 · B ${Number(h.sectionBBlend||0).toFixed(1)}/30 · C ${Number(h.sectionCBlend||0).toFixed(1)}/40 · D ${Number(h.sectionDBlend||0)>=0?"+":""}${Number(h.sectionDBlend||0).toFixed(1)}`
           }</div>`}
-          ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findLabel(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
+          ${h.approvalStatus === "Approved" && h.decision ? `<div class="dept" style="margin-top:2px;">${findDecisionLabels(state.decisionOptionsByTier[state.user.tier], h.decision)}</div>` : ""}
         </div>
-        ${statusBadge(h.status === 'Performer', h.status)}
+        ${statusBadge(h.status !== 'Underperform', h.status)}
       </div>`).join("")}
     ${!history.length ? '<div class="hint">Belum ada riwayat appraisal.</div>' : ""}
   `;
@@ -6490,14 +6503,29 @@ async function renderGm() {
 
   const decisionForm = (s, isEdit) => {
     const opts = state.decisionOptionsByTier[s.tier] || [];
+    let currentDecisions = [];
+    if (isEdit && s.decision) {
+      try { currentDecisions = JSON.parse(s.decision); } catch (e) { currentDecisions = [s.decision]; }
+      if (!Array.isArray(currentDecisions)) currentDecisions = [currentDecisions];
+    }
+    const isChecked = (v) => currentDecisions.indexOf(v) !== -1;
     return `
       <div id="decision-form-${s.staffId}" style="display:none; padding:12px; margin-top:8px; background:var(--sand); border-radius:12px;">
         ${isEdit ? `<div class="hint" style="font-weight:700; color:var(--coral); margin-bottom:8px;">${t("gm_edit_mode_warning")}</div>` : ""}
-        <label>${t("gm_decision_label")}</label>
-        <select id="decision-select-${s.staffId}" onchange="toggleDecisionExtras('${s.staffId}')">
-          <option value="">${t("gm_select_placeholder")}</option>
-          ${opts.map(o => `<option value="${o.value}" ${isEdit && o.value === s.decision ? "selected" : ""}>${o.label}</option>`).join("")}
-        </select>
+        <label>${t("gm_decision_label")} (bisa pilih lebih dari 1, kecuali "Not Extended")</label>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
+          ${opts.map(o => `
+            <label style="display:flex; align-items:center; gap:8px; font-weight:400; text-transform:none; letter-spacing:normal; font-size:15px; cursor:pointer;">
+              <input type="checkbox" id="decision-check-${o.value}-${s.staffId}" value="${o.value}" ${isChecked(o.value) ? "checked" : ""} onchange="toggleDecisionCheckbox('${s.staffId}', '${o.value}')" style="width:18px; height:18px;" />
+              ${o.label}
+            </label>`).join("")}
+        </div>
+
+        <div id="training-fields-${s.staffId}" style="display:none;">
+          <label>Apa yang perlu di-training/coaching? (wajib diisi)</label>
+          <textarea id="training-notes-${s.staffId}" rows="2" placeholder="Contoh: pelatihan komunikasi dengan tamu, penguasaan SOP cashier..." style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.trainingNotes || "") : ""}</textarea>
+          <div class="hint" style="margin-top:-6px; margin-bottom:10px;">Otomatis masuk ke Training Development Plan staff ini.</div>
+        </div>
 
         <div id="extend-fields-${s.staffId}" style="display:none;">
           <label>${t("gm_extend_duration_label")}</label>
@@ -6538,7 +6566,7 @@ async function renderGm() {
             ${Object.entries(s.hrQualitative).map(([q, a]) => `<div style="font-size:13px; margin-bottom:6px;"><em>${q}</em><br/>${a}</div>`).join("")}
           ` : ""}
         </div>` : ""}
-        <label>${t("gm_notes_label")}</label>
+        <label>${t("gm_notes_label")} (opsional)</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
         <div style="margin-top:14px; padding:14px; background:#fff; border:1.5px solid var(--border); border-radius:12px;">
           <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:4px;">${t("gm_calibration_title")}</div>
@@ -6600,11 +6628,11 @@ async function renderGm() {
                 <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.leaderEvaluatorName || "-"})</span></div>
                 <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0) === 0 ? `<span style="color:var(--red); font-weight:700;">⚠️ Belum diisi lengkap</span>` : Number(s.hrTotal).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span></div>
-                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">${t("gm_decision_label_inline")} <strong>${findLabel(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
+                ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">${t("gm_decision_label_inline")} <strong>${findDecisionLabels(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              ${statusBadge(s.status === 'Performer', s.status)}
+              ${statusBadge(s.status !== 'Underperform', s.status)}
               ${s.approvalStatus === 'Approved'
                 ? `<span class="badge done">${t("gm_approved_badge")}</span><button class="ghost" style="font-size:12px;" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">${t("gm_edit_btn")}</button>`
                 : `<button class="secondary" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">${t("gm_approve_btn")}</button>`}
@@ -6748,7 +6776,7 @@ async function showComparisonModal(staffId, name) {
 
   const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
     <div class="section-title" style="margin:16px -18px 8px;">${t("gm_decision_title")}</div>
-    <div style="font-size:14px; color:var(--text);"><strong>${findLabel((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
+    <div style="font-size:14px; color:var(--text);"><strong>${findDecisionLabels((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
     ${s.mutationToPosition ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_mutation_label")} ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
     ${s.extensionDuration ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_extension_label")} ${s.extensionDuration}</div>` : ""}
     <div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_oneonone_inline_label")} <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
@@ -6797,7 +6825,29 @@ function toggleDecisionForm(staffId) {
   if (!el) return;
   const opening = el.style.display === "none";
   el.style.display = opening ? "block" : "none";
-  if (opening) loadCalibrationSuggestion(staffId);
+  if (opening) {
+    loadCalibrationSuggestion(staffId);
+    syncDecisionCheckboxState(staffId);
+  }
+}
+
+/** Order-independent sync of field visibility + Not Extended's mutual exclusivity against
+ *  whatever's CURRENTLY checked — used both right after the form opens (Edit mode can come
+ *  in with boxes pre-checked) and, via toggleDecisionCheckbox, after each individual click. */
+function syncDecisionCheckboxState(staffId) {
+  const isChecked = (v) => { const el = document.getElementById(`decision-check-${v}-${staffId}`); return el && el.checked; };
+  const setDisabled = (v, val) => { const el = document.getElementById(`decision-check-${v}-${staffId}`); if (el) el.disabled = val; };
+
+  const othersChecked = ["mentoring_coaching", "extend_contract", "demote_mutate"].some(isChecked);
+  setDisabled("not_extended", othersChecked);
+  ["mentoring_coaching", "extend_contract", "demote_mutate"].forEach(v => setDisabled(v, isChecked("not_extended")));
+
+  const trainingEl = document.getElementById(`training-fields-${staffId}`);
+  const extendEl = document.getElementById(`extend-fields-${staffId}`);
+  const mutationEl = document.getElementById(`mutation-fields-${staffId}`);
+  if (trainingEl) trainingEl.style.display = isChecked("mentoring_coaching") ? "block" : "none";
+  if (extendEl) extendEl.style.display = isChecked("extend_contract") ? "block" : "none";
+  if (mutationEl) mutationEl.style.display = isChecked("demote_mutate") ? "block" : "none";
 }
 
 /** Fetches and renders the calibration suggestion once per staff (not re-fetched on every
@@ -6838,32 +6888,50 @@ function applyCalibrationSuggestion(staffId, adjustment, evaluatorName, evaluato
   if (reasonEl) reasonEl.value = `${t("gm_calibration_applied_reason_prefix")} (${evaluatorName}): ${t("gm_calibration_applied_reason_avg")} ${evaluatorAverage}, ${t("gm_calibration_applied_reason_vs_company")} ${companyAverage}.`;
 }
 
-function toggleDecisionExtras(staffId) {
-  const decision = document.getElementById(`decision-select-${staffId}`).value;
-  const extendEl = document.getElementById(`extend-fields-${staffId}`);
-  const mutationEl = document.getElementById(`mutation-fields-${staffId}`);
-  if (extendEl) extendEl.style.display = decision === "extend_probation" ? "block" : "none";
-  if (mutationEl) mutationEl.style.display = decision === "demotion_mutation" ? "block" : "none";
+function toggleDecisionCheckbox(staffId, changedValue) {
+  const el = document.getElementById(`decision-check-${changedValue}-${staffId}`);
+  if (el && el.checked) {
+    if (changedValue === "not_extended") {
+      ["mentoring_coaching", "extend_contract", "demote_mutate"].forEach(v => {
+        const other = document.getElementById(`decision-check-${v}-${staffId}`);
+        if (other) other.checked = false;
+      });
+    } else {
+      const notExtendedEl = document.getElementById(`decision-check-not_extended-${staffId}`);
+      if (notExtendedEl) notExtendedEl.checked = false;
+    }
+  }
+  syncDecisionCheckboxState(staffId);
+}
+
+function getCheckedDecisions(staffId) {
+  const values = ["mentoring_coaching", "extend_contract", "demote_mutate", "not_extended"];
+  return values.filter(v => { const el = document.getElementById(`decision-check-${v}-${staffId}`); return el && el.checked; });
 }
 
 async function submitDecisionEdit(staffId) {
-  const decision = document.getElementById(`decision-select-${staffId}`).value;
+  const decisions = getCheckedDecisions(staffId);
   const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
-  if (!decision) { showToast(t("gm_decision_required"), "error"); return; }
+  if (!decisions.length) { showToast(t("gm_decision_required"), "error"); return; }
   if (!oneOnOneStatus) { showToast(t("gm_oneonone_required"), "error"); return; }
-  if (!notes || !notes.trim()) { showToast(t("gm_notes_required"), "error"); return; }
 
-  const payload = { editedById: state.user.staffId, month: state.month, staffId, decision, oneOnOneStatus, notes };
+  const payload = { editedById: state.user.staffId, month: state.month, staffId, decisions, oneOnOneStatus, notes };
 
-  if (decision === "extend_probation") {
+  if (decisions.indexOf("mentoring_coaching") !== -1) {
+    const trainingNotes = document.getElementById(`training-notes-${staffId}`).value;
+    if (!trainingNotes || !trainingNotes.trim()) { showToast("Isi dulu apa yang perlu di-training/coaching.", "error"); return; }
+    payload.trainingNotes = trainingNotes;
+  }
+  if (decisions.indexOf("extend_contract") !== -1) {
     const extensionValue = document.getElementById(`extension-value-${staffId}`).value;
+
     const extensionUnit = document.getElementById(`extension-unit-${staffId}`).value;
     if (!extensionValue || Number(extensionValue) <= 0) { showToast(t("gm_extend_duration_required"), "error"); return; }
     payload.extensionValue = extensionValue;
     payload.extensionUnit = extensionUnit;
   }
-  if (decision === "demotion_mutation") {
+  if (decisions.indexOf("demote_mutate") !== -1) {
     const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
     if (!mutationToPosition) { showToast(t("gm_mutation_position_required"), "error"); return; }
     payload.mutationToPosition = mutationToPosition;
@@ -6892,23 +6960,27 @@ async function submitDecisionEdit(staffId) {
 }
 
 async function submitDecision(staffId) {
-  const decision = document.getElementById(`decision-select-${staffId}`).value;
+  const decisions = getCheckedDecisions(staffId);
   const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
-  if (!decision) { showToast(t("gm_decision_required"), "error"); return; }
+  if (!decisions.length) { showToast(t("gm_decision_required"), "error"); return; }
   if (!oneOnOneStatus) { showToast(t("gm_oneonone_required"), "error"); return; }
-  if (!notes || !notes.trim()) { showToast(t("gm_notes_required"), "error"); return; }
 
-  const payload = { month: state.month, staffId, approvedBy: state.user.name, decision, oneOnOneStatus, notes };
+  const payload = { month: state.month, staffId, approvedBy: state.user.name, approvedById: state.user.staffId, decisions, oneOnOneStatus, notes };
 
-  if (decision === "extend_probation") {
+  if (decisions.indexOf("mentoring_coaching") !== -1) {
+    const trainingNotes = document.getElementById(`training-notes-${staffId}`).value;
+    if (!trainingNotes || !trainingNotes.trim()) { showToast("Isi dulu apa yang perlu di-training/coaching.", "error"); return; }
+    payload.trainingNotes = trainingNotes;
+  }
+  if (decisions.indexOf("extend_contract") !== -1) {
     const extensionValue = document.getElementById(`extension-value-${staffId}`).value;
     const extensionUnit = document.getElementById(`extension-unit-${staffId}`).value;
     if (!extensionValue || Number(extensionValue) <= 0) { showToast(t("gm_extend_duration_required"), "error"); return; }
     payload.extensionValue = extensionValue;
     payload.extensionUnit = extensionUnit;
   }
-  if (decision === "demotion_mutation") {
+  if (decisions.indexOf("demote_mutate") !== -1) {
     const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
     if (!mutationToPosition) { showToast(t("gm_mutation_position_required"), "error"); return; }
     payload.mutationToPosition = mutationToPosition;

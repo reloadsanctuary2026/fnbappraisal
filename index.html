@@ -320,7 +320,7 @@
     background: var(--teal); color: #fff; padding: 13px 22px; border-radius: 14px;
     font-size: 13px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.22);
     z-index: 100; opacity: 0; transition: opacity 0.25s ease, transform 0.25s ease;
-    max-width: 88%; text-align: center; pointer-events: none;
+    max-width: 88%; text-align: center; pointer-events: none; white-space: pre-line; line-height: 1.45;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.success { background: var(--green); }
@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-03-285-fix-misleading-self-not-submitted-text — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-03-288-gm-hr-line-honest-labels — LIVE</div>
 
 <script>
 // =================================================================
@@ -457,7 +457,7 @@ function friendlyError(code) {
     decision_required: "Decision belum dipilih.",
     one_on_one_status_required: "1-on-1 Status belum dipilih.",
     notes_required: "Catatan belum diisi.",
-    outside_approval_window: "Belum waktunya approval (tanggal 28 - 4 bulan depan).",
+    outside_approval_window: "Di luar jendela approval (biasanya tanggal 28 - 4 bulan depan).",
     not_authorized: "Anda tidak punya akses untuk ini.",
     evaluator_or_target_not_found: "Data tidak ditemukan, coba refresh halaman.",
     appraisal_not_found: "Appraisal untuk staff ini belum lengkap.",
@@ -474,7 +474,7 @@ function friendlyError(code) {
   return code || "Terjadi kendala tidak dikenal";
 }
 
-function showToast(message, type = "success") {
+function showToast(message, type = "success", durationMs = 2400) {
   const existing = document.getElementById("toast");
   if (existing) existing.remove();
   const el = document.createElement("div");
@@ -486,7 +486,7 @@ function showToast(message, type = "success") {
   setTimeout(() => {
     el.classList.remove("show");
     setTimeout(() => el.remove(), 300);
-  }, 2400);
+  }, durationMs);
 }
 
 // =================================================================
@@ -599,7 +599,7 @@ const translations = {
     km_audit_conn_error: "Gagal membuat audit: koneksi bermasalah, coba lagi.",
     km_audit_ready: "berhasil diunduh.",
     km_audit_position_suffix: "posisi)",
-    hi_intro: "Buat data appraisal SEBELUM sistem ini ada — cuma skor 1 evaluator yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan untuk perhitungan Service Charge.",
+    hi_intro: "Buat data appraisal SEBELUM sistem ini ada — cuma skor 1 evaluator yang tersedia (Self & HR appraisal tidak ada untuk periode ini). Dipakai murni sebagai bahan tracking performa historis, bukan bagian dari penilaian bulan berjalan.",
     hi_month_label: "Bulan historis",
     hi_progress_title_prefix: "Progress",
     hi_progress_done_of: "dari",
@@ -714,14 +714,14 @@ const translations = {
     gm_from_position_label: "Dari Posisi",
     gm_to_position_label: "Ke Posisi (wajib — cuma level sama/di bawah)",
     gm_oneonone_label: "1-on-1 Status (wajib)",
-    gm_notes_label: "Catatan (wajib)",
+    gm_notes_label: "Catatan (opsional)",
     gm_save_changes_btn: "Simpan Perubahan",
     gm_confirm_approval_btn: "Konfirmasi Approval",
     gm_month_label: "Bulan appraisal",
-    gm_approval_window_hint: "Approval cuma bisa dilakukan tanggal 28 sampai tanggal 4 bulan depan.",
+    gm_approval_window_hint: "Approval dilakukan di jendela tanggal 28 sampai tanggal 4 bulan depan (bisa buka lebih awal begitu tahap sebelumnya selesai).",
     gm_appraisal_title_suffix: "staff",
     gm_approve_all_btn: "Approve Semua yang Layak",
-    gm_approve_all_hint: "\"Approve Semua\" otomatis approve yang Performer (skip yang di bawah standar), Decision default \"Approved — Lanjut\".",
+    gm_approve_all_hint: "\"Approve Semua\" otomatis approve yang Performer dan Best Performer (skip yang di bawah standar), tanpa Decision khusus.",
     gm_export_decision_log_btn: "📊 Export Decision Log (semua bulan)",
     gm_search_placeholder: "Cari nama...",
     gm_sort_placeholder: "Urutkan...",
@@ -845,7 +845,7 @@ const translations = {
     faq_day_8_17: "Tanggal 8–17",
     faq_day_8_17_desc: "Leader/Management/Executive menilai tim-nya",
     faq_day_18_27: "Tanggal 18–27",
-    faq_day_18_27_desc: "HR menilai semua tier",
+    faq_day_18_27_desc: "HR menilai semua tier (kecuali Back Office & dept HR — di sana tidak ada tahap HR)",
     faq_day_28_4: "Tanggal 28 - 4 (bulan depan)",
     faq_day_28_4_desc: "Executive Approval + Decision final",
     faq_general_flow_note: "Kalau fase sebelumnya diisi lebih awal, fase berikutnya bisa dibuka lebih cepat juga — tenggat waktunya tetap sama.",
@@ -1033,7 +1033,7 @@ const translations = {
     km_audit_conn_error: "Failed to generate audit: connection issue, try again.",
     km_audit_ready: "downloaded successfully.",
     km_audit_position_suffix: "positions)",
-    hi_intro: "Records appraisal data from BEFORE this system existed — only 1 evaluator score is available (there's no Self or HR appraisal for this period). Used purely as historical performance tracking data, not for Service Charge calculations.",
+    hi_intro: "Records appraisal data from BEFORE this system existed — only 1 evaluator score is available (there's no Self or HR appraisal for this period). Used purely as historical performance tracking data, not part of the current month's appraisal.",
     hi_month_label: "Historical month",
     hi_progress_title_prefix: "Progress",
     hi_progress_done_of: "of",
@@ -1148,14 +1148,14 @@ const translations = {
     gm_from_position_label: "From Position",
     gm_to_position_label: "To Position (required — same level or below only)",
     gm_oneonone_label: "1-on-1 Status (required)",
-    gm_notes_label: "Notes (required)",
+    gm_notes_label: "Notes (optional)",
     gm_save_changes_btn: "Save Changes",
     gm_confirm_approval_btn: "Confirm Approval",
     gm_month_label: "Appraisal month",
-    gm_approval_window_hint: "Approval can only be done from the 28th to the 4th of the following month.",
+    gm_approval_window_hint: "Approval is done in the window from the 28th to the 4th of the following month (it can open earlier once the previous stages are done).",
     gm_appraisal_title_suffix: "staff",
     gm_approve_all_btn: "Approve All Eligible",
-    gm_approve_all_hint: "\"Approve All\" automatically approves Performers (skips those below standard), with default Decision \"Approved — Continue\".",
+    gm_approve_all_hint: "\"Approve All\" automatically approves Performers and Best Performers (skips those below standard), with no specific Decision attached.",
     gm_export_decision_log_btn: "📊 Export Decision Log (all months)",
     gm_search_placeholder: "Search name...",
     gm_sort_placeholder: "Sort...",
@@ -1279,7 +1279,7 @@ const translations = {
     faq_day_8_17: "Days 8–17",
     faq_day_8_17_desc: "Leader/Management/Executive rates their team",
     faq_day_18_27: "Days 18–27",
-    faq_day_18_27_desc: "HR rates every tier",
+    faq_day_18_27_desc: "HR rates every tier (except Back Office and the HR dept — there is no HR stage there)",
     faq_day_28_4: "Day 28 to the 4th (next month)",
     faq_day_28_4_desc: "Executive Approval + final Decision",
     faq_general_flow_note: "If an earlier phase is filled in ahead of time, the next phase can open sooner too — the deadline itself stays the same.",
@@ -1498,10 +1498,10 @@ function renderFaq() {
       myEvaluations: "Isi appraisal buat orang-orang yang jadi tanggung jawab kamu. Kalau orangnya udah isi Self duluan, skornya muncul sebagai referensi.",
       review: "Lihat hasil appraisal orang-orang di scope kamu — read-only, gak ada tombol isi/ubah, cuma buat monitoring/lihat-lihat. Bisa geser bulan.",
       company: "Ringkasan rata-rata skor per department/tier — buat lihat gambaran besar performa. Gak nampilin skor personal individu, cuma agregat.",
-      gm: "Approve hasil akhir semua tier + wajib pilih Decision, 1-on-1 Status, dan Catatan. Bisa juga geser bulan buat sekedar lihat-lihat skor bulan lain.",
+      gm: "Approve hasil akhir semua tier + wajib pilih Decision dan 1-on-1 Status (Catatan opsional; yang wajib cuma isian khusus tiap Decision: materi coaching, lama extend, atau posisi mutasi). Bisa juga geser bulan buat sekedar lihat-lihat skor bulan lain.",
       progress: "Pantau siapa aja Leader/Management/HR yang UDAH vs BELUM ngerjain tugas appraisal-nya bulan ini — soal kepatuhan/compliance, bukan soal skor bagus/jelek.",
       feedback: "Baca feedback confidential yang staff tulis lewat kolom 'Feedback to Management' pas Self Appraisal, lengkap dengan Issue Summary & Action Tracker — Executive, HR, dan Admin Operational bisa lihat halaman ini.",
-      historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan buat perhitungan Service Charge.",
+      historical: "Input skor Leader appraisal dari periode SEBELUM sistem ini ada — buat bahan tracking histori performa staff, bukan bagian dari penilaian bulan berjalan.",
       settings: "Ganti PIN sendiri dan lihat profil kamu — Nama, NIK, Job Title, Department, Tier.",
       sc: "Input Total Service Charge bulanan — begitu diisi, sistem otomatis hitung potongan dari yang Underperform dan bagi rata ke yang Performer.",
     },
@@ -1511,10 +1511,10 @@ function renderFaq() {
       myEvaluations: "Fill in appraisals for the people you're responsible for. If they already filled in their Self Appraisal first, their score shows up as a reference.",
       review: "View appraisal results for people in your scope — read-only, no fill-in/edit buttons, just for monitoring/browsing. You can switch months.",
       company: "Average score summary per department/tier — for a big-picture view of performance. Doesn't show any individual's personal score, only aggregates.",
-      gm: "Approve final results for every tier + must select a Decision, 1-on-1 Status, and Notes. You can also switch months just to browse other months' scores.",
+      gm: "Approve final results for every tier + must select a Decision and 1-on-1 Status (Notes are optional; only the Decision-specific fields are required: coaching topic, extension length, or mutation target). You can also switch months just to browse other months' scores.",
       progress: "Monitor which Leaders/Management/HR HAVE vs HAVEN'T done their appraisal task this month — about compliance, not about good/bad scores.",
       feedback: "Read confidential feedback staff wrote via the 'Feedback to Management' field during Self Appraisal, complete with an Issue Summary & Action Tracker — Executive, HR, and Admin Operational can view this page.",
-      historical: "Enter Leader appraisal scores from BEFORE this system existed — for historical performance tracking, not for Service Charge calculations.",
+      historical: "Enter Leader appraisal scores from BEFORE this system existed — for historical performance tracking, not part of the current month's appraisal.",
       settings: "Change your own PIN and view your profile — Name, Employee ID, Job Title, Department, Tier.",
       sc: "Enter the monthly Total Service Charge — once entered, the system automatically calculates deductions from Underperformers and distributes the pool evenly to Performers.",
     },
@@ -1533,7 +1533,7 @@ function renderFaq() {
         <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (kamu juga dinilai, oleh Management).</p>
         <p><strong>2.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Staff yang jadi tanggung jawabmu. Kalau Staff-nya udah isi Self duluan, skornya muncul sebagai referensi.</p>
         <p><strong>3.</strong> Lewat <strong>Review Your Team</strong>, kamu bisa lihat hasil appraisal Staff-mu (read-only, gak bisa isi ulang).</p>
-        <p>Kalau lupa isi sampai window ketutup, skor Leader buat Staff itu dianggap 0 (bobot 60%) — jadi usahain tepat waktu.</p>`,
+        <p>Kalau lupa isi sampai window ketutup, skor Leader buat Staff itu dianggap 0, padahal bobot Leader paling besar di skor akhir — jadi usahain tepat waktu.</p>`,
       Management: `
         <p><strong>1.</strong> Tanggal 1–7: isi Self Appraisal kamu sendiri (dinilai oleh Executive).</p>
         <p><strong>2.</strong> Tanggal 8–17: isi <strong>Team Appraisal</strong> buat Leader di scope-mu. Kalau ada Staff yang Leader-nya belum sempat isi, kamu bisa isi sebagai pengganti.</p>
@@ -1545,7 +1545,7 @@ function renderFaq() {
         <p><strong>3.</strong> <strong>Track Team Compliance</strong> — pantau siapa aja Leader/Management/HR yang belum ngerjain tugas appraisal-nya (compliance, bukan skor).</p>
         <p><strong>4.</strong> <strong>Compare Departments</strong> — ringkasan performa seluruh perusahaan bulan ini: rata-rata skor, jumlah Performer/Underperform, breakdown per department.</p>`,
       HR: `
-        <p><strong>1.</strong> Tanggal 18–27: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department. Tombol "Samakan dgn Leader/Mgmt" muncul kalau Leader/Management-nya udah isi duluan.</p>
+        <p><strong>1.</strong> Tanggal 18–27: isi <strong>HR Appraisal</strong> buat SEMUA tier (Staff/Leader/Management), lintas department (kecuali Back Office & dept HR sendiri, yang tidak punya tahap HR). Tombol "Samakan dgn Leader/Mgmt" muncul kalau Leader/Management-nya udah isi duluan.</p>
         <p><strong>2.</strong> <strong>Review Everyone's Records</strong> — lihat semua hasil appraisal, lintas department & tier (read-only).</p>
         <p><strong>3.</strong> <strong>Track Pending Follow-Ups</strong> — reminder buat kasus "Extend Probation/Kontrak" yang udah jatuh tempo, perlu ditindaklanjuti.</p>`,
     },
@@ -1560,7 +1560,7 @@ function renderFaq() {
         <p><strong>1.</strong> Days 1–7: fill in your own Self Appraisal (you're also rated, by Management).</p>
         <p><strong>2.</strong> Days 8–17: fill in <strong>Team Appraisal</strong> for the Staff you're responsible for. If a Staff member already filled in their Self first, their score shows up as a reference.</p>
         <p><strong>3.</strong> Via <strong>Review Your Team</strong>, you can view your Staff's appraisal results (read-only, can't be re-filled).</p>
-        <p>If you forget to fill it in before the window closes, that Staff member's Leader score counts as 0 (60% weight) — so try to be on time.</p>`,
+        <p>If you forget to fill it in before the window closes, that Staff member's Leader score counts as 0, even though the Leader carries the biggest weight in the final score — so try to be on time.</p>`,
       Management: `
         <p><strong>1.</strong> Days 1–7: fill in your own Self Appraisal (rated by Executive).</p>
         <p><strong>2.</strong> Days 8–17: fill in <strong>Team Appraisal</strong> for the Leaders in your scope. If a Staff member's Leader hasn't had a chance to fill it in, you can fill it in as a substitute.</p>
@@ -1572,7 +1572,7 @@ function renderFaq() {
         <p><strong>3.</strong> <strong>Track Team Compliance</strong> — monitor which Leaders/Management/HR haven't done their appraisal task (compliance, not scores).</p>
         <p><strong>4.</strong> <strong>Compare Departments</strong> — a company-wide performance summary for this month: average score, Performer/Underperform counts, breakdown per department.</p>`,
       HR: `
-        <p><strong>1.</strong> Days 18–27: fill in <strong>HR Appraisal</strong> for EVERY tier (Staff/Leader/Management), across every department. A "Match Leader/Mgmt" button appears if the Leader/Management already filled theirs in first.</p>
+        <p><strong>1.</strong> Days 18–27: fill in <strong>HR Appraisal</strong> for EVERY tier (Staff/Leader/Management), across every department (except Back Office and the HR dept itself, which have no HR stage). A "Match Leader/Mgmt" button appears if the Leader/Management already filled theirs in first.</p>
         <p><strong>2.</strong> <strong>Review Everyone's Records</strong> — view every appraisal result, across every department & tier (read-only).</p>
         <p><strong>3.</strong> <strong>Track Pending Follow-Ups</strong> — reminders for "Extend Probation/Contract" cases that are due and need follow-up.</p>`,
     },
@@ -1582,14 +1582,14 @@ function renderFaq() {
   const qaByLang = {
     id: [
       { q: "Kenapa saya gak bisa isi appraisal lagi?", a: "Appraisal cuma bisa disubmit 1 kali per bulan. Kalau udah submit, tombolnya otomatis terkunci sampai bulan berikutnya. Hubungi HR kalau butuh koreksi." },
-      { q: "Kapan saya tahu hasil appraisal saya?", a: "Setelah Executive approve (tanggal 28 - 4 bulan depan), kamu dapat notifikasi (🔔) dan bisa lihat detail lengkapnya di Track Your Progress." },
+      { q: "Kapan saya tahu hasil appraisal saya?", a: "Setelah Executive approve (biasanya tanggal 28 - 4 bulan depan), kamu dapat notifikasi (🔔) dan bisa lihat detail lengkapnya di Track Your Progress." },
       { q: "Kalau Leader/HR saya belum isi appraisal, gimana?", a: "Kalau sampai window waktunya tutup mereka belum isi, skor mereka dianggap 0 (bukan diskip) — ini konsekuensi bawaan sistem, bukan bug." },
       { q: "Skor saya turun karena apa?", a: "Cek Track Your Progress — ada breakdown per Section (Attitude/Discipline/KPI/Bonus) biar tau bagian mana yang lemah." },
       { q: "Siapa yang bisa lihat data appraisal saya?", a: "Leader/Management/Executive/HR yang berwenang di scope kamu. Orang di department lain gak bisa lihat data personal kamu." },
     ],
     en: [
       { q: "Why can't I fill in my appraisal anymore?", a: "An appraisal can only be submitted once a month. Once submitted, the button automatically locks until next month. Contact HR if you need a correction." },
-      { q: "When will I know my appraisal result?", a: "After Executive approves it (the 28th to the 4th of the following month), you'll get a notification (🔔) and can see the full details in Track Your Progress." },
+      { q: "When will I know my appraisal result?", a: "After Executive approves it (usually the 28th to the 4th of the following month), you'll get a notification (🔔) and can see the full details in Track Your Progress." },
       { q: "What if my Leader/HR hasn't filled in my appraisal?", a: "If the window closes before they fill it in, their score counts as 0 (not skipped) — this is a built-in system consequence, not a bug." },
       { q: "Why did my score go down?", a: "Check Track Your Progress — there's a breakdown per Section (Attitude/Discipline/KPI/Bonus) so you can see which part is weak." },
       { q: "Who can see my appraisal data?", a: "The Leader/Management/Executive/HR authorized within your scope. People in other departments can't see your personal data." },
@@ -5731,7 +5731,7 @@ async function renderMyAppraisalStatus(target) {
         <table class="mini">
           <tr><td>Skor Self</td><td>${Number(d.selfTotal || 0).toFixed(1)}</td></tr>
           <tr><td>Skor Leader/Management</td><td>${Number(d.leaderTotal || 0).toFixed(1)}</td></tr>
-          <tr><td>Skor HR</td><td>${Number(d.hrTotal || 0) === 0 ? `<span style="color:var(--red); font-weight:700;">⚠️ Belum diisi lengkap</span>` : Number(d.hrTotal).toFixed(1)}</td></tr>
+          ${Number(d.hrTotal || 0) === 0 ? "" : `<tr><td>Skor HR</td><td>${Number(d.hrTotal).toFixed(1)}</td></tr>`}
           <tr><td>Skor Akhir</td><td>${Number(d.finalScore || 0).toFixed(1)}</td></tr>
         </table>
         <div class="hint" style="font-weight:700; color:var(--teal); margin:14px 0 6px;">Breakdown per Section (biar tau bagian mana yang lemah)</div>
@@ -5739,9 +5739,9 @@ async function renderMyAppraisalStatus(target) {
           ${d.customSectionBreakdown && d.customSectionBreakdown.length ? d.customSectionBreakdown.map(s =>
             `<tr><td>${state.lang === "en" ? (s.labelEn || s.labelId) : s.labelId} (${s.weightPct}%)</td><td>${Number(s.blended || 0).toFixed(1)} / ${s.weightPct}</td></tr>`
           ).join("") : `
-          <tr><td>Section A — Attitude</td><td>${Number(d.sectionABlend || 0).toFixed(1)} / 30</td></tr>
-          <tr><td>Section B — Discipline</td><td>${Number(d.sectionBBlend || 0).toFixed(1)} / 30</td></tr>
-          <tr><td>Section C — Performance KPI</td><td>${Number(d.sectionCBlend || 0).toFixed(1)} / 40</td></tr>
+          <tr><td>Section A — Attitude</td><td>${Number(d.sectionABlend || 0).toFixed(1)}</td></tr>
+          <tr><td>Section B — Discipline</td><td>${Number(d.sectionBBlend || 0).toFixed(1)}</td></tr>
+          <tr><td>Section C — Performance KPI</td><td>${Number(d.sectionCBlend || 0).toFixed(1)}</td></tr>
           <tr><td>Section D — Bonus/Deduction</td><td>${Number(d.sectionDBlend || 0) >= 0 ? "+" : ""}${Number(d.sectionDBlend || 0).toFixed(1)}</td></tr>`}
         </table>
         <div class="mode-banner" style="background:var(--sand); margin-top:14px;">
@@ -6569,7 +6569,7 @@ async function renderGm() {
             ${Object.entries(s.hrQualitative).map(([q, a]) => `<div style="font-size:13px; margin-bottom:6px;"><em>${q}</em><br/>${a}</div>`).join("")}
           ` : ""}
         </div>` : ""}
-        <label>${t("gm_notes_label")} (opsional)</label>
+        <label>${t("gm_notes_label")}</label>
         <textarea id="decision-notes-${s.staffId}" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${isEdit ? (s.decisionNotes || "") : ""}</textarea>
         <div style="margin-top:14px; padding:14px; background:#fff; border:1.5px solid var(--border); border-radius:12px;">
           <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:4px;">${t("gm_calibration_title")}</div>
@@ -6630,7 +6630,11 @@ async function renderGm() {
                 <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.leaderEvaluatorName || "-"})</span></div>
-                <div class="dept" style="margin-top:2px;">HR: ${Number(s.hrTotal || 0) === 0 ? `<span style="color:var(--red); font-weight:700;">⚠️ Belum diisi lengkap</span>` : Number(s.hrTotal).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span></div>
+                <div class="dept" style="margin-top:2px;">HR: ${s.hrStageActive === false
+                  ? `<span style="color:var(--text-muted);">— (tidak ada tahap HR untuk posisi ini)</span>`
+                  : Number(s.hrTotal || 0) === 0
+                    ? `<span style="color:var(--red); font-weight:700;">⚠️ HR tidak mengisi${state.month >= "2026-10" ? " — bobot HR tidak dihitung, dialihkan ke Leader" : ""}</span>`
+                    : `${Number(s.hrTotal).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span>`}</div>
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">${t("gm_decision_label_inline")} <strong>${findDecisionLabels(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>
@@ -7010,7 +7014,12 @@ async function submitDecision(staffId) {
   }
 
   const res = await apiPost("approveStaff", payload);
-  if (res.error || res.success === false) { showToast(t("gm_approve_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
+  if (res.error || res.success === false) {
+    // windowInfo (when the failure is the approval window) carries the person's REAL dates
+    // and whether it's too early or too late — long enough to need a longer-lived toast.
+    showToast(t("gm_approve_failed_prefix") + " " + friendlyError(res.error) + (res.windowInfo ? "\n" + res.windowInfo : ""), "error", res.windowInfo ? 9000 : 2400);
+    return;
+  }
   showToast(t("gm_approve_success_toast"));
   renderGm();
 }

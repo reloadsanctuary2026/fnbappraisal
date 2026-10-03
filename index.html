@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-02-284-redesign-decision-multiselect-3tier-status — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-03-285-fix-misleading-self-not-submitted-text — LIVE</div>
 
 <script>
 // =================================================================
@@ -5758,7 +5758,10 @@ async function renderMyAppraisalStatus(target) {
 
   app.innerHTML = topbar("Status Appraisal Saya") + `
     <div class="card">
-      <div class="hint" style="font-size:14px; margin-bottom:12px;">Appraisal kamu bulan ini (${res.month}) sudah terkirim dan sedang berjalan lewat proses berikut:</div>
+      <div class="hint" style="font-size:14px; margin-bottom:12px;">${res.selfDone
+        ? `Appraisal kamu bulan ini (${res.month}) sudah terkirim dan sedang berjalan lewat proses berikut:`
+        : `Appraisal kamu bulan ini (${res.month}) <strong style="color:var(--coral);">BELUM kamu isi</strong> — Self Appraisal kamu masih kosong. Proses lain gak bisa lanjut sampai ini keisi:`}</div>
+      ${!res.selfDone ? `<button class="primary" onclick="renderAppraisalForm({evaluatorType:'self', target:state.user})" style="margin-bottom:14px;">✍️ Isi Self Appraisal Sekarang</button>` : ""}
       <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:14px;">
         ${[
           { label: "Self", done: res.selfDone, active: !res.activeStages || res.activeStages.self },

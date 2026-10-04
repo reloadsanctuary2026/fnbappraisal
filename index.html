@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-04-293-oversees-dependency-panel — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-04-294-pins-only-ui — LIVE</div>
 
 <script>
 // =================================================================
@@ -3388,7 +3388,10 @@ function orgEvaluatorOptionsFor(rowTier, bu, currentPrimaryId) {
   if (rowTier === 'Staff') pool = [...bu.candidates.leaders.map(c => ({ ...c, tier: 'Leader' })), ...bu.candidates.managements.map(c => ({ ...c, tier: 'Management' })), ...bu.candidates.executives.map(c => ({ ...c, tier: c.actualTier || 'Executive' }))];
   else if (rowTier === 'Leader') pool = [...bu.candidates.managements.map(c => ({ ...c, tier: 'Management' })), ...bu.candidates.executives.map(c => ({ ...c, tier: c.actualTier || 'Executive' }))];
   else if (rowTier === 'Management') pool = bu.candidates.executives.map(c => ({ ...c, tier: c.actualTier || 'Executive' }));
-  return `<option value="">(Otomatis)</option>` +
+  // An empty choice no longer means "decided automatically from Oversees" (that fallback is gone,
+  // 04/10/2026): for Staff/Leader it means NOBODY evaluates this person. Only Management is still
+  // automatic — the Executives of the business unit evaluate them.
+  return `<option value="">${rowTier === 'Management' ? '(Otomatis — Executive unit)' : '(Belum ada penilai)'}</option>` +
     pool.map(c => `<option value="${c.staffId}" ${String(c.staffId) === String(currentPrimaryId) ? "selected" : ""}>${escapeAttr(c.name)} (${c.tier})</option>`).join("");
 }
 
@@ -3493,23 +3496,21 @@ function renderOrgWarningsHtml(unitWarnings, buLabel) {
 }
 
 function orgDeptCoverageBadge(dept) {
-  if (typeof dept.uncoveredCount !== "number") { // older backend: keep the previous wording
-    return dept.hasNoOverseer ? ` <span style="color:var(--red); font-size:12px; font-weight:400;">⚠️ gak ada overseer otomatis</span>` : "";
-  }
-  if (dept.uncoveredCount > 0) return ` <span style="color:var(--red); font-size:12px; font-weight:700;">⚠️ ${dept.uncoveredCount} staff belum punya penilai</span>`;
-  return dept.hasNoOverseer ? ` <span style="color:var(--text-muted); font-size:12px; font-weight:400;">dipimpin Superior manual</span>` : "";
+  return typeof dept.uncoveredCount === "number" && dept.uncoveredCount > 0
+    ? ` <span style="color:var(--red); font-size:12px; font-weight:700;">⚠️ ${dept.uncoveredCount} staff belum punya penilai</span>`
+    : "";
 }
 
 function orgStaffCoverageFlag(s) {
   return s && s.evaluatorSource === "none" ? ` <span style="color:var(--red); font-size:11px; font-weight:700;">⚠️ belum ada penilai</span>` : "";
 }
 
-// ---- Struktur: "Ketergantungan fallback Oversees" ---------------------------------------
-// People who are evaluated ONLY because of Oversees (no usable manual Superior). Oversees is being
-// retired as a way of deciding who evaluates/reviews whom; before the fallback is switched off,
-// each of these must become an explicit pin, or they would silently lose their evaluator.
+// ---- Struktur: saran penilai untuk orang yang belum punya (dari Oversees lama) ------------
+// Since 04/10/2026 Oversees decides nothing: Staff and Leader are evaluated and reviewed ONLY
+// through manual Superiors. These are people with NO usable Superior for whom the old Oversees
+// rule would have found one — a one-click way to give them a pin (typically a new hire).
 // The server re-derives this list and only accepts a pin that is one of the person's own
-// automatic candidates, so nothing here can pin an arbitrary person.
+// suggestions, so nothing here can pin an arbitrary person.
 async function loadOverseesDeps() {
   state._ovDepsLoading = true;
   let res;
@@ -3547,13 +3548,13 @@ async function convertOvDeps(staffIds, confirmText) {
 }
 
 function convertOneOvDep(staffId) {
-  return convertOvDeps([staffId], "Jadikan manual untuk 1 orang ini? Penilainya tidak berubah dari sekarang kecuali kamu memilih salah satu dari beberapa kandidat.");
+  return convertOvDeps([staffId], "Jadikan saran ini Superior manual untuk 1 orang? Dia akan mulai punya penilai (sekarang belum ada).");
 }
 
 function convertAllReadyOvDeps(buName) {
   const bu = ((state._ovDeps && state._ovDeps.businessUnits) || []).find(b => b.name === buName);
   const ready = bu ? bu.dependents.filter(d => ovReadyAssignment(d)).map(d => d.staffId) : [];
-  return convertOvDeps(ready, "Jadikan manual untuk {n} orang sekaligus?\n\nIni menulis {n} baris Superior manual. Penilai Leader tetap sama; yang berubah: Management yang tadinya jadi cadangan tidak lagi dapat tugas cadangan, dan kalau ada lebih dari satu Leader yang cocok, hanya yang kamu pilih yang menilai.");
+  return convertOvDeps(ready, "Jadikan manual untuk {n} orang sekaligus?\n\nIni menulis {n} baris Superior manual. Mereka sekarang belum punya penilai; setelah ini penilainya sesuai saran (atau pilihanmu untuk yang ambigu).");
 }
 
 function renderOverseesDepsHtml(buName, buLabel) {
@@ -3566,7 +3567,7 @@ function renderOverseesDepsHtml(buName, buLabel) {
   const bu = (d.businessUnits || []).find(b => b.name === buName);
   const label = escapeHtml(buLabel);
   if (!bu || !bu.dependents.length) {
-    return `<div class="card"><div class="hint" style="color:var(--green); font-weight:700; margin:0;">✅ Gak ada yang bergantung pada fallback Oversees di ${label} — semua penilai sudah eksplisit.</div></div>`;
+    return `<div class="card"><div class="hint" style="color:var(--green); font-weight:700; margin:0;">✅ Gak ada saran penilai yang tertunda di ${label}.</div></div>`;
   }
   const ambiguous = bu.dependents.filter(x => x.ambiguous).length;
   const ready = bu.dependents.filter(x => ovReadyAssignment(x)).length;
@@ -3578,7 +3579,7 @@ function renderOverseesDepsHtml(buName, buLabel) {
            <option value="">— pilih penilai (${dep.candidates.length} kandidat) —</option>
            ${dep.candidates.map(c => `<option value="${escapeHtml(c.staffId)}" ${c.staffId === picked ? "selected" : ""}>${escapeHtml(c.name)}${c.jobTitle ? ` (${escapeHtml(c.jobTitle)})` : ""}</option>`).join("")}
          </select>`
-      : `<span class="hint" style="margin:0;">otomatis → <strong>${escapeHtml(dep.candidates[0].name)}</strong></span>`;
+      : `<span class="hint" style="margin:0;">saran → <strong>${escapeHtml(dep.candidates[0].name)}</strong></span>`;
     const ok = !!ovReadyAssignment(dep);
     return `<div style="border-bottom:1px solid var(--border); padding:8px 0; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
         <div style="min-width:0; flex:1 1 200px;">
@@ -3591,8 +3592,8 @@ function renderOverseesDepsHtml(buName, buLabel) {
       </div>`;
   };
   return `<div class="card" style="border:1.5px solid var(--amber);">
-      <h2 style="margin-top:0;">🔗 ${bu.dependents.length} orang di ${label} masih bergantung pada fallback Oversees${ambiguous ? ` (${ambiguous} perlu dipilih)` : ""}</h2>
-      <div class="hint" style="margin-bottom:10px;">Mereka tidak punya Superior manual yang valid — penilainya sekarang ditentukan otomatis dari Oversees. Jadikan manual supaya aman saat fallback dimatikan. Yang ambigu = lebih dari satu Leader cocok; pilih siapa yang memegang tanggung jawab.</div>
+      <h2 style="margin-top:0;">🔗 ${bu.dependents.length} orang di ${label} belum punya penilai — ada saran dari Oversees lama${ambiguous ? ` (${ambiguous} perlu dipilih)` : ""}</h2>
+      <div class="hint" style="margin-bottom:10px;">Mereka tidak punya Superior manual yang valid, jadi sekarang TIDAK dinilai siapa pun. Aturan Oversees yang lama punya saran siapa penilainya — klik "Jadikan manual" untuk mengangkat saran itu jadi penilai. Yang ambigu = lebih dari satu kandidat; pilih siapa yang memegang tanggung jawab.</div>
       <button class="primary" ${ready ? "" : "disabled"} onclick="convertAllReadyOvDeps('${escapeAttr(buName)}')">Jadikan manual semua yang siap (${ready})</button>
       <div style="max-height:420px; overflow-y:auto; margin-top:10px;">${bu.dependents.map(row).join("")}</div>
     </div>`;
@@ -3709,7 +3710,7 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
       <td colspan="4">
         <div style="padding:8px; background:var(--sand); border-radius:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <select id="org-add-backup-select-${s.staffId}" style="flex:1; min-width:200px; padding:6px; border-radius:8px; border:1.5px solid var(--border);">
-            ${orgEvaluatorOptionsFor(rowTier, bu, "").replace('<option value="">(Otomatis)</option>', "")}
+            ${orgEvaluatorOptionsFor(rowTier, bu, "").replace(/<option value="">[^<]*<\/option>/, "")}
           </select>
           <button class="primary" style="background:var(--teal);" onclick="addOrgBackup('${s.staffId}')">Tambah (belum disimpan)</button>
           <button class="ghost" onclick="toggleOrgAddBackup(null)">Batal</button>
@@ -3768,7 +3769,7 @@ function renderOrgStructureBody() {
           <div style="font-weight:700;">☑️ ${bulkCount} orang dicentang</div>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <select id="org-bulk-evaluator-select" style="padding:6px; border-radius:8px; border:none; min-width:200px;">
-              <option value="">(Otomatis)</option>
+              <option value="">(Kosongkan penilai)</option>
               ${[...bu.candidates.leaders, ...bu.candidates.managements, ...bu.candidates.executives].map(c => `<option value="${c.staffId}">${escapeAttr(c.name)}</option>`).join("")}
             </select>
             <button class="primary" style="background:var(--coral);" onclick="applyOrgBulkEvaluator()">Terapkan ke Semua</button>

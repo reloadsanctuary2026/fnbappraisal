@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-03-288-gm-hr-line-honest-labels — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-04-289-job-title-coverage-panel — LIVE</div>
 
 <script>
 // =================================================================
@@ -2511,6 +2511,16 @@ function sortMyEvalList(criteria) {
 // backtick template literals allow literal newlines). The browser silently swallows that
 // parse error, so clicking the button just... does nothing — exactly what looked like a
 // broken "Edit" button on any criterion with a real multi-line rubric filled in.
+/** Real HTML escaping, for text/attribute VALUES placed into innerHTML. Do NOT confuse with
+ *  escapeAttr above — that one only prepares a string to sit inside a JS string literal in an
+ *  onclick="...", and leaves < > & " untouched (and turns ' into \' which then shows up
+ *  literally on screen). */
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function escapeAttr(s) {
   return String(s)
     .replace(/\\/g, "\\\\")
@@ -3329,6 +3339,8 @@ async function renderOrgStructure() {
   state._positionMapSearchTerm = "";
   state._positionMapEditingIdx = null;
   state._positionMapAdding = false;
+  state._jtCoverage = null; // re-fetched lazily the next time the Job Title & Tier tab is shown
+  state._jtCoverageLoading = false;
   state._orgStructureData = res;
   state._orgStructureUnit = state._orgStructureUnit || res.businessUnits[0].name;
   state._orgPendingChanges = {};
@@ -3885,8 +3897,141 @@ async function saveAllOrgChanges() {
   await renderOrgStructure(); // one single refetch, after everything's saved
 }
 
+// ============================================================
+// Job Title & Tier — coverage panel (read-only; changes nothing by itself)
+// ============================================================
+// Shows (a) everyone who is silently OUT of the appraisal because their Job Title has no tier,
+// grouped by the exact title HR typed, with a one-click add/edit that carries that exact
+// spelling over; and (b) HR's own Tier column next to the tier the system actually uses, per
+// person, so the differences can be reconciled before tier becomes a per-person value.
+async function loadJobTitleCoverage() {
+  state._jtCoverageLoading = true;
+  let res;
+  try { res = await apiGet("getJobTitleCoverage", { requesterId: state.user.staffId }); }
+  catch (err) { res = { found: false, error: "network" }; }
+  state._jtCoverageLoading = false;
+  state._jtCoverage = res && res.found ? res : { error: (res && res.error) || "unknown" };
+  if (state._orgViewMode === "jobtitles") renderOrgStructureBody();
+}
+
+function setJtUnit(v) { state._jtCoverageUnit = v; renderOrgStructureBody(); }
+function toggleJtShowAll() { state._jtShowAll = !state._jtShowAll; renderOrgStructureBody(); }
+
+function scrollToPositionMapForm() {
+  setTimeout(() => {
+    const el = document.getElementById("pm-department-new")
+      || (state._positionMapEditingIdx !== null ? document.getElementById(`pm-department-edit-${state._positionMapEditingIdx}`) : null);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, 60);
+}
+
+function prefillPositionMapAdd(groupIdx) {
+  const g = ((state._jtCoverage || {}).groups || [])[groupIdx];
+  if (!g) return;
+  state._positionMapPrefillTitle = g.jobTitle;
+  state._positionMapAdding = true;
+  state._positionMapEditingIdx = null;
+  renderOrgStructureBody();
+  scrollToPositionMapForm();
+}
+
+function editPositionMapByTitle(groupIdx) {
+  const g = ((state._jtCoverage || {}).groups || [])[groupIdx];
+  if (!g) return;
+  const entryIdx = (state._positionMapEntries || []).findIndex(e => e.jobTitle.trim().toLowerCase() === g.jobTitle.trim().toLowerCase());
+  if (entryIdx === -1) { showToast("Baris Job Title itu gak ketemu di daftar.", "error"); return; }
+  state._positionMapSearchTerm = ""; // an active search could hide the very row being edited
+  state._positionMapEditingIdx = entryIdx;
+  state._positionMapAdding = false;
+  renderOrgStructureBody();
+  scrollToPositionMapForm();
+}
+
+function renderJobTitleCoveragePanel() {
+  const c = state._jtCoverage;
+  if (!c) {
+    if (!state._jtCoverageLoading) loadJobTitleCoverage();
+    return `<div class="card"><div class="loading">Memeriksa HR Sheet...</div></div>`;
+  }
+  if (c.error) {
+    return `<div class="card"><div class="hint" style="color:var(--red);">Gagal memeriksa HR Sheet (${escapeHtml(friendlyError(c.error))}).</div></div>`;
+  }
+
+  const sm = c.summary;
+  const people = c.people || [];
+  const groups = c.groups || [];
+  const unitList = Array.from(new Set(people.map(p => p.businessUnit).filter(Boolean))).sort();
+  const unit = state._jtCoverageUnit || "";
+  const showAll = !!state._jtShowAll;
+
+  const summaryCard = `<div class="card">
+      <h2 style="margin-bottom:6px;">Cek HR Sheet vs Sistem</h2>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:13px; font-weight:700;">
+        <span>👥 ${sm.total} orang</span>
+        <span style="color:var(--green);">✅ cocok ${sm.match}</span>
+        <span style="color:var(--amber);">⚖️ selisih ${sm.mismatch}</span>
+        <span style="color:var(--red);">🚫 tidak ikut appraisal ${sm.excluded}</span>
+        <span style="color:var(--text-muted);">❔ HR kosong ${sm.hrBlank}</span>
+      </div>
+      <div class="hint" style="margin-top:8px;">Ini baru tampilan. Tier sistem masih diturunkan dari Job Title seperti biasa — belum ada yang berubah. Langkah berikutnya: tier disimpan per orang di aplikasi, dan layar ini jadi tempat konfirmasinya.</div>
+    </div>`;
+
+  const groupRow = (g, idx) => {
+    const names = g.holders.slice(0, 4).map(h => `${escapeHtml(h.name)}${h.hrTier ? ` <span style="color:var(--text-muted);">(HR: ${escapeHtml(h.hrTier)})</span>` : ""}`).join(", ");
+    const more = g.holders.length > 4 ? ` +${g.holders.length - 4} lagi` : "";
+    const status = g.excludedCount > 0
+      ? `<span style="color:var(--red); font-weight:700;">${g.excludedCount} orang tidak ikut appraisal</span>`
+      : `<span style="color:var(--text-muted);">semua pemegangnya pakai override Tier — title ini tetap belum punya baris</span>`;
+    const reason = g.reason === "no_row" ? "belum ada barisnya di pemetaan" : "barisnya ada, tapi Tier-nya kosong";
+    const action = g.reason === "no_row"
+      ? `<button class="primary" onclick="prefillPositionMapAdd(${idx})">➕ Tambah ke pemetaan</button>`
+      : `<button class="secondary" onclick="editPositionMapByTitle(${idx})">✏️ Isi Tier</button>`;
+    return `<div style="border:1.5px solid ${g.excludedCount > 0 ? "var(--red)" : "var(--border)"}; border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div style="min-width:0; flex:1 1 220px;">
+          <div style="font-weight:700;">${escapeHtml(g.jobTitle)} <span class="hint" style="display:inline;">· ${escapeHtml(g.businessUnits.join(", "))} · ${reason}</span></div>
+          <div class="hint" style="margin:2px 0 0;">${status}</div>
+          <div class="hint" style="margin:2px 0 0;">${names}${more}</div>
+        </div>
+        ${action}
+      </div>`;
+  };
+
+  const excludedCard = groups.length
+    ? `<div class="card" style="border:2px solid ${sm.excluded > 0 ? "var(--red)" : "var(--border)"};">
+        <h2 style="margin-bottom:4px;">🚫 Job Title tanpa Tier (${sm.excluded} orang tidak ikut appraisal)</h2>
+        <div class="hint" style="margin-bottom:10px;">Orang dengan Job Title yang belum dipetakan tidak dapat tugas Self Appraisal dan tidak dinilai siapa pun. Ejaan di bawah disalin persis dari HR Sheet.</div>
+        ${groups.map(groupRow).join("")}
+      </div>`
+    : `<div class="card"><div class="hint" style="color:var(--green); font-weight:700; margin:0;">✅ Semua orang di HR Sheet punya Tier — tidak ada yang tertinggal dari appraisal.</div></div>`;
+
+  const statusIcon = { match: "✅", mismatch: "⚖️", hr_blank: "❔", excluded: "🚫" };
+  const rows = people.filter(p => (!unit || p.businessUnit === unit) && (showAll || p.status === "mismatch"));
+  const compareRow = (p) => `<div style="border-bottom:1px solid var(--border); padding:7px 0;">
+      <div style="font-weight:700;">${statusIcon[p.status] || ""} ${escapeHtml(p.name)} <span class="hint" style="display:inline;">· ${escapeHtml(p.jobTitle || "-")} · ${escapeHtml(p.businessUnit)}</span></div>
+      <div class="hint" style="margin:2px 0 0;">HR bilang: <strong>${escapeHtml(p.hrTier || "(kosong)")}</strong> → Sistem pakai: <strong>${escapeHtml(p.systemTier || "(tanpa tier)")}</strong>${p.hasOverride ? " · pakai override" : ""}</div>
+    </div>`;
+
+  const compareCard = `<div class="card">
+      <h2 style="margin-bottom:4px;">⚖️ Tier: HR bilang vs Sistem bilang</h2>
+      <div class="hint" style="margin-bottom:8px;">Sistem menurunkan tier dari Job Title; kolom Tier di HR Sheet mencerminkan posisi sebenarnya per orang. Selisihnya yang perlu kamu putuskan nanti.</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+        <select onchange="setJtUnit(this.value)" style="padding:8px; border-radius:8px; border:1.5px solid var(--border);">
+          <option value="">Semua unit</option>
+          ${unitList.map(u => `<option value="${escapeHtml(u)}" ${u === unit ? "selected" : ""}>${escapeHtml(u)}</option>`).join("")}
+        </select>
+        <label style="display:flex; align-items:center; gap:6px; margin:0; font-size:13px; text-transform:none; letter-spacing:normal;">
+          <input type="checkbox" ${showAll ? "checked" : ""} onchange="toggleJtShowAll()" style="width:auto; margin:0;" /> tampilkan semua orang (bukan cuma yang selisih)
+        </label>
+      </div>
+      <div class="hint" style="margin-bottom:4px;">${rows.length} orang ditampilkan</div>
+      <div style="max-height:420px; overflow-y:auto;">${rows.length ? rows.map(compareRow).join("") : `<div class="hint">Tidak ada yang selisih di filter ini.</div>`}</div>
+    </div>`;
+
+  return summaryCard + excludedCard + compareCard;
+}
+
 function updatePositionMapSearch(v) { state._positionMapSearchTerm = v; renderOrgStructureBody(); }
-function togglePositionMapAdd() { state._positionMapAdding = !state._positionMapAdding; state._positionMapEditingIdx = null; renderOrgStructureBody(); }
+function togglePositionMapAdd() { state._positionMapPrefillTitle = ""; state._positionMapAdding = !state._positionMapAdding; state._positionMapEditingIdx = null; renderOrgStructureBody(); }
 function togglePositionMapEdit(idx) { state._positionMapEditingIdx = idx; state._positionMapAdding = false; renderOrgStructureBody(); }
 
 function positionMapEditForm(entry, idPrefix) {
@@ -3894,7 +4039,7 @@ function positionMapEditForm(entry, idPrefix) {
   return `
     <div class="card" style="border:2px solid var(--coral);">
       <h2>${entry ? `Edit: ${escapeAttr(entry.jobTitle)}` : "Job Title Baru"}</h2>
-      ${!entry ? `<label>Job Title</label><input type="text" id="pm-jobtitle-${idPrefix}" placeholder="Contoh: Head of Marketing" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />` : `<div class="hint">Job Title: <strong>${escapeAttr(entry.jobTitle)}</strong> (gak bisa diganti nama di sini — pakai "Ubah Job Title" di bagian Struktur buat pindahin ORANGnya ke title lain)</div>`}
+      ${!entry ? `<label>Job Title</label><input type="text" id="pm-jobtitle-${idPrefix}" value="${escapeHtml(state._positionMapPrefillTitle || '')}" placeholder="Contoh: Head of Marketing" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />` : `<div class="hint">Job Title: <strong>${escapeAttr(entry.jobTitle)}</strong> (gak bisa diganti nama di sini — pakai "Ubah Job Title" di bagian Struktur buat pindahin ORANGnya ke title lain)</div>`}
       <label style="margin-top:8px; display:block;">Department (Appraisal)</label>
       <input type="text" id="pm-department-${idPrefix}" value="${entry ? escapeAttr(entry.department) : '-'}" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
       <label style="margin-top:8px; display:block;">Tier</label>
@@ -3915,7 +4060,7 @@ function renderPositionMapEditorContent() {
   const entries = state._positionMapEntries || [];
   const searchTerm = (state._positionMapSearchTerm || "").toLowerCase();
 
-  return `<div class="card">
+  return renderJobTitleCoveragePanel() + `<div class="card">
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <input type="text" placeholder="Cari Job Title..." value="${escapeAttr(state._positionMapSearchTerm || "")}" oninput="updatePositionMapSearch(this.value)" style="flex:1; min-width:180px; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
         <button class="primary" onclick="togglePositionMapAdd()">➕ Tambah Job Title Baru</button>
@@ -3954,6 +4099,7 @@ async function doSavePositionMapEntry(idPrefix) {
   const res = await apiPost("savePositionMapEntry", { requesterId: state.user.staffId, jobTitle, department, tier, oversees, isHrEvaluator });
   if (res.error || res.success === false) { showToast(`Gagal: ${friendlyError(res.error)}`, "error"); return; }
   showToast("✅ Job Title disimpan.");
+  state._positionMapPrefillTitle = "";
   await renderOrgStructure();
 }
 

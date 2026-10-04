@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-04-291-position-map-form-pickers — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-04-292-per-staff-coverage-warnings — LIVE</div>
 
 <script>
 // =================================================================
@@ -3464,6 +3464,43 @@ function removeOrgBackup(staffId, idToRemove) {
   renderOrgStructureBody();
 }
 
+// ---- Struktur: evaluator coverage display ------------------------------------------------
+// The backend now judges coverage per STAFF (is anyone really evaluating this person?), not per
+// department. "warning" = real gaps; "info" = a department with no Leader/Management that is
+// nevertheless fully covered by manual Superiors (e.g. one led directly by an Executive) — worth
+// knowing, not a problem. A missing severity (older backend) counts as a warning.
+function renderOrgWarningsHtml(unitWarnings, buLabel) {
+  const real = (unitWarnings || []).filter(w => w.severity !== "info");
+  const notes = (unitWarnings || []).filter(w => w.severity === "info");
+  const label = escapeHtml(buLabel);
+  const warnCard = real.length
+    ? `<div class="card" style="background:var(--amber-bg); border:1.5px solid var(--amber);">
+        <h2 style="color:var(--amber); margin-top:0;">⚠️ ${real.length} Peringatan Struktur di ${label}</h2>
+        ${real.map(w => `<div class="hint" style="margin-bottom:8px; color:var(--text);">${escapeHtml(w.message)}</div>`).join("")}
+      </div>`
+    : `<div class="card"><div class="hint" style="color:var(--green);">✅ Gak ada peringatan struktur di ${label}.</div></div>`;
+  const noteCard = notes.length
+    ? `<div class="card">
+        <h2 style="margin-top:0;">ℹ️ ${notes.length} Catatan di ${label} (bukan masalah)</h2>
+        <div class="hint" style="margin-bottom:8px;">Department tanpa Leader/Management, tapi semua stafnya sudah punya penilai lewat Superior manual.</div>
+        ${notes.map(w => `<div class="hint" style="margin-bottom:6px;">${escapeHtml(w.message)}</div>`).join("")}
+      </div>`
+    : "";
+  return warnCard + noteCard;
+}
+
+function orgDeptCoverageBadge(dept) {
+  if (typeof dept.uncoveredCount !== "number") { // older backend: keep the previous wording
+    return dept.hasNoOverseer ? ` <span style="color:var(--red); font-size:12px; font-weight:400;">⚠️ gak ada overseer otomatis</span>` : "";
+  }
+  if (dept.uncoveredCount > 0) return ` <span style="color:var(--red); font-size:12px; font-weight:700;">⚠️ ${dept.uncoveredCount} staff belum punya penilai</span>`;
+  return dept.hasNoOverseer ? ` <span style="color:var(--text-muted); font-size:12px; font-weight:400;">dipimpin Superior manual</span>` : "";
+}
+
+function orgStaffCoverageFlag(s) {
+  return s && s.evaluatorSource === "none" ? ` <span style="color:var(--red); font-size:11px; font-weight:700;">⚠️ belum ada penilai</span>` : "";
+}
+
 function orgPersonRow(s, rowTier, bu, checkedIds) {
   const pending = (state._orgPendingChanges && state._orgPendingChanges[s.staffId]) || {};
   const hasPending = Object.keys(pending).length > 0;
@@ -3510,7 +3547,7 @@ function orgPersonRow(s, rowTier, bu, checkedIds) {
     <tr id="org-row-${s.staffId}" ${hasPending ? 'class="org-pending-row"' : ""}>
       <td><input type="checkbox" ${isChecked ? "checked" : ""} onchange="toggleOrgBulkCheck('${s.staffId}', this.checked)" style="width:16px; height:16px;" /></td>
       <td>
-        <div style="font-weight:700;">${escapeAttr(s.name)}</div>
+        <div style="font-weight:700;">${escapeHtml(s.name)}${orgStaffCoverageFlag(s)}</div>
         <div class="hint" style="margin:0; white-space:nowrap;">${escapeAttr(s.jobTitle)}</div>
         <a href="#" onclick="toggleOrgJobTitleEdit('${s.staffId}'); return false;" style="color:var(--teal); font-weight:600; font-size:12px;">✏️ Job Title</a>
         <div style="display:flex; gap:8px; margin-top:4px; font-size:11px; color:var(--text-muted);">
@@ -3674,12 +3711,7 @@ function renderOrgStructureBody() {
           </div>`).join("")}
       </div>`;
     })() +
-    (state._orgDepartmentFilter ? "" : (unitWarnings.length ? `
-      <div class="card" style="background:var(--amber-bg); border:1.5px solid var(--amber);">
-        <h2 style="color:var(--amber); margin-top:0;">⚠️ ${unitWarnings.length} Peringatan Struktur di ${bu.label}</h2>
-        ${unitWarnings.map(w => `<div class="hint" style="margin-bottom:8px; color:var(--text);">${w.message}</div>`).join("")}
-      </div>` : `
-      <div class="card"><div class="hint" style="color:var(--green);">✅ Gak ada peringatan struktur di ${bu.label}.</div></div>`)) +
+    (state._orgDepartmentFilter ? "" : renderOrgWarningsHtml(unitWarnings, bu.label)) +
     (state._orgDepartmentFilter ? "" : `<div class="card">
       <h2>👑 Kepemimpinan — Company-wide / Gak Spesifik 1 Department (${bu.unmatchedLeadership.length} orang)</h2>
       <div class="hint" style="margin-bottom:10px;">Yang oversees-nya gak nempel ke 1 department spesifik (misal "ALL").</div>
@@ -3693,7 +3725,7 @@ function renderOrgStructureBody() {
         filteredStaff.map(s => orgPersonRow(s, 'Staff', bu, checkedIds)).join("");
       return `
       <div class="card">
-        <h2>${escapeAttr(dept.name)} (${dept.leaders.length} pimpinan, ${dept.staff.length} staff)${dept.hasNoOverseer ? ` <span style="color:var(--red); font-size:12px; font-weight:400;">⚠️ gak ada overseer otomatis</span>` : ""}</h2>
+        <h2>${escapeHtml(dept.name)} (${dept.leaders.length} pimpinan, ${dept.staff.length} staff)${orgDeptCoverageBadge(dept)}</h2>
         ${orgTableWrap(rowsHtml)}
       </div>`;
     }).join("");

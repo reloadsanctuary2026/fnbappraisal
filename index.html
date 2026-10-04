@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-04-289-job-title-coverage-panel — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-04-291-position-map-form-pickers — LIVE</div>
 
 <script>
 // =================================================================
@@ -3361,6 +3361,7 @@ async function doRefreshOrgStructure(btnEl) {
 
 function switchOrgViewMode(mode) {
   state._orgViewMode = mode;
+  if (mode === "jobtitles") { state._jtCoverage = null; state._jtCoverageLoading = false; } // entering the tab always re-checks the HR Sheet
   renderOrgStructureBody();
 }
 
@@ -3910,10 +3911,12 @@ async function loadJobTitleCoverage() {
   try { res = await apiGet("getJobTitleCoverage", { requesterId: state.user.staffId }); }
   catch (err) { res = { found: false, error: "network" }; }
   state._jtCoverageLoading = false;
+  state._jtCoverageAt = new Date();
   state._jtCoverage = res && res.found ? res : { error: (res && res.error) || "unknown" };
   if (state._orgViewMode === "jobtitles") renderOrgStructureBody();
 }
 
+function refreshJobTitleCoverage() { state._jtCoverage = null; state._jtCoverageLoading = false; renderOrgStructureBody(); }
 function setJtUnit(v) { state._jtCoverageUnit = v; renderOrgStructureBody(); }
 function toggleJtShowAll() { state._jtShowAll = !state._jtShowAll; renderOrgStructureBody(); }
 
@@ -3973,7 +3976,8 @@ function renderJobTitleCoveragePanel() {
         <span style="color:var(--red);">🚫 tidak ikut appraisal ${sm.excluded}</span>
         <span style="color:var(--text-muted);">❔ HR kosong ${sm.hrBlank}</span>
       </div>
-      <div class="hint" style="margin-top:8px;">Ini baru tampilan. Tier sistem masih diturunkan dari Job Title seperti biasa — belum ada yang berubah. Langkah berikutnya: tier disimpan per orang di aplikasi, dan layar ini jadi tempat konfirmasinya.</div>
+      <div class="hint" style="margin-top:8px;">Diperiksa jam ${escapeHtml(state._jtCoverageAt ? state._jtCoverageAt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-")} langsung dari HR Sheet · <a href="#" onclick="refreshJobTitleCoverage(); return false;" style="color:var(--teal); font-weight:700;">🔄 Periksa ulang</a></div>
+      <div class="hint" style="margin-top:6px;">Ini baru tampilan. Tier sistem masih diturunkan dari Job Title seperti biasa — belum ada yang berubah. Langkah berikutnya: tier disimpan per orang di aplikasi, dan layar ini jadi tempat konfirmasinya.</div>
     </div>`;
 
   const groupRow = (g, idx) => {
@@ -4034,20 +4038,147 @@ function updatePositionMapSearch(v) { state._positionMapSearchTerm = v; renderOr
 function togglePositionMapAdd() { state._positionMapPrefillTitle = ""; state._positionMapAdding = !state._positionMapAdding; state._positionMapEditingIdx = null; renderOrgStructureBody(); }
 function togglePositionMapEdit(idx) { state._positionMapEditingIdx = idx; state._positionMapAdding = false; renderOrgStructureBody(); }
 
+// ============================================================
+// Job Title & Tier form — pick from a list instead of typing (same idea as the per-person
+// Oversees picker). Why it matters: department matching is an exact, CASE-SENSITIVE string
+// comparison (overseesIncludes / Staff.department vs Leader.oversees), so one typo'd or
+// differently-capitalized department quietly means "this Leader oversees nobody".
+// ============================================================
+const PM_NEW = "__new__";
+const PM_MANUAL = "__manual__";
+const PM_SPECIAL_TOKENS = [
+  { value: "ALL", label: "ALL — semua department di unit sendiri" },
+  { value: "ALL_COMPANY", label: "ALL_COMPANY — lintas semua unit (khusus Regional GM)" },
+];
+
+/** Departments the data already uses (Department column + every Oversees token), one spelling
+ *  per case-insensitive name. The spelling used by the MOST rows wins (ties: code-point order,
+ *  never localeCompare — locale ordering differs by runtime, and the backend applies this exact
+ *  same rule, so both sides must always agree). excludeEntryIdx leaves the row being edited out
+ *  of the vote so its own old spelling can't lock itself in place. variants = names that exist
+ *  in more than one spelling today. */
+function pmDeptModel(excludeEntryIdx) {
+  const counts = {};
+  const add = (raw) => {
+    const t = String(raw == null ? "" : raw).trim();
+    if (!t || t === "-") return;
+    const u = t.toUpperCase();
+    if (u === "ALL" || u === "ALL_COMPANY") return;
+    const k = t.toLowerCase();
+    counts[k] = counts[k] || {};
+    counts[k][t] = (counts[k][t] || 0) + 1;
+  };
+  const cmp = (k) => (a, b) => (counts[k][b] - counts[k][a]) || (a < b ? -1 : a > b ? 1 : 0);
+  (state._positionMapEntries || []).forEach((e, i) => {
+    if (i === excludeEntryIdx) return;
+    add(e.department);
+    String(e.oversees || "").split(",").forEach(add);
+  });
+  const canon = {};
+  Object.keys(counts).forEach(k => { canon[k] = Object.keys(counts[k]).sort(cmp(k))[0]; });
+
+  // variants are judged on ALL rows (including the one being edited) — it's a data-health hint
+  const allCounts = {};
+  const addAll = (raw) => {
+    const t = String(raw == null ? "" : raw).trim();
+    if (!t || t === "-" || t.toUpperCase() === "ALL" || t.toUpperCase() === "ALL_COMPANY") return;
+    const k = t.toLowerCase();
+    allCounts[k] = allCounts[k] || {};
+    allCounts[k][t] = (allCounts[k][t] || 0) + 1;
+  };
+  (state._positionMapEntries || []).forEach(e => { addAll(e.department); String(e.oversees || "").split(",").forEach(addAll); });
+  const variants = Object.keys(allCounts).filter(k => Object.keys(allCounts[k]).length > 1)
+    .map(k => Object.keys(allCounts[k]).sort((a, b) => (allCounts[k][b] - allCounts[k][a]) || (a < b ? -1 : a > b ? 1 : 0)));
+
+  const names = Object.keys(canon).map(k => canon[k]).sort((a, b) => a.localeCompare(b)); // display order only
+  return { canon, names, variants };
+}
+
+/** Snap typed text to the spelling the data already uses; ALL / ALL_COMPANY are always
+ *  upper-cased (the backend only recognizes exactly "ALL"). */
+function pmResolveName(typed, canon) {
+  const t = String(typed == null ? "" : typed).trim();
+  if (!t || t === "-") return t;
+  const u = t.toUpperCase();
+  if (u === "ALL" || u === "ALL_COMPANY") return u;
+  return canon[t.toLowerCase()] || t;
+}
+
+function pmToggleCustom(id, show) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = show ? "block" : "none";
+}
+
 function positionMapEditForm(entry, idPrefix) {
-  const tierChoices = ['', 'Staff', 'Leader', 'Management', 'Executive', 'HO', 'HR'];
+  // "HR" is not offered as a Tier here: the backend rejects it (HR capability is the separate
+  // "Is HR Evaluator" checkbox below). It only appears if an old row already carries it.
+  const tierChoices = ["", "Staff", "Leader", "Management", "Executive", "HO"].concat(entry && entry.tier === "HR" ? ["HR"] : []);
+  const editIdx = entry ? state._positionMapEditingIdx : -1;
+  const model = pmDeptModel(editIdx);
+
+  // current values, snapped to the spelling the data uses; anything unknown is KEPT as an option
+  // so editing a row can never silently drop a value it already has
+  const currentDeptRaw = entry ? String(entry.department || "").trim() : "";
+  const currentDept = !currentDeptRaw ? "-" : pmResolveName(currentDeptRaw, model.canon);
+  const currentOversees = entry ? String(entry.oversees || "").split(",").map(x => pmResolveName(x, model.canon)).filter(x => x && x !== "-") : [];
+  const deptNames = model.names.slice();
+  const hasName = (n) => deptNames.some(d => d.toLowerCase() === n.toLowerCase());
+  if (currentDept !== "-" && !hasName(currentDept)) deptNames.push(currentDept);
+  currentOversees.forEach(t => { const u = t.toUpperCase(); if (u !== "ALL" && u !== "ALL_COMPANY" && !hasName(t)) deptNames.push(t); });
+  deptNames.sort((a, b) => a.localeCompare(b));
+
+  const deptOptions = [`<option value="-" ${currentDept === "-" ? "selected" : ""}>— (tidak ada / bukan department staff)</option>`]
+    .concat(deptNames.map(n => `<option value="${escapeHtml(n)}" ${n.toLowerCase() === currentDept.toLowerCase() ? "selected" : ""}>${escapeHtml(n)}</option>`))
+    .concat([`<option value="${PM_NEW}">➕ Department baru…</option>`]).join("");
+
+  const isOv = (name) => currentOversees.some(t => t.toLowerCase() === name.toLowerCase());
+  const cbStyle = "display:flex; align-items:center; gap:5px; background:#fff; padding:5px 10px; border-radius:8px; border:1.5px solid var(--border);";
+  const overseesBoxes = PM_SPECIAL_TOKENS.map(t => `
+      <label style="${cbStyle}" title="${escapeHtml(t.label)}"><input type="checkbox" class="pm-ov-cb-${idPrefix}" value="${t.value}" ${isOv(t.value) ? "checked" : ""} /> <strong>${t.value}</strong></label>`).join("")
+    + deptNames.map(n => `
+      <label style="${cbStyle}"><input type="checkbox" class="pm-ov-cb-${idPrefix}" value="${escapeHtml(n)}" ${isOv(n) ? "checked" : ""} /> ${escapeHtml(n)}</label>`).join("");
+
+  // Job Title (add mode): pick from the HR Sheet titles that have no mapping yet, so the exact
+  // spelling is copied rather than retyped; manual typing stays available for a title HR hasn't entered.
+  const unmappedTitles = ((state._jtCoverage && state._jtCoverage.groups) || []).filter(g => g.reason === "no_row").map(g => g.jobTitle);
+  const prefill = state._positionMapPrefillTitle || "";
+  const manualSelected = !!prefill && unmappedTitles.indexOf(prefill) === -1;
+  const inputStyle = "width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);";
+  let jobTitleBlock;
+  if (entry) {
+    jobTitleBlock = `<div class="hint">Job Title: <strong>${escapeHtml(entry.jobTitle)}</strong> (gak bisa diganti nama di sini — pakai "Ubah Job Title" di bagian Struktur buat pindahin ORANGnya ke title lain)</div>`;
+  } else if (unmappedTitles.length) {
+    jobTitleBlock = `<label>Job Title</label>
+      <select id="pm-jobtitle-${idPrefix}" onchange="pmToggleCustom('pm-jobtitle-custom-${idPrefix}', this.value === '${PM_MANUAL}')" style="${inputStyle}">
+        ${unmappedTitles.map(t => `<option value="${escapeHtml(t)}" ${t === prefill ? "selected" : ""}>${escapeHtml(t)}</option>`).join("")}
+        <option value="${PM_MANUAL}" ${manualSelected ? "selected" : ""}>✍️ Ketik manual (title belum ada di HR Sheet)</option>
+      </select>
+      <input type="text" id="pm-jobtitle-custom-${idPrefix}" value="${manualSelected ? escapeHtml(prefill) : ""}" placeholder="Ketik Job Title persis seperti di HR Sheet" style="${inputStyle} margin-top:6px; display:${manualSelected ? "block" : "none"};" />`;
+  } else {
+    jobTitleBlock = `<label>Job Title</label><input type="text" id="pm-jobtitle-${idPrefix}" value="${escapeHtml(prefill)}" placeholder="Contoh: Head of Marketing" style="${inputStyle}" />`;
+  }
+
+  const variantWarning = model.variants.length
+    ? `<div class="hint" style="color:var(--amber); font-weight:700; margin-bottom:8px;">⚠️ Ejaan department tidak konsisten di data: ${model.variants.map(f => f.map(x => `"${escapeHtml(x)}"`).join(" vs ")).join("; ")}. Pencocokan penilai itu sensitif huruf besar-kecil. Baris yang kamu simpan di sini otomatis memakai ejaan yang paling banyak dipakai; baris lain ikut setelah dibuka dan disimpan.</div>`
+    : "";
+
   return `
     <div class="card" style="border:2px solid var(--coral);">
-      <h2>${entry ? `Edit: ${escapeAttr(entry.jobTitle)}` : "Job Title Baru"}</h2>
-      ${!entry ? `<label>Job Title</label><input type="text" id="pm-jobtitle-${idPrefix}" value="${escapeHtml(state._positionMapPrefillTitle || '')}" placeholder="Contoh: Head of Marketing" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />` : `<div class="hint">Job Title: <strong>${escapeAttr(entry.jobTitle)}</strong> (gak bisa diganti nama di sini — pakai "Ubah Job Title" di bagian Struktur buat pindahin ORANGnya ke title lain)</div>`}
+      <h2>${entry ? `Edit: ${escapeHtml(entry.jobTitle)}` : "Job Title Baru"}</h2>
+      ${variantWarning}
+      ${jobTitleBlock}
       <label style="margin-top:8px; display:block;">Department (Appraisal)</label>
-      <input type="text" id="pm-department-${idPrefix}" value="${entry ? escapeAttr(entry.department) : '-'}" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
+      <select id="pm-department-${idPrefix}" onchange="pmToggleCustom('pm-department-custom-${idPrefix}', this.value === '${PM_NEW}')" style="${inputStyle}">${deptOptions}</select>
+      <input type="text" id="pm-department-custom-${idPrefix}" placeholder="Nama department baru (mis. Security)" style="${inputStyle} margin-top:6px; display:none;" />
+      <div class="hint" style="margin-top:4px;">Staff: dipakai buat cari penilai otomatis & pengelompokan. Leader/Management biasanya "—".</div>
       <label style="margin-top:8px; display:block;">Tier</label>
-      <select id="pm-tier-${idPrefix}" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
+      <select id="pm-tier-${idPrefix}" style="${inputStyle}">
         ${tierChoices.map(tc => `<option value="${tc}" ${entry && entry.tier === tc ? "selected" : ""}>${tc || "(kosong)"}</option>`).join("")}
       </select>
-      <label style="margin-top:8px; display:block;">Oversees (pisah koma kalau lebih dari 1)</label>
-      <input type="text" id="pm-oversees-${idPrefix}" value="${entry ? escapeAttr(entry.oversees) : ''}" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
+      <label style="margin-top:8px; display:block;">Oversees — department yang dipegang (centang)</label>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;">${overseesBoxes}</div>
+      <input type="text" id="pm-oversees-extra-${idPrefix}" placeholder="Department lain yang belum ada di daftar (pisah koma)" style="${inputStyle}" />
+      <div class="hint" style="margin-top:4px;">Cuma dipakai buat Leader/Management. Centang yang BENERAN dipegang — daftar diambil dari department yang sudah ada, jadi gak bisa salah ketik.</div>
       <label style="margin-top:8px; display:flex; align-items:center; gap:8px;"><input type="checkbox" id="pm-ishr-${idPrefix}" ${entry && entry.isHrEvaluator ? "checked" : ""} /> Is HR Evaluator</label>
       <div style="display:flex; gap:8px; margin-top:10px;">
         <button class="primary" onclick="doSavePositionMapEntry('${idPrefix}')">Simpan</button>
@@ -4062,7 +4193,7 @@ function renderPositionMapEditorContent() {
 
   return renderJobTitleCoveragePanel() + `<div class="card">
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" placeholder="Cari Job Title..." value="${escapeAttr(state._positionMapSearchTerm || "")}" oninput="updatePositionMapSearch(this.value)" style="flex:1; min-width:180px; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
+        <input type="text" placeholder="Cari Job Title..." value="${escapeHtml(state._positionMapSearchTerm || "")}" oninput="updatePositionMapSearch(this.value)" style="flex:1; min-width:180px; padding:8px; border-radius:8px; border:1.5px solid var(--border);" />
         <button class="primary" onclick="togglePositionMapAdd()">➕ Tambah Job Title Baru</button>
       </div>
     </div>` +
@@ -4075,7 +4206,7 @@ function renderPositionMapEditorContent() {
         return `
         <div style="border:1.5px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
           <div>
-            <div style="font-weight:700;">${escapeAttr(e.jobTitle)} <span class="hint" style="display:inline; ${!e.holderCount ? "color:var(--text-muted);" : ""}">(${e.holderCount || "gak ada yang"} orang)</span></div>
+            <div style="font-weight:700;">${escapeHtml(e.jobTitle)} <span class="hint" style="display:inline; ${!e.holderCount ? "color:var(--text-muted);" : ""}">(${e.holderCount || "gak ada yang"} orang)</span></div>
             <div class="hint" style="margin:0;">Tier: ${e.tier || "-"} · Dept: ${e.department || "-"} · Oversees: ${e.oversees || "-"} ${e.isHrEvaluator ? "· HR Evaluator" : ""}</div>
           </div>
           <div style="display:flex; gap:6px;">
@@ -4088,17 +4219,57 @@ function renderPositionMapEditorContent() {
 }
 
 async function doSavePositionMapEntry(idPrefix) {
-  const jobTitleEl = document.getElementById(`pm-jobtitle-${idPrefix}`);
-  const jobTitle = jobTitleEl ? jobTitleEl.value.trim() : (state._positionMapEditingIdx !== null ? state._positionMapEntries[state._positionMapEditingIdx].jobTitle : "");
-  const department = document.getElementById(`pm-department-${idPrefix}`).value.trim();
-  const tier = document.getElementById(`pm-tier-${idPrefix}`).value;
-  const oversees = document.getElementById(`pm-oversees-${idPrefix}`).value.trim();
-  const isHrEvaluator = document.getElementById(`pm-ishr-${idPrefix}`).checked;
-  if (!jobTitle) { showToast("Job Title wajib diisi.", "error"); return; }
+  const editing = idPrefix !== "new" && state._positionMapEditingIdx !== null;
+  const model = pmDeptModel(editing ? state._positionMapEditingIdx : -1);
+  const val = (id) => { const el = document.getElementById(id); return el ? el.value : ""; };
+  const isAllToken = (t) => { const u = String(t).toUpperCase(); return u === "ALL" || u === "ALL_COMPANY"; };
 
-  const res = await apiPost("savePositionMapEntry", { requesterId: state.user.staffId, jobTitle, department, tier, oversees, isHrEvaluator });
+  // --- Job Title ---
+  let jobTitle;
+  const titleEl = document.getElementById(`pm-jobtitle-${idPrefix}`);
+  if (titleEl) jobTitle = (titleEl.value === PM_MANUAL ? val(`pm-jobtitle-custom-${idPrefix}`) : titleEl.value).trim();
+  else jobTitle = editing ? state._positionMapEntries[state._positionMapEditingIdx].jobTitle : "";
+  if (!jobTitle) { showToast("Job Title wajib diisi.", "error"); return; }
+  // A "new" entry whose title already exists would silently OVERWRITE that row (the backend matches
+  // by title, case-insensitively) — stop it here and point at Edit instead.
+  if (!editing && (state._positionMapEntries || []).some(e => e.jobTitle.trim().toLowerCase() === jobTitle.toLowerCase())) {
+    showToast(`"${jobTitle}" sudah ada di daftar — buka ✏️ Edit di baris itu, jangan bikin baru (nanti menimpa).`, "error", 6000);
+    return;
+  }
+
+  // --- Department ---
+  const newNames = []; // spellings this save would CREATE (not in the data yet)
+  const deptSel = val(`pm-department-${idPrefix}`);
+  let department;
+  if (deptSel === PM_NEW) {
+    const typed = val(`pm-department-custom-${idPrefix}`).trim();
+    if (!typed) { showToast("Isi nama department barunya dulu.", "error"); return; }
+    department = pmResolveName(typed, model.canon);
+    if (department !== "-" && !isAllToken(department) && !model.canon[department.toLowerCase()]) newNames.push(department);
+  } else {
+    department = deptSel || "-";
+  }
+
+  // --- Oversees ---
+  const checked = Array.from(document.querySelectorAll(`.pm-ov-cb-${idPrefix}:checked`)).map(c => c.value);
+  const extra = val(`pm-oversees-extra-${idPrefix}`).split(",").map(x => pmResolveName(x, model.canon)).filter(x => x && x !== "-");
+  const oversees = [];
+  checked.concat(extra).forEach(t => { if (!oversees.some(o => o.toLowerCase() === t.toLowerCase())) oversees.push(t); });
+  extra.forEach(t => { if (!isAllToken(t) && !model.canon[t.toLowerCase()] && !newNames.some(n => n.toLowerCase() === t.toLowerCase())) newNames.push(t); });
+
+  const tier = val(`pm-tier-${idPrefix}`);
+
+  // --- guards: each one is a way this form used to quietly produce a broken mapping ---
+  if (newNames.length && !confirm(`Department BARU akan dibuat: ${newNames.map(n => `"${n}"`).join(", ")}.\n\nBelum ada di data sama sekali. Kalau ini salah ketik, pencocokan penilai gagal diam-diam. Lanjut?`)) return;
+  if (!tier && !confirm(`Tier kosong = semua orang dengan Job Title "${jobTitle}" DIKECUALIKAN dari appraisal. Yakin?`)) return;
+  if (tier === "Staff" && department === "-" && !confirm(`Tier Staff tapi Department "—": orang dengan title ini TIDAK akan ketemu penilai otomatis (harus diatur manual lewat Evaluator di tab Struktur). Lanjut?`)) return;
+  if ((tier === "Leader" || tier === "Management") && !oversees.length && !confirm(`${tier} tanpa Oversees: tidak akan otomatis menilai siapa pun. Lanjut?`)) return;
+
+  const isHrEvaluator = !!(document.getElementById(`pm-ishr-${idPrefix}`) || {}).checked;
+  const res = await apiPost("savePositionMapEntry", { requesterId: state.user.staffId, jobTitle, department, tier, oversees: oversees.join(","), isHrEvaluator });
   if (res.error || res.success === false) { showToast(`Gagal: ${friendlyError(res.error)}`, "error"); return; }
-  showToast("✅ Job Title disimpan.");
+  const adjusted = res.adjusted && res.adjusted.length ? ` Ejaan disesuaikan: ${res.adjusted.join("; ")}` : "";
+  showToast("✅ Job Title disimpan." + adjusted, "success", adjusted ? 7000 : 2400);
   state._positionMapPrefillTitle = "";
   await renderOrgStructure();
 }

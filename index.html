@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-301-feedback-escaped-and-scoped — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-303-feedback-per-business-unit-and-new-notice — LIVE</div>
 
 <script>
 // =================================================================
@@ -423,6 +423,19 @@ function fullDateLabelID(dateInput) {
   const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
   if (isNaN(d.getTime())) return "-";
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/** "5 Oktober 2026 · 14:32 WITA" — date AND time of day, always in Bali time (Asia/Makassar) whatever timezone the
+ *  device is set to, so the time a comment was sent reads the same for everyone who looks at it. */
+function feedbackWhenLabel(dateInput) {
+  const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  if (dateInput === null || dateInput === undefined || dateInput === "") return "-"; // new Date(null) would quietly be 1 Jan 1970
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) return "-";
+  const part = {};
+  new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Makassar", day: "numeric", month: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+    .formatToParts(d).forEach(x => { part[x.type] = x.value; });
+  return `${Number(part.day)} ${months[Number(part.month) - 1]} ${part.year} · ${part.hour}:${part.minute} WITA`;
 }
 
 function statusLabelID(status) {
@@ -885,8 +898,9 @@ const translations = {
     form_bonus_occurred: "Terjadi",
     form_bonus_notes_placeholder: "Evidence / notes (opsional)",
     form_feedback_section: "Feedback to Management",
-    form_feedback_privacy: "🔒 Kotak ini dibaca terbatas oleh level manajemen &amp; HR yang berwenang — gak akan bocor ke Leader/Manager langsungmu. Ngomong aja apa yang perlu disampaikan.",
+    form_feedback_privacy: "🔒 Feedback ini hanya akan dibaca oleh Executive dan HR.",
     form_feedback_placeholder: "Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung...",
+  form_feedback_send_failed: "Penilaianmu sudah tersimpan, tapi feedback ke manajemen BELUM terkirim. Buka lagi form-nya (jangan refresh halaman dulu — tulisanmu masih tersimpan di sini) lalu kirim ulang.",
     form_submit: "Submit Appraisal",
     form_cancel: "Batal",
     form_progress: "dari",
@@ -1332,8 +1346,9 @@ const translations = {
     form_bonus_occurred: "Occurred",
     form_bonus_notes_placeholder: "Evidence / notes (optional)",
     form_feedback_section: "Feedback to Management",
-    form_feedback_privacy: "🔒 This box is only read by authorized management &amp; HR — it will never reach your direct Leader/Manager. Feel free to share what's on your mind.",
+    form_feedback_privacy: "🔒 This feedback will only be read by Executive and HR.",
     form_feedback_placeholder: "Optional — write anything you'd like to share directly with an Executive...",
+  form_feedback_send_failed: "Your appraisal is saved, but your feedback to management was NOT sent. Open the form again (don't refresh the page yet — your text is still kept here) and submit again.",
     form_submit: "Submit Appraisal",
     form_cancel: "Cancel",
     form_progress: "of",
@@ -5336,9 +5351,10 @@ async function renderStaffFeedback() {
   app.innerHTML = topbar("Read Staff Feedback") + `<div class="loading">Memuat...</div>`;
   if (!state._feedbackMonth) state._feedbackMonth = state.month;
 
-  const [feedbackRes, summaryRes, actionsRes, catRes] = await Promise.all([
+  const requestedUnit = state._feedbackUnit || "";
+  let [feedbackRes, summaryRes, actionsRes, catRes] = await Promise.all([
     apiGet("getAllManagementFeedback", { requesterId: state.user.staffId }),
-    apiGet("getIssueSummary", { requesterId: state.user.staffId, month: state._feedbackMonth }),
+    apiGet("getIssueSummary", { requesterId: state.user.staffId, month: state._feedbackMonth, businessUnit: requestedUnit }),
     apiGet("getActionItems", {}),
     apiGet("getFeedbackCategories", {}),
   ]);
@@ -5347,7 +5363,36 @@ async function renderStaffFeedback() {
     return;
   }
   state._feedbackCategories = catRes.categories || [];
-  const feedback = (feedbackRes.feedback || []).filter(f => f.month === state._feedbackMonth);
+  // A reader who sees MORE than one business unit (HR, Admin Operational, a company-wide Executive) gets one tab per unit,
+  // so F&B, Gym and Back Office are never mixed in one list. A reader limited to one unit sees no tabs.
+  const unitOf = (f) => f.businessUnit || "_other";
+  const allFeedback = feedbackRes.feedback || [];
+  const unitLabels = {};
+  allFeedback.forEach(f => { unitLabels[unitOf(f)] = f.businessUnitLabel || unitOf(f); });
+  const UNIT_ORDER = ["fnb", "gym", "backoffice"];
+  const rank = (k) => (k === "_other" ? 1000 : (UNIT_ORDER.indexOf(k) === -1 ? 500 : UNIT_ORDER.indexOf(k)));
+  const unitKeys = Object.keys(unitLabels).sort((x, y) => rank(x) - rank(y) || x.localeCompare(y));
+  const hasTabs = unitKeys.length > 1;
+  const inMonth = allFeedback.filter(f => f.month === state._feedbackMonth);
+  let unit = null;
+  if (hasTabs) {
+    // keep the chosen unit; the first time, open the first unit that actually has feedback this month
+    unit = unitKeys.includes(state._feedbackUnit) ? state._feedbackUnit : (unitKeys.find(k => inMonth.some(f => unitOf(f) === k)) || unitKeys[0]);
+  }
+  state._feedbackUnit = unit;
+  if ((unit || "") !== requestedUnit) {
+    // the summary above was asked for a different unit than the one now showing: ask again for the right one
+    summaryRes = await apiGet("getIssueSummary", { requesterId: state.user.staffId, month: state._feedbackMonth, businessUnit: unit || "" });
+  }
+  const feedback = inMonth.filter(f => !hasTabs || unitOf(f) === unit);
+  const unitTitle = hasTabs ? ` — ${unitLabels[unit]}` : "";
+  const unitTabsHtml = hasTabs ? `
+    <div class="card">
+      <label>Business Unit</label>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;">
+        ${unitKeys.map(k => `<button class="${k === unit ? "primary" : "secondary"}" style="flex:0 0 auto;" onclick="changeFeedbackUnit('${escapeHtml(escapeAttr(k))}')">${escapeHtml(unitLabels[k])} (${inMonth.filter(f => unitOf(f) === k).length})</button>`).join("")}
+      </div>
+    </div>` : "";
   const summary = summaryRes.summary || [];
   const actions = actionsRes.items || [];
   const showMenuLink = availableScreens(state.user).length > 1;
@@ -5362,8 +5407,10 @@ async function renderStaffFeedback() {
       <input type="month" value="${state._feedbackMonth}" onchange="changeFeedbackMonth(this.value)" />
     </div>
 
+    ${unitTabsHtml}
+
     <div class="card">
-      <h2>1. Issue Summary — ${monthLabelID(state._feedbackMonth)}</h2>
+      <h2>1. Issue Summary — ${monthLabelID(state._feedbackMonth)}${escapeHtml(unitTitle)}</h2>
       <div class="hint" style="margin-bottom:10px;">${summaryRes.taggedCount || 0} dari ${summaryRes.totalRespondents || 0} feedback udah di-tag kategorinya.</div>
       <button class="secondary" onclick="doExportFeedbackReport()" style="margin-bottom:10px;">📊 Export Issue Summary + Action Tracker</button>
       <div class="hint" id="feedback-export-note" style="margin-bottom:10px;"></div>
@@ -5379,12 +5426,15 @@ async function renderStaffFeedback() {
     </div>
 
     <div class="card">
-      <h2>2. Comment Master — ${feedback.length} feedback</h2>
+      <h2>2. Comment Master${escapeHtml(unitTitle)} — ${feedback.length} feedback</h2>
       ${feedback.map(f => `
         <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:baseline;">
-            <div class="name">${escapeHtml(f.staffName)}</div>
-            <div class="hint" style="font-size:11px;">${fullDateLabelID(f.timestamp)}</div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px;">
+            <div>
+              <div class="name">${escapeHtml(f.staffName)}</div>
+              <div class="hint" style="font-size:12px;">Posisi: ${escapeHtml(f.jobTitle || "—")}</div>
+            </div>
+            <div class="hint" style="font-size:11px; text-align:right;">${escapeHtml(feedbackWhenLabel(f.timestamp))}</div>
           </div>
           <div style="font-size:14px; color:var(--text); margin:8px 0; white-space:pre-wrap;">"${escapeHtml(f.feedback)}"</div>
           ${state.user.isAdminOperational ? `
@@ -5417,6 +5467,11 @@ async function renderStaffFeedback() {
   `;
 }
 
+async function changeFeedbackUnit(unit) {
+  state._feedbackUnit = unit;
+  renderStaffFeedback();
+}
+
 async function changeFeedbackMonth(month) {
   state._feedbackMonth = month;
   renderStaffFeedback();
@@ -5425,7 +5480,7 @@ async function changeFeedbackMonth(month) {
 async function doExportFeedbackReport() {
   const noteEl = document.getElementById("feedback-export-note");
   noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + "Membuat sheet export...";
-  const res = await apiPost("exportFeedbackReport", { requesterId: state.user.staffId, month: state._feedbackMonth });
+  const res = await apiPost("exportFeedbackReport", { requesterId: state.user.staffId, month: state._feedbackMonth, businessUnit: state._feedbackUnit || "" });
   if (res.error || res.success === false) {
     noteEl.textContent = "Gagal export: " + friendlyError(res.error);
     return;
@@ -7097,10 +7152,19 @@ async function confirmAndSubmit(evaluatorType) {
       state.scores = {};
       state._pendingBonusEntries = null;
       if (evaluatorType === "self") {
+        let feedbackSent = true;
         if (state._pendingFeedback && state._pendingFeedback.trim()) {
-          await apiPost("submitManagementFeedback", { staffId: target.staffId, feedback: state._pendingFeedback.trim() });
+          // This used to ignore the answer: if it failed (server busy, session trouble) the person was told
+          // "Appraisal tersimpan!" and believed their comment had been delivered, when it had been lost.
+          const feedbackRes = await apiPost("submitManagementFeedback", { staffId: target.staffId, feedback: state._pendingFeedback.trim() });
+          feedbackSent = !!(feedbackRes && feedbackRes.success && !feedbackRes.error);
         }
-        state._pendingFeedback = null;
+        if (feedbackSent) {
+          state._pendingFeedback = null;
+        } else {
+          // Keep what they typed (the form refills from it) and say so plainly.
+          showToast(t("form_feedback_send_failed"), "error", 12000);
+        }
       }
       if (evaluatorType !== "self") {
         // Came from "Tugas Appraisal Saya" — land back there directly so the person

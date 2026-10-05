@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-300-report-trend-says-what-it-found — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-301-feedback-escaped-and-scoped — LIVE</div>
 
 <script>
 // =================================================================
@@ -5351,12 +5351,13 @@ async function renderStaffFeedback() {
   const summary = summaryRes.summary || [];
   const actions = actionsRes.items || [];
   const showMenuLink = availableScreens(state.user).length > 1;
-  const catOptions = (extra) => `<option value="">— pilih —</option>` + state._feedbackCategories.map(c => `<option value="${c.code}" ${c.code === extra ? "selected" : ""}>${c.label}</option>`).join("");
+  const catOptions = (extra) => `<option value="">— pilih —</option>` + state._feedbackCategories.map(c => `<option value="${escapeHtml(c.code)}" ${c.code === extra ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("");
 
   app.innerHTML = topbar("Read Staff Feedback") + `
     ${showMenuLink ? '<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>' : ""}
     <div class="card">
       <div class="hint" style="font-weight:700; color:var(--purple, #6C4FB6);">🔒 Confidential — cuma Executive, HR, dan Admin Operational yang bisa lihat halaman ini.</div>
+      ${feedbackRes.scopeLabel ? `<div class="hint" style="margin-top:6px;">Kamu melihat feedback dari unit <b>${escapeHtml(feedbackRes.scopeLabel)}</b> saja.</div>` : ""}
       <label style="margin-top:8px;">Bulan</label>
       <input type="month" value="${state._feedbackMonth}" onchange="changeFeedbackMonth(this.value)" />
     </div>
@@ -5370,9 +5371,9 @@ async function renderStaffFeedback() {
         <tr><th>Kategori</th><th>Jumlah Orang</th><th>%</th><th>Prioritas</th></tr>
         ${summary.map(s => `
           <tr>
-            <td>${s.label}</td><td>${s.employeeCount}</td>
+            <td>${escapeHtml(s.label)}</td><td>${s.employeeCount}</td>
             <td>${(s.pct * 100).toFixed(1)}%</td>
-            <td><span class="badge ${s.priority === "TOP 5" ? "underperform" : s.priority === "Monitor" ? "pending" : ""}">${s.priority}</span></td>
+            <td><span class="badge ${s.priority === "TOP 5" ? "underperform" : s.priority === "Monitor" ? "pending" : ""}">${escapeHtml(s.priority)}</span></td>
           </tr>`).join("")}
       </table>
     </div>
@@ -5382,17 +5383,17 @@ async function renderStaffFeedback() {
       ${feedback.map(f => `
         <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
           <div style="display:flex; justify-content:space-between; align-items:baseline;">
-            <div class="name">${f.staffName}</div>
+            <div class="name">${escapeHtml(f.staffName)}</div>
             <div class="hint" style="font-size:11px;">${fullDateLabelID(f.timestamp)}</div>
           </div>
-          <div style="font-size:14px; color:var(--text); margin:8px 0;">"${f.feedback}"</div>
+          <div style="font-size:14px; color:var(--text); margin:8px 0; white-space:pre-wrap;">"${escapeHtml(f.feedback)}"</div>
           ${state.user.isAdminOperational ? `
             <div class="row-flex" style="gap:8px;">
-              <select id="tag-primary-${f.staffId}">${catOptions(f.primaryIssue)}</select>
-              <select id="tag-secondary-${f.staffId}">${catOptions(f.secondaryIssue)}</select>
-              <button class="secondary" style="flex:0 0 auto;" onclick="doTagFeedback('${f.staffId}')">Simpan Tag</button>
+              <select id="tag-primary-${escapeHtml(f.staffId)}">${catOptions(f.primaryIssue)}</select>
+              <select id="tag-secondary-${escapeHtml(f.staffId)}">${catOptions(f.secondaryIssue)}</select>
+              <button class="secondary" style="flex:0 0 auto;" onclick="doTagFeedback('${escapeHtml(escapeAttr(f.staffId))}')">Simpan Tag</button>
             </div>
-          ` : (f.primaryIssue ? `<div class="hint">Tag: ${f.primaryIssue}${f.secondaryIssue ? " / " + f.secondaryIssue : ""}</div>` : `<div class="hint">Belum di-tag.</div>`)}
+          ` : (f.primaryIssue ? `<div class="hint">Tag: ${escapeHtml(f.primaryIssue)}${f.secondaryIssue ? " / " + escapeHtml(f.secondaryIssue) : ""}</div>` : `<div class="hint">Belum di-tag.</div>`)}
         </div>`).join("")}
       ${!feedback.length ? '<div class="hint">Belum ada feedback bulan ini.</div>' : ""}
     </div>
@@ -5404,12 +5405,12 @@ async function renderStaffFeedback() {
       ${actions.map(a => `
         <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;">
           <div style="display:flex; justify-content:space-between;">
-            <div class="name">${a.actionId} — ${a.issue}</div>
-            <span class="badge ${a.status === "Done" ? "done" : a.status === "In Progress" ? "pending" : "underperform"}">${a.status}</span>
+            <div class="name">${escapeHtml(a.actionId)} — ${escapeHtml(a.issue)}</div>
+            <span class="badge ${a.status === "Done" ? "done" : a.status === "In Progress" ? "pending" : "underperform"}">${escapeHtml(a.status)}</span>
           </div>
-          <div style="font-size:13px; margin:6px 0;">${a.action}</div>
-          <div class="hint">Owner: ${a.owner || "-"} · Target: ${a.target || "-"}</div>
-          <button class="ghost" style="font-size:12px; margin-top:6px;" onclick="showEditActionForm('${a.actionId}', '${escapeAttr(a.issue)}', '${escapeAttr(a.action)}', '${escapeAttr(a.owner)}', '${escapeAttr(a.target)}', '${a.status}', '${escapeAttr(a.actualCompletion)}', '${escapeAttr(a.remarks)}')">Edit</button>
+          <div style="font-size:13px; margin:6px 0;">${escapeHtml(a.action)}</div>
+          <div class="hint">Owner: ${escapeHtml(a.owner || "-")} · Target: ${escapeHtml(a.target || "-")}</div>
+          <button class="ghost" style="font-size:12px; margin-top:6px;" onclick="showEditActionForm('${escapeHtml(escapeAttr(a.actionId))}', '${escapeHtml(escapeAttr(a.issue))}', '${escapeHtml(escapeAttr(a.action))}', '${escapeHtml(escapeAttr(a.owner))}', '${escapeHtml(escapeAttr(a.target))}', '${escapeHtml(escapeAttr(a.status))}', '${escapeHtml(escapeAttr(a.actualCompletion))}', '${escapeHtml(escapeAttr(a.remarks))}')">Edit</button>
         </div>`).join("")}
       ${!actions.length ? '<div class="hint">Belum ada action item.</div>' : ""}
     </div>

@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-299-report-redesign-language — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-300-report-trend-says-what-it-found — LIVE</div>
 
 <script>
 // =================================================================
@@ -5977,9 +5977,12 @@ const REPORT_TEXT = {
     thresholds: "Batas status: Underperform di bawah {u} · Performer {u}–{b} · Best Performer di atas {b}.",
     deptTitle: "Per Department", people: "orang", person: "orang", underCount: "{n} Underperform", deptNone: "Belum ada data.",
     trendTitle: "Perubahan vs Bulan Sebelumnya", trendRangeTitle: "Perubahan dalam Periode",
-    trendCompared: "Dibandingkan dengan {month} · {n} {who}", trendComparedRange: "Awal vs akhir periode · {n} {who}",
+    trendCompared: "Dibandingkan dengan {month} · {n} dari {total} {who}", trendComparedRange: "Awal vs akhir periode · {n} dari {total} {who}",
+    trendUnapproved: "{m} {who} punya data {month} yang belum di-approve, jadi tidak ikut dibandingkan.",
     improved: "Paling Meningkat", declined: "Paling Menurun", nobodyUp: "Tidak ada yang naik.", nobodyDown: "Tidak ada yang turun.",
-    noBaseline: "<b>Belum ada bulan pembanding.</b> {month} adalah periode pertama yang sudah di-approve di sistem ini, jadi belum ada perubahan yang bisa dihitung. Perbandingan muncul otomatis mulai bulan berikutnya.",
+    noBaselineNone: "<b>Belum ada data {baseline} di sistem.</b> Tidak ada catatan {baseline} untuk orang-orang yang bisa kamu lihat, jadi belum ada yang bisa dibandingkan. Perbandingan muncul otomatis begitu data bulan sebelumnya ada.",
+    noBaselineUnapproved: "<b>Data {baseline} ada ({m} orang), tapi belum di-approve.</b> Perbandingan hanya memakai data yang sudah di-approve. Approve dulu bulan {baseline} (di Approve Final Decisions), lalu buka laporan ini lagi.",
+    noBaselineNoOverlap: "<b>Data {baseline} sudah di-approve untuk {a} orang, tapi tidak ada yang sama dengan yang dinilai bulan {month}.</b> Jadi belum ada yang bisa dibandingkan.",
     noBaselineRange: "<b>Belum ada perubahan yang bisa dihitung</b> — belum ada orang dengan data di lebih dari satu bulan pada periode ini.",
     underTitle: "Perlu Perhatian", underLead: "Skor di bawah {u}, diurutkan dari yang terendah.", weakest: "Terlemah: {a}", noDecision: "Belum ada Decision", underNone: "Tidak ada yang berstatus Underperform. ✅",
     feedbackTitle: "Isu dari Feedback Staff", feedbackLead: "Dari {n} feedback yang masuk bulan {month} — isu kualitatif yang staff tulis sendiri, pelengkap angka di atas.", feedbackNone: "Tidak ada isu yang menonjol.",
@@ -5991,9 +5994,12 @@ const REPORT_TEXT = {
     thresholds: "Status cut-offs: Underperform below {u} · Performer {u}–{b} · Best Performer above {b}.",
     deptTitle: "By Department", people: "people", person: "person", underCount: "{n} Underperform", deptNone: "No data yet.",
     trendTitle: "Change vs Previous Month", trendRangeTitle: "Change over the Period",
-    trendCompared: "Compared with {month} · {n} {who}", trendComparedRange: "Start vs end of period · {n} {who}",
+    trendCompared: "Compared with {month} · {n} of {total} {who}", trendComparedRange: "Start vs end of period · {n} of {total} {who}",
+    trendUnapproved: "{m} {who} with {month} data not yet approved are left out of the comparison.",
     improved: "Most Improved", declined: "Most Declined", nobodyUp: "Nobody went up.", nobodyDown: "Nobody went down.",
-    noBaseline: "<b>No month to compare against yet.</b> {month} is the first approved period in this system, so there is no change to calculate. The comparison appears automatically from next month.",
+    noBaselineNone: "<b>No {baseline} data in the system.</b> There are no {baseline} records for the people you can see, so there is nothing to compare yet. The comparison appears automatically once last month's data exists.",
+    noBaselineUnapproved: "<b>{baseline} data exists ({m} people), but it is not approved yet.</b> The comparison only uses approved data. Approve {baseline} first (in Approve Final Decisions), then open this report again.",
+    noBaselineNoOverlap: "<b>{baseline} is approved for {a} people, but none of them are among those assessed in {month}.</b> So there is nothing to compare yet.",
     noBaselineRange: "<b>No change to calculate</b> — nobody has data in more than one month within this period.",
     underTitle: "Needs Attention", underLead: "Score below {u}, lowest first.", weakest: "Weakest: {a}", noDecision: "No decision yet", underNone: "Nobody is rated Underperform. ✅",
     feedbackTitle: "Staff Feedback Issues", feedbackLead: "From {n} feedback submissions in {month} — qualitative issues staff wrote themselves, complementing the numbers above.", feedbackNone: "No standout issues.",
@@ -6012,7 +6018,7 @@ body{margin:0;background:var(--sand);color:var(--ink);font:15px/1.5 system-ui,-a
 .seg label{padding:6px 14px;border-radius:999px;font-weight:700;font-size:13px;color:var(--muted);cursor:pointer}
 #rl-id:checked ~ .toolbar label[for=rl-id],#rl-en:checked ~ .toolbar label[for=rl-en]{background:var(--teal);color:#fff}
 .printbtn{background:var(--coral);color:#fff;border:0;border-radius:999px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer}
-.sheet{max-width:880px;margin:18px auto 40px;background:#fff;border-radius:18px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.07);overflow-wrap:anywhere}
+.sheet{max-width:880px;margin:18px auto 40px;background:#fff;border-radius:18px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,.07);overflow-wrap:break-word}
 .sheet *{min-width:0}
 #rl-id:checked ~ .sheet .pane-en,#rl-en:checked ~ .sheet .pane-id{display:none}
 .head{display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:3px solid var(--teal)}
@@ -6033,10 +6039,11 @@ h2{margin:30px 0 2px;font-size:17px;color:var(--teal);break-after:avoid}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 .note{font-size:12px;color:var(--muted);margin-top:8px}
 .dept{padding:10px 0;border-bottom:1px solid var(--line);break-inside:avoid}
-.d-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-.d-name{font-weight:700;flex:1;min-width:90px}
+.d-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.d-sub{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin-top:6px}
+.d-name{font-weight:700;flex:1 1 auto}
 .d-meta{color:var(--muted);font-size:12px}
-.d-avg{font-weight:800;font-size:16px;min-width:44px;text-align:right}
+.d-avg{font-weight:800;font-size:16px;text-align:right;flex:none}
 .bar{height:8px;border-radius:99px;background:#EEE4D3;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;border-radius:99px}
 .pill{display:inline-block;border-radius:99px;padding:2px 9px;font-size:11.5px;font-weight:700;white-space:nowrap}
@@ -6079,13 +6086,9 @@ function buildReportPane(res, lang) {
 
   const deptHtml = res.departmentSummary.length ? res.departmentSummary.map(d => `
       <div class="dept">
-        <div class="d-top">
-          <span class="d-name">${e(d.department)}</span>
-          <span class="d-meta">${d.headcount} ${e(ppl(d.headcount))}</span>
-          <span class="pill ${d.underperformCount > 0 ? "bad" : "mute"}">${e(fill(T.underCount, { n: d.underperformCount }))}</span>
-          <span class="d-avg">${fmt(d.averageScore)}</span>
-        </div>
+        <div class="d-top"><span class="d-name">${e(d.department)}</span><span class="d-avg">${fmt(d.averageScore)}</span></div>
         <div class="bar"><i style="width:${Math.max(0, Math.min(100, d.averageScore))}%; background:${d.averageScore < th.underperformBelow ? COLORS.under : COLORS.best}"></i></div>
+        <div class="d-sub"><span class="d-meta">${d.headcount} ${e(ppl(d.headcount))}</span><span class="pill ${d.underperformCount > 0 ? "bad" : "mute"}">${e(fill(T.underCount, { n: d.underperformCount }))}</span></div>
       </div>`).join("") : `<div class="col"><div class="empty">${e(T.deptNone)}</div></div>`;
 
   const trendRow = (p) => `
@@ -6095,9 +6098,20 @@ function buildReportPane(res, lang) {
       </div>`;
   const trend = res.trend || { mode: "none", baselineMonth: null, comparedCount: 0 };
   const isRange = res.rangeStart !== res.rangeEnd;
+  // What to say when there is nothing to compare: say what was actually FOUND, never assume "first month".
+  const noBaselineText = () => {
+    if (isRange) return T.noBaselineRange;
+    const baseLabel = reportMonthLabel(trend.baselineMonth, lang);
+    const approved = trend.baselineApprovedCount || 0, unapproved = trend.baselineNotApprovedCount || 0;
+    if (approved === 0 && unapproved > 0) return fill(T.noBaselineUnapproved, { baseline: baseLabel, m: unapproved });
+    if (approved > 0) return fill(T.noBaselineNoOverlap, { baseline: baseLabel, a: approved, month: reportMonthLabel(res.rangeEnd, lang) });
+    return fill(T.noBaselineNone, { baseline: baseLabel });
+  };
+  const unapprovedNote = (!isRange && (trend.baselineNotApprovedCount || 0) > 0)
+    ? ` ${fill(T.trendUnapproved, { m: trend.baselineNotApprovedCount, who: ppl(trend.baselineNotApprovedCount), month: reportMonthLabel(trend.baselineMonth, lang) })}` : "";
   const trendHtml = trend.mode === "none"
-    ? `<div class="info">${isRange ? T.noBaselineRange : fill(T.noBaseline, { month: reportMonthLabel(res.rangeEnd, lang) })}</div>`
-    : `<p class="lead">${e(isRange ? fill(T.trendComparedRange, { n: trend.comparedCount, who: ppl(trend.comparedCount) }) : fill(T.trendCompared, { month: reportMonthLabel(trend.baselineMonth, lang), n: trend.comparedCount, who: ppl(trend.comparedCount) }))}</p>
+    ? `<div class="info">${noBaselineText()}</div>`
+    : `<p class="lead">${e((isRange ? fill(T.trendComparedRange, { n: trend.comparedCount, total, who: ppl(total) }) : fill(T.trendCompared, { month: reportMonthLabel(trend.baselineMonth, lang), n: trend.comparedCount, total, who: ppl(total) })) + unapprovedNote)}</p>
        <div class="cols">
          <div class="col"><h3>🌟 ${e(T.improved)}</h3>${res.mostImproved.length ? res.mostImproved.map(trendRow).join("") : `<div class="empty">${e(T.nobodyUp)}</div>`}</div>
          <div class="col"><h3>📉 ${e(T.declined)}</h3>${res.mostDeclined.length ? res.mostDeclined.map(trendRow).join("") : `<div class="empty">${e(T.nobodyDown)}</div>`}</div>
@@ -6121,7 +6135,7 @@ function buildReportPane(res, lang) {
     <h2>💬 ${e(T.feedbackTitle)}</h2>
     <p class="lead">${e(fill(T.feedbackLead, { n: res.feedbackIssueSummary.totalRespondents, month: reportMonthLabel(res.rangeEnd, lang) }))}</p>
     ${issues.length ? issues.map(x => `
-      <div class="dept"><div class="d-top"><span class="d-name">${e(x.label)}</span><span class="d-meta">${x.employeeCount} ${e(ppl(x.employeeCount))} · ${(x.pct * 100).toFixed(0)}%</span>${x.priority === "TOP 5" ? `<span class="pill bad">${e(x.priority)}</span>` : `<span class="pill mute">${e(x.priority)}</span>`}</div></div>`).join("") : `<div class="col"><div class="empty">${e(T.feedbackNone)}</div></div>`}` : "";
+      <div class="dept"><div class="d-top"><span class="d-name">${e(x.label)}</span>${x.priority === "TOP 5" ? `<span class="pill bad">${e(x.priority)}</span>` : `<span class="pill mute">${e(x.priority)}</span>`}</div><div class="d-sub"><span class="d-meta">${x.employeeCount} ${e(ppl(x.employeeCount))} · ${(x.pct * 100).toFixed(0)}%</span></div></div>`).join("") : `<div class="col"><div class="empty">${e(T.feedbackNone)}</div></div>`}` : "";
 
   return `
     <section class="pane pane-${lang}">

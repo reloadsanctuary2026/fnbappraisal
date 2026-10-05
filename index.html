@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-295-approve-all-explains-skips — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-296-approval-window-named-executives — LIVE</div>
 
 <script>
 // =================================================================
@@ -789,11 +789,13 @@ const translations = {
     gm_export_next_step: "— lalu File → Download → Excel.",
     gm_approve_all_failed_prefix: "Gagal approve semua:",
     gm_approve_all_success_suffix: "appraisal ter-approve! Notifikasi terkirim.",
-    gm_approve_all_closed_confirm: "{n} orang DILEWATI karena jendela approval-nya sudah ditutup.\n{info}\n\nBuka jendela approval untuk SEMUA yang belum di-approve bulan ini, lalu approve sekarang?",
+    gm_approve_all_closed_confirm: "{n} orang DILEWATI karena jendela approval-nya sudah ditutup.\n{info}\n\nBuka jendela approval untuk SEMUA yang belum di-approve bulan ini, lalu approve sekarang atas namamu?",
+    gm_approve_all_closed_confirm_super: "{n} orang DILEWATI karena jendela approval-nya sudah ditutup.\n{info}\n\nBuka jendela approval untuk SEMUA yang belum di-approve bulan ini?\n\nKamu login sebagai Superadmin, jadi approve-nya JANGAN dilakukan dari sini — penyetuju akan tercatat \"Superadmin\". Setelah dibuka, login pakai akunmu sendiri lalu klik Approve Semua.",
+    gm_open_window_done_super: "✅ Jendela dibuka untuk {n} orang. Sekarang login pakai akunmu sendiri (bukan Superadmin), buka bulan yang sama, lalu klik Approve Semua yang Layak — supaya penyetuju tercatat atas namamu.",
     gm_approve_all_skipped_closed: "{n} dilewati: jendela approval sudah ditutup.",
     gm_approve_all_skipped_early: "{n} dilewati: jendela approval belum dibuka.",
     gm_approve_all_needs_manual: "{n} Underperform perlu keputusan manual (tidak ikut approve massal).",
-    gm_approve_all_ask_admin: "Minta Superadmin membukanya lewat Access Override.",
+    gm_approve_all_ask_admin: "Minta Superadmin membuka jendelanya, atau minta akses \"ApprovalWindow\" supaya kamu bisa membukanya sendiri.",
     gm_open_window_failed_prefix: "Gagal membuka jendela approval:",
     gm_calibration_title: "Kalibrasi Skor",
     gm_calibration_desc: "Skor Self, Leader, dan HR tidak berubah. Penyesuaian ini hanya memengaruhi Final Score dan Status resmi, dan alasannya akan tercatat secara permanen.",
@@ -1229,11 +1231,13 @@ const translations = {
     gm_export_next_step: "— then File → Download → Excel.",
     gm_approve_all_failed_prefix: "Failed to approve all:",
     gm_approve_all_success_suffix: "appraisals approved! Notifications sent.",
-    gm_approve_all_closed_confirm: "{n} people were SKIPPED because their approval window has closed.\n{info}\n\nOpen the approval window for EVERYONE not yet approved this month, then approve now?",
+    gm_approve_all_closed_confirm: "{n} people were SKIPPED because their approval window has closed.\n{info}\n\nOpen the approval window for EVERYONE not yet approved this month, then approve now under your own name?",
+    gm_approve_all_closed_confirm_super: "{n} people were SKIPPED because their approval window has closed.\n{info}\n\nOpen the approval window for EVERYONE not yet approved this month?\n\nYou are logged in as Superadmin, so do NOT approve from here — the approver would be recorded as \"Superadmin\". Once it is open, log in with your own account and click Approve All.",
+    gm_open_window_done_super: "✅ Window opened for {n} people. Now log in with your own account (not Superadmin), open the same month, and click Approve All Eligible — so the approval is recorded under your name.",
     gm_approve_all_skipped_closed: "{n} skipped: approval window has closed.",
     gm_approve_all_skipped_early: "{n} skipped: approval window is not open yet.",
     gm_approve_all_needs_manual: "{n} Underperform need a manual decision (not part of bulk approve).",
-    gm_approve_all_ask_admin: "Ask a Superadmin to open it via Access Override.",
+    gm_approve_all_ask_admin: "Ask a Superadmin to open the window, or ask for the \"ApprovalWindow\" access so you can open it yourself.",
     gm_open_window_failed_prefix: "Failed to open the approval window:",
     gm_calibration_title: "Calibration Score Adjustment",
     gm_calibration_desc: "Self, Leader, and HR scores don't change. This adjustment only affects the Final Score and official Status, and the reason will be permanently recorded.",
@@ -7488,15 +7492,25 @@ async function approveAll(afterOpening) {
   const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
   if (res.error) { showToast(t("gm_approve_all_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
   const approved = res.approvedCount || 0, closed = res.skippedClosed || 0, early = res.skippedEarly || 0, manual = res.needsManualCount || 0;
+  const canOpen = !!res.canOpenWindow; // decided by the SERVER (Superadmin, or an Executive granted "ApprovalWindow")
 
-  // The usual reason for "nothing happened": the window closed (e.g. the day after it ended). A Superadmin
-  // can open it for everyone not yet approved, right here, and carry on — once (afterOpening stops a loop).
-  if (closed > 0 && !afterOpening && state.user && state.user.isSuperAdmin) {
-    const question = t("gm_approve_all_closed_confirm").replace("{n}", closed).replace("{info}", res.windowInfo || "");
+  // The usual reason for "nothing happened": the window closed (e.g. the day after it ended). Someone allowed to
+  // can open it for everyone not yet approved, right here — once (afterOpening stops a loop).
+  if (closed > 0 && !afterOpening && canOpen) {
+    // The shared Superadmin account records every approval as "Superadmin": it only OPENS the window, and the
+    // real approver then approves from their own login so the name on the record is theirs.
+    const isSuperAccount = !!(state.user && state.user.isSuperAdmin);
+    const question = t(isSuperAccount ? "gm_approve_all_closed_confirm_super" : "gm_approve_all_closed_confirm")
+      .replace("{n}", closed).replace("{info}", res.windowInfo || "");
     if (confirm(question)) {
       const opened = await apiPost("openExecutiveWindowForMonth", { monthKey: state.month });
       if (opened.error || opened.success === false) {
         showToast(t("gm_open_window_failed_prefix") + " " + friendlyError(opened.error), "error");
+        renderGm();
+        return;
+      }
+      if (isSuperAccount) {
+        showToast(t("gm_open_window_done_super").replace("{n}", (opened.opened || 0) + (opened.alreadyOpen || 0)), "success", 12000);
         renderGm();
         return;
       }
@@ -7505,7 +7519,7 @@ async function approveAll(afterOpening) {
   }
 
   const parts = [`${approved} ${t("gm_approve_all_success_suffix")}`];
-  if (closed) parts.push(t("gm_approve_all_skipped_closed").replace("{n}", closed) + ((state.user && state.user.isSuperAdmin) ? "" : " " + t("gm_approve_all_ask_admin")));
+  if (closed) parts.push(t("gm_approve_all_skipped_closed").replace("{n}", closed) + (canOpen ? "" : " " + t("gm_approve_all_ask_admin")));
   if (early) parts.push(t("gm_approve_all_skipped_early").replace("{n}", early));
   if (manual) parts.push(t("gm_approve_all_needs_manual").replace("{n}", manual));
   const skipped = closed + early;

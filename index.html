@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-296-approval-window-named-executives — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-297-approve-all-never-silent — LIVE</div>
 
 <script>
 // =================================================================
@@ -797,6 +797,9 @@ const translations = {
     gm_approve_all_needs_manual: "{n} Underperform perlu keputusan manual (tidak ikut approve massal).",
     gm_approve_all_ask_admin: "Minta Superadmin membuka jendelanya, atau minta akses \"ApprovalWindow\" supaya kamu bisa membukanya sendiri.",
     gm_open_window_failed_prefix: "Gagal membuka jendela approval:",
+    gm_approve_all_working: "⏳ Memproses Approve Semua… (jangan tutup halaman)",
+    gm_approve_all_nothing: "Tidak ada appraisal yang menunggu di-approve di {month}. Cek dulu bulan yang dipilih — atau semuanya memang sudah di-approve.",
+    gm_approve_all_stale_server: "⚠️ Server (Apps Script) masih versi LAMA — perubahan terbaru belum aktif. Deploy ulang: Deploy → Manage deployments → pensil → Version \"New version\" → Deploy.",
     gm_calibration_title: "Kalibrasi Skor",
     gm_calibration_desc: "Skor Self, Leader, dan HR tidak berubah. Penyesuaian ini hanya memengaruhi Final Score dan Status resmi, dan alasannya akan tercatat secara permanen.",
     gm_calibration_adj_label: "Penyesuaian (poin)",
@@ -1239,6 +1242,9 @@ const translations = {
     gm_approve_all_needs_manual: "{n} Underperform need a manual decision (not part of bulk approve).",
     gm_approve_all_ask_admin: "Ask a Superadmin to open the window, or ask for the \"ApprovalWindow\" access so you can open it yourself.",
     gm_open_window_failed_prefix: "Failed to open the approval window:",
+    gm_approve_all_working: "⏳ Running Approve All… (keep the page open)",
+    gm_approve_all_nothing: "Nothing is waiting to be approved in {month}. Check the selected month — or everything is already approved.",
+    gm_approve_all_stale_server: "⚠️ The server (Apps Script) is still an OLD version — the latest changes are not active. Redeploy: Deploy → Manage deployments → pencil → Version \"New version\" → Deploy.",
     gm_calibration_title: "Calibration Score Adjustment",
     gm_calibration_desc: "Self, Leader, and HR scores don't change. This adjustment only affects the Final Score and official Status, and the reason will be permanently recorded.",
     gm_calibration_adj_label: "Adjustment (points)",
@@ -7489,42 +7495,59 @@ async function submitDecision(staffId) {
 }
 
 async function approveAll(afterOpening) {
-  const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
-  if (res.error) { showToast(t("gm_approve_all_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
-  const approved = res.approvedCount || 0, closed = res.skippedClosed || 0, early = res.skippedEarly || 0, manual = res.needsManualCount || 0;
-  const canOpen = !!res.canOpenWindow; // decided by the SERVER (Superadmin, or an Executive granted "ApprovalWindow")
+  // Something must ALWAYS appear: a "working" notice the instant the button is pressed (so a press that does
+  // nothing at all is distinguishable from one that is merely slow), and a result that never vanishes
+  // unseen. approveAll can take a while — it notifies everyone it approves.
+  showToast(t("gm_approve_all_working"), "success", 120000);
+  try {
+    const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
+    if (res.error) { showToast(t("gm_approve_all_failed_prefix") + " " + friendlyError(res.error), "error", 9000); return; }
+    // An old deployment never sends `version`: say so plainly instead of reading its missing fields as "0 / nothing".
+    if (!res.version) { showToast(t("gm_approve_all_stale_server"), "error", 20000); return; }
+    const approved = res.approvedCount || 0, closed = res.skippedClosed || 0, early = res.skippedEarly || 0, manual = res.needsManualCount || 0;
+    const canOpen = !!res.canOpenWindow; // decided by the SERVER (Superadmin, or an Executive granted "ApprovalWindow")
 
-  // The usual reason for "nothing happened": the window closed (e.g. the day after it ended). Someone allowed to
-  // can open it for everyone not yet approved, right here — once (afterOpening stops a loop).
-  if (closed > 0 && !afterOpening && canOpen) {
-    // The shared Superadmin account records every approval as "Superadmin": it only OPENS the window, and the
-    // real approver then approves from their own login so the name on the record is theirs.
-    const isSuperAccount = !!(state.user && state.user.isSuperAdmin);
-    const question = t(isSuperAccount ? "gm_approve_all_closed_confirm_super" : "gm_approve_all_closed_confirm")
-      .replace("{n}", closed).replace("{info}", res.windowInfo || "");
-    if (confirm(question)) {
-      const opened = await apiPost("openExecutiveWindowForMonth", { monthKey: state.month });
-      if (opened.error || opened.success === false) {
-        showToast(t("gm_open_window_failed_prefix") + " " + friendlyError(opened.error), "error");
-        renderGm();
-        return;
+    // The usual reason for "nothing happened": the window closed (e.g. the day after it ended). Someone allowed to
+    // can open it for everyone not yet approved, right here — once (afterOpening stops a loop).
+    if (closed > 0 && !afterOpening && canOpen) {
+      // The shared Superadmin account records every approval as "Superadmin": it only OPENS the window, and the
+      // real approver then approves from their own login so the name on the record is theirs.
+      const isSuperAccount = !!(state.user && state.user.isSuperAdmin);
+      const question = t(isSuperAccount ? "gm_approve_all_closed_confirm_super" : "gm_approve_all_closed_confirm")
+        .replace("{n}", closed).replace("{info}", res.windowInfo || "");
+      if (confirm(question)) {
+        const opened = await apiPost("openExecutiveWindowForMonth", { monthKey: state.month });
+        if (opened.error || opened.success === false) {
+          showToast(t("gm_open_window_failed_prefix") + " " + friendlyError(opened.error), "error");
+          renderGm();
+          return;
+        }
+        if (isSuperAccount) {
+          showToast(t("gm_open_window_done_super").replace("{n}", (opened.opened || 0) + (opened.alreadyOpen || 0)), "success", 12000);
+          renderGm();
+          return;
+        }
+        return approveAll(true);
       }
-      if (isSuperAccount) {
-        showToast(t("gm_open_window_done_super").replace("{n}", (opened.opened || 0) + (opened.alreadyOpen || 0)), "success", 12000);
-        renderGm();
-        return;
-      }
-      return approveAll(true);
     }
-  }
 
-  const parts = [`${approved} ${t("gm_approve_all_success_suffix")}`];
-  if (closed) parts.push(t("gm_approve_all_skipped_closed").replace("{n}", closed) + (canOpen ? "" : " " + t("gm_approve_all_ask_admin")));
-  if (early) parts.push(t("gm_approve_all_skipped_early").replace("{n}", early));
-  if (manual) parts.push(t("gm_approve_all_needs_manual").replace("{n}", manual));
-  const skipped = closed + early;
-  showToast(parts.join(" "), approved === 0 && skipped > 0 ? "error" : "success", skipped || manual ? 9000 : undefined);
-  renderGm();
+    const parts = [`${approved} ${t("gm_approve_all_success_suffix")}`];
+    if (closed) parts.push(t("gm_approve_all_skipped_closed").replace("{n}", closed) + (canOpen ? "" : " " + t("gm_approve_all_ask_admin")));
+    if (early) parts.push(t("gm_approve_all_skipped_early").replace("{n}", early));
+    if (manual) parts.push(t("gm_approve_all_needs_manual").replace("{n}", manual));
+    const skipped = closed + early;
+    if (!approved && !skipped && !manual) { // nothing pending at all: wrong month, or already done
+      showToast(t("gm_approve_all_nothing").replace("{month}", monthLabelID(state.month)) + `  [${res.version}]`, "error", 12000);
+      renderGm();
+      return;
+    }
+    showToast(parts.join(" "), approved === 0 && skipped > 0 ? "error" : "success", 9000);
+    renderGm();
+  } catch (err) {
+    // A script error must never leave the "working" notice hanging, or the button looking dead.
+    console.error("approveAll failed:", err);
+    showToast(t("gm_approve_all_failed_prefix") + " " + (err && err.message ? err.message : err), "error", 15000);
+  }
 }
 
 // =================================================================

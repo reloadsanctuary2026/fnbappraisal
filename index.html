@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-297-approve-all-never-silent — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-298-approve-all-batched — LIVE</div>
 
 <script>
 // =================================================================
@@ -797,7 +797,9 @@ const translations = {
     gm_approve_all_needs_manual: "{n} Underperform perlu keputusan manual (tidak ikut approve massal).",
     gm_approve_all_ask_admin: "Minta Superadmin membuka jendelanya, atau minta akses \"ApprovalWindow\" supaya kamu bisa membukanya sendiri.",
     gm_open_window_failed_prefix: "Gagal membuka jendela approval:",
-    gm_approve_all_working: "⏳ Memproses Approve Semua… (jangan tutup halaman)",
+    gm_approve_all_working: "⏳ Memproses Approve Semua… (jangan tutup halaman, jangan klik lagi)",
+    gm_approve_all_busy: "Ada proses lain yang masih berjalan di server (biasanya Approve Semua sebelumnya). Tunggu 2–3 menit, JANGAN klik berulang, lalu muat ulang halaman dan coba lagi. Yang sudah ter-approve tidak diproses ulang.",
+    gm_approve_all_already_running: "Approve Semua masih berjalan — tunggu sampai selesai, jangan klik lagi.",
     gm_approve_all_nothing: "Tidak ada appraisal yang menunggu di-approve di {month}. Cek dulu bulan yang dipilih — atau semuanya memang sudah di-approve.",
     gm_approve_all_stale_server: "⚠️ Server (Apps Script) masih versi LAMA — perubahan terbaru belum aktif. Deploy ulang: Deploy → Manage deployments → pensil → Version \"New version\" → Deploy.",
     gm_calibration_title: "Kalibrasi Skor",
@@ -1242,7 +1244,9 @@ const translations = {
     gm_approve_all_needs_manual: "{n} Underperform need a manual decision (not part of bulk approve).",
     gm_approve_all_ask_admin: "Ask a Superadmin to open the window, or ask for the \"ApprovalWindow\" access so you can open it yourself.",
     gm_open_window_failed_prefix: "Failed to open the approval window:",
-    gm_approve_all_working: "⏳ Running Approve All… (keep the page open)",
+    gm_approve_all_working: "⏳ Running Approve All… (keep the page open, don't click again)",
+    gm_approve_all_busy: "Another action is still running on the server (usually an earlier Approve All). Wait 2–3 minutes, do NOT click repeatedly, then reload the page and try again. People already approved are not processed again.",
+    gm_approve_all_already_running: "Approve All is still running — wait for it to finish, don't click again.",
     gm_approve_all_nothing: "Nothing is waiting to be approved in {month}. Check the selected month — or everything is already approved.",
     gm_approve_all_stale_server: "⚠️ The server (Apps Script) is still an OLD version — the latest changes are not active. Redeploy: Deploy → Manage deployments → pencil → Version \"New version\" → Deploy.",
     gm_calibration_title: "Calibration Score Adjustment",
@@ -7494,14 +7498,21 @@ async function submitDecision(staffId) {
   renderGm();
 }
 
+let _approveAllRunning = false;
 async function approveAll(afterOpening) {
+  // One run at a time: a second click while the first is still working only queues behind the server's lock
+  // (and is what turns "slow" into "timed out"). The recursive call after opening the window is the same run.
+  if (_approveAllRunning && !afterOpening) { showToast(t("gm_approve_all_already_running"), "error", 6000); return; }
+  if (!afterOpening) _approveAllRunning = true;
   // Something must ALWAYS appear: a "working" notice the instant the button is pressed (so a press that does
   // nothing at all is distinguishable from one that is merely slow), and a result that never vanishes
   // unseen. approveAll can take a while — it notifies everyone it approves.
   showToast(t("gm_approve_all_working"), "success", 120000);
   try {
     const res = await apiPost("approveAll", { month: state.month, approvedBy: state.user.name });
-    if (res.error) { showToast(t("gm_approve_all_failed_prefix") + " " + friendlyError(res.error), "error", 9000); return; }
+    // The server's lock is held by another long action (e.g. an earlier Approve All still running): say so, kindly.
+  if (res.error === "busy_try_again" || /penguncian|lock timeout/i.test(String(res.error))) { showToast(t("gm_approve_all_busy"), "error", 20000); return; }
+  if (res.error) { showToast(t("gm_approve_all_failed_prefix") + " " + friendlyError(res.error), "error", 9000); return; }
     // An old deployment never sends `version`: say so plainly instead of reading its missing fields as "0 / nothing".
     if (!res.version) { showToast(t("gm_approve_all_stale_server"), "error", 20000); return; }
     const approved = res.approvedCount || 0, closed = res.skippedClosed || 0, early = res.skippedEarly || 0, manual = res.needsManualCount || 0;
@@ -7527,7 +7538,8 @@ async function approveAll(afterOpening) {
           renderGm();
           return;
         }
-        return approveAll(true);
+        await approveAll(true); // same run — keeps the "already running" guard up until it finishes
+      return;
       }
     }
 
@@ -7547,6 +7559,8 @@ async function approveAll(afterOpening) {
     // A script error must never leave the "working" notice hanging, or the button looking dead.
     console.error("approveAll failed:", err);
     showToast(t("gm_approve_all_failed_prefix") + " " + (err && err.message ? err.message : err), "error", 15000);
+  } finally {
+    if (!afterOpening) _approveAllRunning = false;
   }
 }
 

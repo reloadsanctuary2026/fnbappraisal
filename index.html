@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-06-307-feedback-strict-superadmin-catchup — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-06-308-feedback-staff-error-messages — LIVE</div>
 
 <script>
 // =================================================================
@@ -363,7 +363,7 @@ async function apiGet(action, params = {}) {
     return json;
   } catch (err) {
     console.error("apiGet failed:", action, err);
-    return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
+    return { error: "Gagal terhubung ke server — cek koneksi internetmu, lalu coba lagi." };
   }
 }
 
@@ -403,7 +403,7 @@ async function apiPost(action, payload) {
     return json;
   } catch (err) {
     console.error("apiPost failed:", action, err);
-    return { error: "Gagal terhubung ke server (cek koneksi / setting deployment Apps Script)." };
+    return { error: "Gagal terhubung ke server — cek koneksi internetmu, lalu coba lagi." };
   }
 }
 function currentMonth() {
@@ -478,8 +478,10 @@ function friendlyError(code) {
     max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
     session_expired: "Sesi kamu udah habis, login ulang ya.",
     identity_mismatch: "Permintaan gak valid — coba refresh halaman dan login ulang.",
-    feedback_required: "Feedback ke management wajib diisi (minimal 5 huruf atau angka). Kalau halaman ini sudah lama terbuka, refresh dulu lalu isi kotak feedback.",
-    feedback_catchup_not_enabled: "Menyusul feedback belum dibuka untukmu. Feedback wajib diisi saat Self Appraisal — hubungi admin kalau perlu menyusul.",
+    feedback_required: "Feedback ke management wajib diisi (minimal 5 huruf atau angka). Penilaianmu BELUM tersimpan. Kalau halaman ini sudah lama terbuka, refresh dulu lalu isi ulang, termasuk kotak feedback.",
+    feedback_catchup_not_enabled: "Kesempatan menyusul feedback tidak sedang terbuka (belum dibuka, sudah terpakai, atau sudah ditutup admin). Feedback wajib diisi saat Self Appraisal — hubungi admin kalau perlu membukanya lagi.",
+    target_not_found: "Data kamu tidak ditemukan di roster. Hubungi admin.",
+    primary_issue_required: "Pilih isu utamanya dulu.",
     staff_not_found: "NIK itu tidak ditemukan di roster.",
     staff_id_required: "Masukin NIK-nya dulu.",
     busy_try_again: "Server lagi sibuk — tunggu beberapa detik lalu coba lagi.",
@@ -913,6 +915,11 @@ const translations = {
   menu_my_feedback_done: "Sudah diisi",
   myfb_title: "Feedback ke Management",
   myfb_intro: "Admin membuka kesempatan SATU KALI untukmu menyusul atau menambah feedback. Tulisan yang sudah ada tetap tampil di kotak di bawah — tinggal tambahkan di bawahnya, lalu simpan. Setelah disimpan, jalur ini tertutup lagi.",
+  myfb_err_required: "Feedback belum tersimpan: wajib diisi, minimal {n} huruf atau angka.",
+  myfb_err_closed: "Kesempatan menyusul feedback tidak sedang terbuka (belum dibuka, sudah terpakai, atau sudah ditutup admin). Hubungi admin kalau perlu membukanya lagi.",
+  myfb_err_not_found: "Data kamu tidak ditemukan di roster. Hubungi admin.",
+  myfb_err_load: "Halaman ini belum bisa dimuat karena ada kendala. Coba lagi sebentar lagi, dan kalau tetap gagal hubungi admin.",
+  myfb_err_generic: "Feedback belum tersimpan karena ada kendala. Tulisanmu masih ada di kotak — coba lagi sebentar lagi, dan kalau tetap gagal hubungi admin.",
   myfb_locked: "Menyusul feedback sedang ditutup. Feedback wajib diisi saat Self Appraisal. Kalau kamu memang perlu menyusul atau menambah, hubungi admin untuk membukanya.",
   myfb_last_saved: "Terakhir disimpan: {when}",
   myfb_none_yet: "Bulan ini kamu belum mengisi feedback.",
@@ -1378,6 +1385,11 @@ const translations = {
   menu_my_feedback_done: "Filled in",
   myfb_title: "Feedback to Management",
   myfb_intro: "An admin has opened a ONE-TIME chance for you to catch up on or add to your feedback. What you already wrote stays in the box below — just add to it, then save. Once saved, this closes again.",
+  myfb_err_required: "Feedback not saved: it is required, at least {n} letters or digits.",
+  myfb_err_closed: "Catching up on feedback is not open right now (not opened, already used, or closed by an admin). Contact an admin if you need it opened again.",
+  myfb_err_not_found: "Your record was not found in the roster. Please contact an admin.",
+  myfb_err_load: "This page could not be loaded because something went wrong. Try again in a moment, and contact an admin if it keeps failing.",
+  myfb_err_generic: "Your feedback was not saved because something went wrong. Your text is still in the box — try again in a moment, and contact an admin if it keeps failing.",
   myfb_locked: "Catching up on feedback is closed. Feedback is required when you do your Self Appraisal. If you really need to catch up or add something, contact an admin to open it.",
   myfb_last_saved: "Last saved: {when}",
   myfb_none_yet: "You haven't filled in feedback this month.",
@@ -5463,11 +5475,23 @@ async function saveHistoricalAppraisal() {
 /** "Feedback ke Management": the way in for someone who missed the feedback box, or wants to add to what they wrote. Always open
  *  during the month; the box starts with what they already wrote, so adding means typing underneath it. */
 let _myFeedbackSaving = false;
+/** The error sentence for the staff's OWN feedback screen. A code the app knows gets its sentence (three worded for this screen);
+ *  anything else — a raw server message, "unknown", a string out of a stack trace — is NEVER shown as it is: one calm sentence
+ *  instead, with the detail left in the console. The "can't reach the server" sentence is already written for people, so it passes. */
+function myFeedbackError(code, context) {
+  if (typeof code === "string" && /^Gagal terhubung ke server/.test(code)) return code;
+  const own = { feedback_required: t("myfb_err_required").replace("{n}", FEEDBACK_MIN_CHARS), feedback_catchup_not_enabled: t("myfb_err_closed"), target_not_found: t("myfb_err_not_found") };
+  if (own[code]) return own[code];
+  const msg = friendlyError(code);
+  // "not saved / your text is still in the box" only makes sense when SAVING; when the page could not even load there is no box
+  return (code && msg !== code && msg !== "Terjadi kendala tidak dikenal") ? msg : t(context === "load" ? "myfb_err_load" : "myfb_err_generic");
+}
+
 async function renderMyFeedback() {
   app.innerHTML = topbar(t("myfb_title")) + `<div class="loading">Memuat...</div>`;
   const res = await apiGet("getMyManagementFeedback", { staffId: state.user.staffId });
-  if (res.error) {
-    app.innerHTML = topbar(t("myfb_title")) + `<div class="card"><div class="error">${escapeHtml(friendlyError(res.error))}</div><button class="secondary" onclick="goToRoleMenu()" style="margin-top:10px;">${t("myfb_back")}</button></div>`;
+  if (!res || typeof res !== "object" || res.error) {
+    app.innerHTML = topbar(t("myfb_title")) + `<div class="card"><div class="error">${escapeHtml(myFeedbackError(res && res.error, "load"))}</div><button class="secondary" onclick="goToRoleMenu()" style="margin-top:10px;">${t("myfb_back")}</button></div>`;
     return;
   }
   if (!res.catchUpEnabled) {
@@ -5508,12 +5532,12 @@ async function saveMyFeedback() {
       showToast(t("myfb_saved"));
       goToRoleMenu();
     } else {
-      showToast(friendlyError((res && (res.error || res.reason)) || "unknown"), "error", 9000);
+      showToast(myFeedbackError(res && (res.error || res.reason)), "error", 9000);
       if (btn) btn.disabled = false;
     }
   } catch (err) {
     console.error("saveMyFeedback failed:", err);
-    showToast("Terjadi error tak terduga: " + err.message, "error");
+    showToast(t("myfb_err_generic"), "error", 9000);
     if (btn) btn.disabled = false;
   } finally {
     _myFeedbackSaving = false;

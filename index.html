@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-303-feedback-per-business-unit-and-new-notice — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-304-submit-single-flight-and-real-denial-reason — LIVE</div>
 
 <script>
 // =================================================================
@@ -900,6 +900,10 @@ const translations = {
     form_feedback_section: "Feedback to Management",
     form_feedback_privacy: "🔒 Feedback ini hanya akan dibaca oleh Executive dan HR.",
     form_feedback_placeholder: "Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung...",
+  form_submit_working: "⏳ Menyimpan… jangan ketuk lagi, tunggu sampai muncul tulisan tersimpan.",
+  form_submit_in_progress: "Masih menyimpan — tunggu sebentar, jangan ketuk lagi.",
+  form_submit_already_saved: "Penilaianmu SUDAH tersimpan sebelumnya, jadi tidak bisa dikirim lagi. Jawabanmu aman, tidak ada yang berubah.",
+  form_unit_not_active: "Unit kamu belum mulai siklus appraisal — memang belum waktunya.",
   form_feedback_send_failed: "Penilaianmu sudah tersimpan, tapi feedback ke manajemen BELUM terkirim. Buka lagi form-nya (jangan refresh halaman dulu — tulisanmu masih tersimpan di sini) lalu kirim ulang.",
     form_submit: "Submit Appraisal",
     form_cancel: "Batal",
@@ -1348,6 +1352,10 @@ const translations = {
     form_feedback_section: "Feedback to Management",
     form_feedback_privacy: "🔒 This feedback will only be read by Executive and HR.",
     form_feedback_placeholder: "Optional — write anything you'd like to share directly with an Executive...",
+  form_submit_working: "⏳ Saving… don't tap again, wait until it says saved.",
+  form_submit_in_progress: "Still saving — please wait, don't tap again.",
+  form_submit_already_saved: "Your appraisal was ALREADY saved earlier, so it can't be sent again. Your answers are safe — nothing changed.",
+  form_unit_not_active: "Your unit hasn't started the appraisal cycle yet — it's simply not time.",
   form_feedback_send_failed: "Your appraisal is saved, but your feedback to management was NOT sent. Open the form again (don't refresh the page yet — your text is still kept here) and submit again.",
     form_submit: "Submit Appraisal",
     form_cancel: "Cancel",
@@ -7106,7 +7114,31 @@ function backToEditForm(evaluatorType) {
   renderFormBody(evaluatorType, state.targetStaff, state.kpiConfig);
 }
 
+/** Why a send was refused, in words the person can act on. The server answers "access_denied" plus a reason; the screen
+ *  used to show only "Akses ditolak." for ALL of them — so a second tap on "Kirim" (after the first one had already saved)
+ *  looked like a failure, when the right message is "it is already saved". Reuses the wording the form itself shows
+ *  when it is opened. Returns { text, type }, or null when there is nothing better to say than the generic message. */
+function submitDeniedMessage(res) {
+  const plain = (h) => String(h).replace(/<[^>]+>/g, "");
+  switch (res && res.reason) {
+    case "max_attempts_reached": // a stored submission exists by definition (that is what the limit counts), so this is GOOD news
+      return { text: t("form_submit_already_saved"), type: "success" };
+    case "too_early": return { text: "Gagal menyimpan: " + plain(`${t("form_too_early")} ${res.retryDateLabel}.`), type: "error" }; // same sentence the form shows: "...mulai <tanggal>."
+    case "too_late": return { text: "Gagal menyimpan: " + plain(t("form_too_late_full")), type: "error" };
+    case "deferred_to_previous_cycle": return { text: "Gagal menyimpan: " + plain(t("form_deferred")), type: "error" };
+    case "new_hire_this_month": return { text: "Gagal menyimpan: " + plain(t("form_new_hire")), type: "error" };
+    case "business_unit_not_yet_active": return { text: "Gagal menyimpan: " + plain(t("form_unit_not_active")), type: "error" };
+    default: return null;
+  }
+}
+
+// One send at a time. There was nothing stopping a second tap while the first was still on its way (the "Menyimpan..." notice
+// vanished after 2 seconds and the screen then looked idle), and since a second send of an already-saved appraisal is refused,
+// the person ended up with BOTH "Sudah Diisi" and a red "Gagal menyimpan".
+let _appraisalSubmitInFlight = false;
 async function confirmAndSubmit(evaluatorType) {
+  if (_appraisalSubmitInFlight) { showToast(t("form_submit_in_progress"), "error", 5000); return; }
+  _appraisalSubmitInFlight = true;
   try {
     const cfg = state.kpiConfig;
     const kpiCriteria = (cfg.isCustomStructure || cfg.placeholder) ? [] : cfg.kpi.map(c => c.name);
@@ -7137,7 +7169,7 @@ async function confirmAndSubmit(evaluatorType) {
       ],
       bonusEntries: state._pendingBonusEntries || [],
     };
-    showToast("Menyimpan...");
+    showToast(t("form_submit_working"), "success", 60000); // stays until the result replaces it
     const res = await apiPost("submitAppraisal", payload);
     if (res.computeError) {
       console.error("computeEvaluatorTotal error:", res.computeError);
@@ -7179,11 +7211,15 @@ async function confirmAndSubmit(evaluatorType) {
         }
       }
     } else {
-      showToast("Gagal menyimpan: " + friendlyError(res.error || res.reason), "error");
+      const denied = res.error === "access_denied" ? submitDeniedMessage(res) : null;
+      if (denied) showToast(denied.text, denied.type, 9000);
+      else showToast("Gagal menyimpan: " + friendlyError(res.error || res.reason), "error");
     }
   } catch (err) {
     console.error("confirmAndSubmit crashed:", err);
     showToast("Terjadi error tak terduga: " + err.message, "error");
+  } finally {
+    _appraisalSubmitInFlight = false;
   }
 }
 

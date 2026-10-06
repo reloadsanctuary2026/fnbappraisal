@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-304-submit-single-flight-and-real-denial-reason — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-305-report-best-performers-photos-donut-dotplot — LIVE</div>
 
 <script>
 // =================================================================
@@ -6040,6 +6040,8 @@ const REPORT_TEXT = {
     overview: "Ringkasan", assessed: "Karyawan dinilai", avg: "Rata-rata skor", best: "Best Performer", performer: "Performer", under: "Underperform",
     thresholds: "Batas status: Underperform di bawah {u} · Performer {u}–{b} · Best Performer di atas {b}.",
     deptTitle: "Per Department", people: "orang", person: "orang", underCount: "{n} Underperform", deptNone: "Belum ada data.",
+    deptLead: "Setiap titik = rata-rata skor satu department. Garis putus-putus = rata-rata perusahaan ({avg}); garis titik-titik merah muda = batas Underperform ({u}).",
+    bestTitle: "Best Performer", bestLead: "Skor di atas {b} — terima kasih atas kerja kerasnya! 🎉", bestNone: "Belum ada yang berskor di atas {b} bulan ini.", bestMore: "+{n} Best Performer lainnya",
     trendTitle: "Perubahan vs Bulan Sebelumnya", trendRangeTitle: "Perubahan dalam Periode",
     trendCompared: "Dibandingkan dengan {month} · {n} dari {total} {who}", trendComparedRange: "Awal vs akhir periode · {n} dari {total} {who}",
     trendUnapproved: "{m} {who} punya data {month} yang belum di-approve, jadi tidak ikut dibandingkan.",
@@ -6049,7 +6051,8 @@ const REPORT_TEXT = {
     noBaselineNoOverlap: "<b>Data {baseline} sudah di-approve untuk {a} orang, tapi tidak ada yang sama dengan yang dinilai bulan {month}.</b> Jadi belum ada yang bisa dibandingkan.",
     noBaselineRange: "<b>Belum ada perubahan yang bisa dihitung</b> — belum ada orang dengan data di lebih dari satu bulan pada periode ini.",
     underTitle: "Perlu Perhatian", underLead: "Skor di bawah {u}, diurutkan dari yang terendah.", weakest: "Terlemah: {a}", noDecision: "Belum ada Decision", underNone: "Tidak ada yang berstatus Underperform. ✅",
-    feedbackTitle: "Isu dari Feedback Staff", feedbackLead: "Dari {n} feedback yang masuk bulan {month} — isu kualitatif yang staff tulis sendiri, pelengkap angka di atas.", feedbackNone: "Tidak ada isu yang menonjol.",
+    feedbackTitle: "Tema Feedback Staff", feedbackLead: "Dari {n} feedback bulan {month}. Hanya tema yang ditampilkan — tanpa nama dan tanpa isi komentar.",
+    pieCenter: "feedback", pieNoIssue: "Tidak ada keluhan", pieNone: "Belum ada tema yang ditandai bulan ini.", pieNote: "Persentase = porsi tema yang disebut. Satu feedback bisa menyentuh lebih dari satu tema.",
     footer: "Dibuat otomatis oleh Reload 360°", loading: "Memuat laporan…",
   },
   en: {
@@ -6057,6 +6060,8 @@ const REPORT_TEXT = {
     overview: "Overview", assessed: "Employees assessed", avg: "Average score", best: "Best Performer", performer: "Performer", under: "Underperform",
     thresholds: "Status cut-offs: Underperform below {u} · Performer {u}–{b} · Best Performer above {b}.",
     deptTitle: "By Department", people: "people", person: "person", underCount: "{n} Underperform", deptNone: "No data yet.",
+    deptLead: "Each dot = one department's average score. Dashed line = company average ({avg}); pink dotted line = the Underperform cut-off ({u}).",
+    bestTitle: "Best Performers", bestLead: "Score above {b} — thank you for the great work! 🎉", bestNone: "Nobody scored above {b} this month.", bestMore: "+{n} more Best Performers",
     trendTitle: "Change vs Previous Month", trendRangeTitle: "Change over the Period",
     trendCompared: "Compared with {month} · {n} of {total} {who}", trendComparedRange: "Start vs end of period · {n} of {total} {who}",
     trendUnapproved: "{m} {who} with {month} data not yet approved are left out of the comparison.",
@@ -6066,7 +6071,8 @@ const REPORT_TEXT = {
     noBaselineNoOverlap: "<b>{baseline} is approved for {a} people, but none of them are among those assessed in {month}.</b> So there is nothing to compare yet.",
     noBaselineRange: "<b>No change to calculate</b> — nobody has data in more than one month within this period.",
     underTitle: "Needs Attention", underLead: "Score below {u}, lowest first.", weakest: "Weakest: {a}", noDecision: "No decision yet", underNone: "Nobody is rated Underperform. ✅",
-    feedbackTitle: "Staff Feedback Issues", feedbackLead: "From {n} feedback submissions in {month} — qualitative issues staff wrote themselves, complementing the numbers above.", feedbackNone: "No standout issues.",
+    feedbackTitle: "Staff Feedback Themes", feedbackLead: "From {n} feedback submissions in {month}. Themes only — no names and no comments are shown.",
+    pieCenter: "feedback", pieNoIssue: "No concerns", pieNone: "No themes tagged yet this month.", pieNote: "Percentages = share of themes mentioned. One feedback can touch more than one theme.",
     footer: "Generated automatically by Reload 360°", loading: "Loading report…",
   },
 };
@@ -6118,6 +6124,7 @@ h2{margin:30px 0 2px;font-size:17px;color:var(--teal);break-after:avoid}
 .col h3{margin:10px 0 0;font-size:14px;break-after:avoid}
 .col .empty{color:var(--muted);font-size:13px;padding:10px 0}
 .person{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:11px 0;border-bottom:1px solid var(--line);break-inside:avoid}
+.person.has-av{grid-template-columns:auto 1fr auto;align-items:center}
 .p-name{font-weight:700}.p-meta{color:var(--muted);font-size:12.5px}
 .p-score{font-weight:800;font-size:18px;color:var(--bad);text-align:right;align-self:center}
 .p-tags{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
@@ -6125,15 +6132,100 @@ h2{margin:30px 0 2px;font-size:17px;color:var(--teal);break-after:avoid}
 .chip.weak{background:#FFF0D6;color:#8A5A00}.chip.dec{background:#DDEFEF;color:var(--teal)}.chip.none{background:#FBE3DF;color:var(--bad)}
 .delta{font-weight:800;font-size:15px;text-align:right;align-self:center}.up{color:var(--ok)}.down{color:var(--bad)}
 .foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:11.5px;text-align:center}
-@media(max-width:700px){.cards .stat:last-child:nth-child(odd){grid-column:1/-1}.cols{grid-template-columns:1fr}.sheet{padding:18px 14px;margin:10px 8px 30px;border-radius:14px}.head h1{font-size:18px}.head img{width:40px;height:40px}}
+/* avatars: initials underneath, photo layer on top */
+.avatar{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;border-radius:50%;overflow:hidden;background:#E8DCC8;color:var(--teal);font-weight:800;width:44px;height:44px;font-size:15px}
+.avatar.lg{width:68px;height:68px;font-size:22px}
+.avatar b{position:relative;z-index:0}
+.avatar .photo{position:absolute;top:0;right:0;bottom:0;left:0;background-size:cover;background-position:center;z-index:1}
+/* best performers */
+.best-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:10px}
+.best{background:linear-gradient(160deg,#FFF9E6,#FFF0C7);border:1px solid #F0D58A;border-radius:14px;padding:14px 10px;text-align:center;break-inside:avoid}
+.best .avatar{margin:0 auto 8px;box-shadow:0 0 0 3px #F2C14E}
+.b-name{font-weight:800;line-height:1.25}
+.b-meta{color:var(--muted);font-size:12px;margin-top:2px}
+.b-score{display:inline-block;margin-top:8px;background:#fff;border:1px solid #F0D58A;color:#8A5A00;font-weight:800;border-radius:999px;padding:2px 12px;font-size:14px}
+.info.soft{background:#F1F7F3;border-color:#D4E6DA;color:#35574A}
+.pill.gold{background:#FFF0C7;color:#8A5A00}
+/* departments: dot plot against the company average */
+.dp-axis{position:relative;height:16px;margin:10px 0 2px;font-size:11px;color:var(--muted)}
+.dp-axis span{position:absolute;transform:translateX(-50%)}
+.dp-row{padding:8px 0;border-bottom:1px solid var(--line);break-inside:avoid}
+.dp-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.dp-val{font-weight:800;font-size:16px}
+.dp-val small{font-weight:700;font-size:12px}
+.dp-val.pos small{color:var(--ok)}.dp-val.neg small{color:#B7791F}
+.dp-track{position:relative;height:26px;margin-top:4px}
+.dp-track::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:#EEE4D3;transform:translateY(-50%)}
+.dp-avg{position:absolute;top:-2px;bottom:-2px;width:0;border-left:2px dashed var(--teal);opacity:.55}
+.dp-thr{position:absolute;top:3px;bottom:3px;width:0;border-left:2px dotted #E3A9A0}
+.dp-stem{position:absolute;top:50%;height:5px;border-radius:5px;transform:translateY(-50%);opacity:.35}
+.dp-dot{position:absolute;top:50%;width:16px;height:16px;border-radius:50%;transform:translate(-50%,-50%);border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.14)}
+.dp-up{background:var(--teal)}.dp-dn{background:#E9A23B}
+/* staff feedback themes: one donut */
+.fb{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:8px}
+.donut{position:relative;width:168px;height:168px;border-radius:50%;flex:none}
+.donut::after{content:"";position:absolute;top:24%;right:24%;bottom:24%;left:24%;background:#fff;border-radius:50%}
+.donut-c{position:absolute;top:0;right:0;bottom:0;left:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;text-align:center}
+.donut-c b{font-size:28px;color:var(--teal);line-height:1}
+.donut-c span{font-size:11px;color:var(--muted);margin-top:2px}
+.legend-list{list-style:none;margin:0;padding:0;flex:1 1 220px}
+.legend-list li{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13.5px}
+.legend-list .sw{width:12px;height:12px;border-radius:4px;flex:none}
+.legend-list li span:nth-child(2){flex:1}
+.legend-list b{font-variant-numeric:tabular-nums}
+@media(max-width:700px){.cards .stat:last-child:nth-child(odd){grid-column:1/-1}.fb{justify-content:center}.cols{grid-template-columns:1fr}.sheet{padding:18px 14px;margin:10px 8px 30px;border-radius:14px}.head h1{font-size:18px}.head img{width:40px;height:40px}}
 @media print{body{background:#fff}.toolbar{display:none}.sheet{box-shadow:none;border-radius:0;margin:0;max-width:none;padding:0}@page{size:A4;margin:14mm}}
 `;
 
+// ---- photos & avatars for the report -------------------------------------------------------------------
+// A photo is only ever used if it is a plain https image URL or an embedded base64 image: it ends up inside a CSS url("..."),
+// so anything that could break out of it (quotes, parentheses, backslashes, whitespace, other schemes) is refused.
+const REPORT_SAFE_HTTPS = /^https:\/\/[^\s"'()\\<>]+$/;
+const REPORT_SAFE_DATA = /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+function reportPhotoSrc(entry) {
+  if (!entry || !entry.found) return "";
+  const src = String(entry.dataUri || entry.url || "").trim();
+  return (REPORT_SAFE_HTTPS.test(src) || REPORT_SAFE_DATA.test(src)) ? src : "";
+}
+function reportAvatarClass(staffId) { return "av-" + String(staffId).replace(/[^A-Za-z0-9_-]/g, ""); }
+function reportInitials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts[0][0] + (parts.length > 1 ? parts[1][0] : "")).toUpperCase();
+}
+/** One rule per person that has a photo, defined ONCE in the <style> (both language panes share it, so an embedded image is
+ *  never written twice into the document). */
+function reportPhotoCss(photos) {
+  return Object.keys(photos || {}).map(id => {
+    const src = photos[id];
+    return (REPORT_SAFE_HTTPS.test(src) || REPORT_SAFE_DATA.test(src)) ? `.${reportAvatarClass(id)}{background-image:url("${src}")}` : "";
+  }).join("");
+}
+/** Initials sit underneath; the photo is a layer on top. If a photo cannot load, that layer is simply empty and the
+ *  initials show — no broken-image icon, no script needed. */
+function reportAvatar(person, photos, size) {
+  const has = photos && photos[person.staffId] && (REPORT_SAFE_HTTPS.test(photos[person.staffId]) || REPORT_SAFE_DATA.test(photos[person.staffId]));
+  return `<span class="avatar ${size}"><b>${escapeHtml(reportInitials(person.name))}</b>${has ? `<span class="photo ${reportAvatarClass(person.staffId)}"></span>` : ""}</span>`;
+}
+// whole-number shares that add up to exactly 100 (largest remainder), so a pie legend never reads 99% or 101%
+function reportRoundShares(values) {
+  const total = values.reduce((a, b) => a + b, 0);
+  if (!total) return values.map(() => 0);
+  const raw = values.map(v => (v / total) * 100), base = raw.map(Math.floor);
+  let left = 100 - base.reduce((a, b) => a + b, 0);
+  raw.map((r, i) => ({ i, rem: r - base[i] })).sort((a, b) => b.rem - a.rem || a.i - b.i).forEach(x => { if (left-- > 0) base[x.i]++; });
+  return base;
+}
+const REPORT_BEST_SHOWN = 12;
+const REPORT_FB_COLORS = { MAN: "#0E4749", COM: "#2F8F83", PPL: "#8E7CC3", DEV: "#E9B44C", ENG: "#5B8DEF", STK: "#C97B9B", EQP: "#6FB7A5", ADM: "#E08A4A", DWL: "#9DB4C0", _: "#B8C97B", OKY: "#CFE3BE" };
+
 /** One language's worth of report. Every value from the data goes through escapeHtml. */
-function buildReportPane(res, lang) {
+function buildReportPane(res, lang, photos) {
+  photos = photos || {};
   const T = REPORT_TEXT[lang];
   const e = escapeHtml;
   const fmt = (v) => Number(v).toFixed(1);
+  const signed = (v) => (v > 0 ? "+" : v < 0 ? "−" : "±") + Math.abs(v).toFixed(1);
   const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => (vars[k] === undefined ? "" : vars[k]));
   const th = res.thresholds || { underperformBelow: 60, bestPerformerAbove: 90 };
   const rangeLabel = res.rangeStart === res.rangeEnd ? reportMonthLabel(res.rangeStart, lang) : `${reportMonthLabel(res.rangeStart, lang)} — ${reportMonthLabel(res.rangeEnd, lang)}`;
@@ -6143,17 +6235,57 @@ function buildReportPane(res, lang) {
   const pct = (n) => (total ? Math.round((n / total) * 100) : 0);
   const ppl = (n) => (n === 1 ? T.person : T.people);
   const COLORS = { best: "#0E4749", performer: "#6FB7A5", under: "#B8352B" };
+  // "Cook · Kitchen", but just "Runner" when the job title and the department are the same word
+  const roleLine = (p) => { const seen = new Set(); return e([p.jobTitle, p.department].filter(x => { const k = String(x || "").trim().toLowerCase(); if (!k || seen.has(k)) return false; seen.add(k); return true; }).join(" · ")); };
 
   const stat = (num, label, cls) => `<div class="stat ${cls || ""}"><div class="num">${num}</div><div class="lbl">${e(label)}</div></div>`;
   const legend = (color, label, n) => `<span><span class="dot" style="background:${color}"></span><b>${n}</b> ${e(label)} (${pct(n)}%)</span>`;
   const seg = (color, n) => (n > 0 ? `<i style="width:${(n / total) * 100}%; background:${color}"></i>` : "");
 
-  const deptHtml = res.departmentSummary.length ? res.departmentSummary.map(d => `
-      <div class="dept">
-        <div class="d-top"><span class="d-name">${e(d.department)}</span><span class="d-avg">${fmt(d.averageScore)}</span></div>
-        <div class="bar"><i style="width:${Math.max(0, Math.min(100, d.averageScore))}%; background:${d.averageScore < th.underperformBelow ? COLORS.under : COLORS.best}"></i></div>
-        <div class="d-sub"><span class="d-meta">${d.headcount} ${e(ppl(d.headcount))}</span><span class="pill ${d.underperformCount > 0 ? "bad" : "mute"}">${e(fill(T.underCount, { n: d.underperformCount }))}</span></div>
-      </div>`).join("") : `<div class="col"><div class="empty">${e(T.deptNone)}</div></div>`;
+  // ---- Best Performers: a gold highlight, with their faces ----
+  const bestList = res.bestPerformers || [];
+  const bestShown = bestList.slice(0, REPORT_BEST_SHOWN);
+  const bestHtml = bestList.length
+    ? `<div class="best-grid">${bestShown.map(p => `
+        <div class="best">
+          ${reportAvatar(p, photos, "lg")}
+          <div class="b-name">${e(p.name)}</div>
+          <div class="b-meta">${roleLine(p)}</div>
+          <div class="b-score">⭐ ${fmt(p.finalScore)}</div>
+        </div>`).join("")}</div>${bestList.length > bestShown.length ? `<p class="lead" style="margin-top:10px;">${e(fill(T.bestMore, { n: bestList.length - bestShown.length }))}</p>` : ""}`
+    : `<div class="info soft">${e(fill(T.bestNone, { b: th.bestPerformerAbove }))}</div>`;
+
+  // ---- Departments: each one a dot on a shared scale, against the company average ----
+  const depts = res.departmentSummary;
+  let deptHtml = `<div class="col"><div class="empty">${e(T.deptNone)}</div></div>`;
+  if (depts.length) {
+    const companyAvg = Number(overall.averageScore) || 0;
+    const values = depts.map(d => Number(d.averageScore)).concat([companyAvg]);
+    let lo = Math.max(0, Math.floor((Math.min(...values) - 5) / 5) * 5);
+    let hi = Math.min(100, Math.ceil((Math.max(...values) + 5) / 5) * 5);
+    if (hi - lo < 20) { hi = Math.min(100, lo + 20); lo = Math.max(0, hi - 20); }
+    const at = (v) => ((Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo)) * 100;
+    const ticks = []; for (let t = Math.ceil(lo / 10) * 10; t <= hi; t += 10) ticks.push(t);
+    const showThr = th.underperformBelow > lo && th.underperformBelow < hi;
+    deptHtml = `
+      <p class="lead">${e(fill(T.deptLead, { avg: fmt(companyAvg), u: th.underperformBelow }))}</p>
+      <div class="dp-axis">${ticks.map(t => `<span style="left:${at(t)}%">${t}</span>`).join("")}</div>
+      ${depts.map(d => {
+        const avg = Number(d.averageScore), diff = Number((avg - companyAvg).toFixed(1)), cls = diff >= 0 ? "dp-up" : "dp-dn";
+        const left = Math.min(at(avg), at(companyAvg)), width = Math.abs(at(avg) - at(companyAvg));
+        return `
+        <div class="dp-row">
+          <div class="dp-top"><span class="d-name">${e(d.department)}</span><span class="dp-val ${diff >= 0 ? "pos" : "neg"}">${fmt(avg)} <small>(${signed(diff)})</small></span></div>
+          <div class="dp-track">
+            ${showThr ? `<span class="dp-thr" style="left:${at(th.underperformBelow)}%"></span>` : ""}
+            <span class="dp-avg" style="left:${at(companyAvg)}%"></span>
+            <span class="dp-stem ${cls}" style="left:${left}%; width:${width}%"></span>
+            <span class="dp-dot ${cls}" style="left:${at(avg)}%"></span>
+          </div>
+          <div class="d-sub"><span class="d-meta">${d.headcount} ${e(ppl(d.headcount))}</span>${d.bestPerformerCount > 0 ? `<span class="pill gold">⭐ ${d.bestPerformerCount}</span>` : ""}${d.underperformCount > 0 ? `<span class="pill bad">${e(fill(T.underCount, { n: d.underperformCount }))}</span>` : ""}</div>
+        </div>`;
+      }).join("")}`;
+  }
 
   const trendRow = (p) => `
       <div class="person">
@@ -6174,8 +6306,8 @@ function buildReportPane(res, lang) {
   const unapprovedNote = (!isRange && (trend.baselineNotApprovedCount || 0) > 0)
     ? ` ${fill(T.trendUnapproved, { m: trend.baselineNotApprovedCount, who: ppl(trend.baselineNotApprovedCount), month: reportMonthLabel(trend.baselineMonth, lang) })}` : "";
   const trendHtml = trend.mode === "none"
-    ? `<div class="info">${noBaselineText()}</div>`
-    : `<p class="lead">${e((isRange ? fill(T.trendComparedRange, { n: trend.comparedCount, total, who: ppl(total) }) : fill(T.trendCompared, { month: reportMonthLabel(trend.baselineMonth, lang), n: trend.comparedCount, total, who: ppl(total) })) + unapprovedNote)}</p>
+    ? `<div class="info trend-note">${noBaselineText()}</div>`
+    : `<p class="lead trend-lead">${e((isRange ? fill(T.trendComparedRange, { n: trend.comparedCount, total, who: ppl(total) }) : fill(T.trendCompared, { month: reportMonthLabel(trend.baselineMonth, lang), n: trend.comparedCount, total, who: ppl(total) })) + unapprovedNote)}</p>
        <div class="cols">
          <div class="col"><h3>🌟 ${e(T.improved)}</h3>${res.mostImproved.length ? res.mostImproved.map(trendRow).join("") : `<div class="empty">${e(T.nobodyUp)}</div>`}</div>
          <div class="col"><h3>📉 ${e(T.declined)}</h3>${res.mostDeclined.length ? res.mostDeclined.map(trendRow).join("") : `<div class="empty">${e(T.nobodyDown)}</div>`}</div>
@@ -6184,8 +6316,9 @@ function buildReportPane(res, lang) {
   const underRow = (p) => {
     const labels = (p.decisionLabels && p.decisionLabels[lang]) || [];
     return `
-      <div class="person">
-        <div><div class="p-name">${e(p.name)}</div><div class="p-meta">${e(p.department)}</div></div>
+      <div class="person has-av">
+        ${reportAvatar(p, photos, "md")}
+        <div><div class="p-name">${e(p.name)}</div><div class="p-meta">${roleLine(p)}</div></div>
         <div class="p-score">${fmt(p.finalScore)}</div>
         <div class="p-tags">
           <span class="chip weak">${e(fill(T.weakest, { a: p.weakestArea }))}</span>
@@ -6194,12 +6327,27 @@ function buildReportPane(res, lang) {
       </div>`;
   };
 
-  const issues = res.feedbackIssueSummary ? res.feedbackIssueSummary.summary.filter(x => x.employeeCount > 0 && x.code !== "OKY") : [];
-  const feedbackHtml = res.feedbackIssueSummary ? `
+  // ---- Staff feedback: themes as one donut, no list of issues, no names, no comments ----
+  let feedbackHtml = "";
+  if (res.feedbackIssueSummary) {
+    const fs = res.feedbackIssueSummary;
+    const counted = (fs.summary || []).filter(x => x.employeeCount > 0);
+    const themes = counted.filter(x => x.code !== "OKY").sort((a, b) => b.employeeCount - a.employeeCount);
+    const oky = counted.find(x => x.code === "OKY");
+    const slices = oky ? themes.concat([oky]) : themes;
+    const shares = reportRoundShares(slices.map(x => x.employeeCount));
+    let acc = 0;
+    const stops = slices.map((x, i) => { const from = acc; acc += shares[i]; return `${REPORT_FB_COLORS[x.code] || REPORT_FB_COLORS._} ${from}% ${acc}%`; }).join(", ");
+    feedbackHtml = `
     <h2>💬 ${e(T.feedbackTitle)}</h2>
-    <p class="lead">${e(fill(T.feedbackLead, { n: res.feedbackIssueSummary.totalRespondents, month: reportMonthLabel(res.rangeEnd, lang) }))}</p>
-    ${issues.length ? issues.map(x => `
-      <div class="dept"><div class="d-top"><span class="d-name">${e(x.label)}</span>${x.priority === "TOP 5" ? `<span class="pill bad">${e(x.priority)}</span>` : `<span class="pill mute">${e(x.priority)}</span>`}</div><div class="d-sub"><span class="d-meta">${x.employeeCount} ${e(ppl(x.employeeCount))} · ${(x.pct * 100).toFixed(0)}%</span></div></div>`).join("") : `<div class="col"><div class="empty">${e(T.feedbackNone)}</div></div>`}` : "";
+    <p class="lead">${e(fill(T.feedbackLead, { n: fs.totalRespondents, month: reportMonthLabel(res.rangeEnd, lang) }))}</p>
+    ${slices.length ? `
+    <div class="fb">
+      <div class="donut" style="background:conic-gradient(${stops})"><div class="donut-c"><b>${fs.totalRespondents}</b> <span>${e(T.pieCenter)}</span></div></div>
+      <ul class="legend-list">${slices.map((x, i) => `<li><span class="sw" style="background:${REPORT_FB_COLORS[x.code] || REPORT_FB_COLORS._}"></span><span>${e(x.code === "OKY" ? T.pieNoIssue : x.label)}</span> <b>${shares[i]}%</b></li>`).join("")}</ul>
+    </div>
+    <div class="note">${e(T.pieNote)}</div>` : `<div class="info soft">${e(T.pieNone)}</div>`}`;
+  }
 
   return `
     <section class="pane pane-${lang}">
@@ -6220,6 +6368,10 @@ function buildReportPane(res, lang) {
       <div class="legend">${legend(COLORS.best, T.best, overall.bestPerformerCount)}${legend(COLORS.performer, T.performer, overall.performerCount)}${legend(COLORS.under, T.under, overall.underperformCount)}</div>` : ""}
       <div class="note">${e(fill(T.thresholds, { u: th.underperformBelow, b: th.bestPerformerAbove }))}</div>
 
+      <h2>⭐ ${e(T.bestTitle)}</h2>
+      ${bestList.length ? `<p class="lead">${e(fill(T.bestLead, { b: th.bestPerformerAbove }))}</p>` : ""}
+      ${bestHtml}
+
       <h2>📊 ${e(T.deptTitle)}</h2>
       ${deptHtml}
 
@@ -6236,12 +6388,12 @@ function buildReportPane(res, lang) {
 
 /** The whole standalone report document: both languages inside, switchable with no script (two radio
  *  inputs + sibling selectors), so it also works when scripts are blocked and prints exactly what is shown. */
-function buildReportDocument(res, initialLang) {
+function buildReportDocument(res, initialLang, photos) {
   const rangeLabel = (lang) => res.rangeStart === res.rangeEnd ? reportMonthLabel(res.rangeStart, lang) : `${reportMonthLabel(res.rangeStart, lang)} — ${reportMonthLabel(res.rangeEnd, lang)}`;
   const title = `${REPORT_TEXT[initialLang].docTitle} — ${rangeLabel(initialLang)}`;
   return `<!DOCTYPE html>
 <html lang="${initialLang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)}</title><style>${REPORT_CSS}</style></head>
+<title>${escapeHtml(title)}</title><style>${REPORT_CSS}${reportPhotoCss(photos)}</style></head>
 <body>
   <input type="radio" name="rl" id="rl-id" class="rl" ${initialLang === "id" ? "checked" : ""}>
   <input type="radio" name="rl" id="rl-en" class="rl" ${initialLang === "en" ? "checked" : ""}>
@@ -6250,8 +6402,8 @@ function buildReportDocument(res, initialLang) {
     <button class="printbtn" onclick="window.print()">🖨️ Print / Cetak</button>
   </div>
   <main class="sheet">
-    ${buildReportPane(res, "id")}
-    ${buildReportPane(res, "en")}
+    ${buildReportPane(res, "id", photos)}
+    ${buildReportPane(res, "en", photos)}
   </main>
 </body></html>`;
 }
@@ -6272,8 +6424,16 @@ async function openExecutiveSummaryReport() {
     showToast("Gagal memuat laporan: " + friendlyError(res.error));
     return;
   }
+  // Faces for the Best Performers and the Underperformers only, in ONE request (the app's own batch endpoint). If it fails, the
+  // report simply shows initials instead.
+  const photos = {};
+  const faceIds = [...new Set([...(res.bestPerformers || []).slice(0, REPORT_BEST_SHOWN), ...(res.underperformList || [])].map(p => String(p.staffId)))];
+  if (faceIds.length) {
+    const photoRes = await apiGet("getStaffPhotosBatch", { staffIds: faceIds.join(",") });
+    Object.keys((photoRes && photoRes.photos) || {}).forEach(id => { const src = reportPhotoSrc(photoRes.photos[id]); if (src) photos[id] = src; });
+  }
   reportWindow.document.open();
-  reportWindow.document.write(buildReportDocument(res, lang));
+  reportWindow.document.write(buildReportDocument(res, lang, photos));
   reportWindow.document.close();
 }
 

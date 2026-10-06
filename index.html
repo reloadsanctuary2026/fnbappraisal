@@ -329,7 +329,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-05-305-report-best-performers-photos-donut-dotplot — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-06-307-feedback-strict-superadmin-catchup — LIVE</div>
 
 <script>
 // =================================================================
@@ -478,6 +478,11 @@ function friendlyError(code) {
     max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
     session_expired: "Sesi kamu udah habis, login ulang ya.",
     identity_mismatch: "Permintaan gak valid — coba refresh halaman dan login ulang.",
+    feedback_required: "Feedback ke management wajib diisi (minimal 5 huruf atau angka). Kalau halaman ini sudah lama terbuka, refresh dulu lalu isi kotak feedback.",
+    feedback_catchup_not_enabled: "Menyusul feedback belum dibuka untukmu. Feedback wajib diisi saat Self Appraisal — hubungi admin kalau perlu menyusul.",
+    staff_not_found: "NIK itu tidak ditemukan di roster.",
+    staff_id_required: "Masukin NIK-nya dulu.",
+    busy_try_again: "Server lagi sibuk — tunggu beberapa detik lalu coba lagi.",
     staff_outside_your_business_unit: "Orang ini bukan bagian dari unit bisnis kamu.",
     evaluator_outside_your_business_unit: "Salah satu yang kamu pilih bukan bagian dari unit bisnis kamu.",
     pin_not_set: "PIN belum di-set. Hubungi HR.",
@@ -899,12 +904,25 @@ const translations = {
     form_bonus_notes_placeholder: "Evidence / notes (opsional)",
     form_feedback_section: "Feedback to Management",
     form_feedback_privacy: "🔒 Feedback ini hanya akan dibaca oleh Executive dan HR.",
-    form_feedback_placeholder: "Opsional — tulis kalau ada yang mau disampaikan ke Executive secara langsung...",
+    form_feedback_placeholder: "Tulis feedback atau masukanmu untuk Executive dan HR secara langsung...",
+  form_feedback_not_recorded: "Penilaianmu tersimpan, tapi feedback-mu BELUM tercatat. Buka menu \"Feedback ke Management\" dan isi di sana.",
+  form_feedback_required_hint: "wajib diisi",
+  form_feedback_required_error: "Feedback ke management wajib diisi (minimal {n} huruf atau angka) — kamu tidak bisa lanjut sebelum mengisinya.",
+  menu_my_feedback: "Feedback ke Management",
+  menu_my_feedback_todo: "Belum diisi",
+  menu_my_feedback_done: "Sudah diisi",
+  myfb_title: "Feedback ke Management",
+  myfb_intro: "Admin membuka kesempatan SATU KALI untukmu menyusul atau menambah feedback. Tulisan yang sudah ada tetap tampil di kotak di bawah — tinggal tambahkan di bawahnya, lalu simpan. Setelah disimpan, jalur ini tertutup lagi.",
+  myfb_locked: "Menyusul feedback sedang ditutup. Feedback wajib diisi saat Self Appraisal. Kalau kamu memang perlu menyusul atau menambah, hubungi admin untuk membukanya.",
+  myfb_last_saved: "Terakhir disimpan: {when}",
+  myfb_none_yet: "Bulan ini kamu belum mengisi feedback.",
+  myfb_save: "Simpan Feedback",
+  myfb_saved: "Feedback tersimpan. Terima kasih!",
+  myfb_back: "Kembali",
   form_submit_working: "⏳ Menyimpan… jangan ketuk lagi, tunggu sampai muncul tulisan tersimpan.",
   form_submit_in_progress: "Masih menyimpan — tunggu sebentar, jangan ketuk lagi.",
   form_submit_already_saved: "Penilaianmu SUDAH tersimpan sebelumnya, jadi tidak bisa dikirim lagi. Jawabanmu aman, tidak ada yang berubah.",
   form_unit_not_active: "Unit kamu belum mulai siklus appraisal — memang belum waktunya.",
-  form_feedback_send_failed: "Penilaianmu sudah tersimpan, tapi feedback ke manajemen BELUM terkirim. Buka lagi form-nya (jangan refresh halaman dulu — tulisanmu masih tersimpan di sini) lalu kirim ulang.",
     form_submit: "Submit Appraisal",
     form_cancel: "Batal",
     form_progress: "dari",
@@ -1351,12 +1369,25 @@ const translations = {
     form_bonus_notes_placeholder: "Evidence / notes (optional)",
     form_feedback_section: "Feedback to Management",
     form_feedback_privacy: "🔒 This feedback will only be read by Executive and HR.",
-    form_feedback_placeholder: "Optional — write anything you'd like to share directly with an Executive...",
+    form_feedback_placeholder: "Write your feedback or suggestions for Executive and HR directly...",
+  form_feedback_not_recorded: "Your appraisal is saved, but your feedback was NOT recorded. Open \"Feedback to Management\" and fill it in there.",
+  form_feedback_required_hint: "required",
+  form_feedback_required_error: "Feedback to management is required (at least {n} letters or digits) — you can't continue until it is filled in.",
+  menu_my_feedback: "Feedback to Management",
+  menu_my_feedback_todo: "Not filled in",
+  menu_my_feedback_done: "Filled in",
+  myfb_title: "Feedback to Management",
+  myfb_intro: "An admin has opened a ONE-TIME chance for you to catch up on or add to your feedback. What you already wrote stays in the box below — just add to it, then save. Once saved, this closes again.",
+  myfb_locked: "Catching up on feedback is closed. Feedback is required when you do your Self Appraisal. If you really need to catch up or add something, contact an admin to open it.",
+  myfb_last_saved: "Last saved: {when}",
+  myfb_none_yet: "You haven't filled in feedback this month.",
+  myfb_save: "Save Feedback",
+  myfb_saved: "Feedback saved. Thank you!",
+  myfb_back: "Back",
   form_submit_working: "⏳ Saving… don't tap again, wait until it says saved.",
   form_submit_in_progress: "Still saving — please wait, don't tap again.",
   form_submit_already_saved: "Your appraisal was ALREADY saved earlier, so it can't be sent again. Your answers are safe — nothing changed.",
   form_unit_not_active: "Your unit hasn't started the appraisal cycle yet — it's simply not time.",
-  form_feedback_send_failed: "Your appraisal is saved, but your feedback to management was NOT sent. Open the form again (don't refresh the page yet — your text is still kept here) and submit again.",
     form_submit: "Submit Appraisal",
     form_cancel: "Cancel",
     form_progress: "of",
@@ -1477,6 +1508,7 @@ function render() {
   if (state.screen === "myEvaluationsHR") return renderMyEvaluations("hr");
   if (state.screen === "review") return renderReview();
   if (state.screen === "feedback") return renderStaffFeedback();
+  if (state.screen === "myFeedback") return renderMyFeedback();
   if (state.screen === "historical") return renderHistoricalInput();
   if (state.screen === "settings") return renderSettings();
   if (state.screen === "devTools") return renderDevTools();
@@ -2210,6 +2242,7 @@ function availableScreensGrouped(user) {
   if (["Staff", "Leader", "Management"].indexOf(user.tier) !== -1 && !user.isSuperAdmin) {
     groups.push({ name: "MyAppraisal", items: [
       { key: "self", label: t("menu_self") },
+      { key: "myFeedback", label: t("menu_my_feedback") },
       { key: "history", label: t("menu_history") },
       { key: "myDevelopmentPlan", label: t("menu_dev_plan") },
     ]});
@@ -2287,12 +2320,13 @@ function goToRoleMenu() {
   render();
 }
 
-function menuItemHtml(o) {
+function menuItemHtml(o, badge) {
   const ACTION_KEYS = ["self", "myEvaluations", "gm", "historical", "trainingNeeds"];
   const isAction = ACTION_KEYS.indexOf(o.key) !== -1;
-  const color = isAction ? "var(--coral)" : "var(--teal)";
-  const tag = isAction ? t("menu_tag_action") : t("menu_tag_view");
-  const bg = isAction ? "var(--red-bg)" : "var(--green-bg)";
+  // a tile may carry its own badge (e.g. "Belum diisi") instead of the generic Aksi / Lihat tag
+  const color = badge ? badge.color : (isAction ? "var(--coral)" : "var(--teal)");
+  const tag = badge ? badge.text : (isAction ? t("menu_tag_action") : t("menu_tag_view"));
+  const bg = badge ? badge.bg : (isAction ? "var(--red-bg)" : "var(--green-bg)");
   return `
     <div class="staff-row" style="border-left: 4px solid ${color};" onclick="goToScreen('${o.key}')">
       <div class="name">${o.label}</div>
@@ -2319,6 +2353,8 @@ async function renderDashboard() {
 
   let chartBlock = "";
   let selfDoneThisMonth = false;
+  let feedbackDoneThisMonth = false;
+  let feedbackCatchUpEnabled = false;
 
   if (hasSelfCapability) {
     const [historyRes, statusRes, peerRes] = await Promise.all([
@@ -2328,6 +2364,8 @@ async function renderDashboard() {
     ]);
     const history = historyRes.history || [];
     selfDoneThisMonth = !!statusRes.selfDone;
+    feedbackDoneThisMonth = !!statusRes.feedbackDone;
+    feedbackCatchUpEnabled = !!statusRes.feedbackCatchUpEnabled;
 
     if (history.length > 1) {
       const latest = history[history.length - 1];
@@ -2372,6 +2410,14 @@ async function renderDashboard() {
               <div class="name">${item.label}</div>
               <span class="badge pending">Sudah Diisi</span>
             </div>`;
+        }
+        if (item.key === "myFeedback") {
+          // Feedback is mandatory on the self appraisal. This tile is NOT a standing door: it only appears while a superadmin has
+          // opened a one-time catch-up for this person (and disappears again once they save).
+          if (!feedbackCatchUpEnabled) return "";
+          return menuItemHtml(item, feedbackDoneThisMonth
+            ? { text: t("menu_my_feedback_done"), color: "var(--teal)", bg: "var(--green-bg)" }
+            : { text: t("menu_my_feedback_todo"), color: "var(--coral)", bg: "var(--red-bg)" });
         }
         return menuItemHtml(item);
       }).join("");
@@ -4668,7 +4714,65 @@ function updateOverrideMode() {
       </select>
       <button class="primary" id="reset-submission-btn" style="margin-top:8px;" onclick="doResetSubmissionCount()">Reset Jatah Submit</button>
       <div id="reset-submission-result" class="hint" style="margin-top:8px;"></div>`;
+  } else if (mode === "feedback") {
+    descEl.textContent = "Feedback ke management WAJIB diisi saat Self Appraisal. Ini satu-satunya jalan untuk menyusul atau menambah: kamu membukanya untuk SATU orang, dan tertutup sendiri begitu feedback-nya tersimpan. Hanya superadmin yang bisa.";
+    controlsEl.innerHTML = `
+      <label>NIK Staff</label>
+      <div class="row-flex">
+        <input type="text" id="feedback-catchup-nik" placeholder="Contoh: 1198" style="flex:1;" />
+        <button class="primary" id="feedback-catchup-btn" style="flex:0 0 auto;" onclick="doGrantFeedbackCatchUp()">Buka</button>
+      </div>
+      <div id="feedback-catchup-note" class="hint" style="margin-top:8px;"></div>
+      <div id="feedback-catchup-lists" style="margin-top:12px;"></div>`;
+    doLoadFeedbackCatchUp();
   }
+}
+
+async function doLoadFeedbackCatchUp() {
+  const box = document.getElementById("feedback-catchup-lists");
+  if (!box) return;
+  box.innerHTML = `<div class="hint">Memuat...</div>`;
+  const res = await apiGet("listFeedbackCatchUp", { requesterId: state.user.staffId });
+  if (res.error || res.success === false) { box.innerHTML = `<div class="error">${escapeHtml(friendlyError(res.error))}</div>`; return; }
+  const arg = (id) => escapeHtml(escapeAttr(String(id)));
+  const enabledHtml = res.enabled.length ? res.enabled.map(x => `
+      <div class="staff-row" style="cursor:default;">
+        <div><div class="name">${escapeHtml(x.name || "(tidak di roster)")} <span class="hint">· NIK ${escapeHtml(x.staffId)}</span></div>
+        <div class="hint">Dibuka oleh ${escapeHtml(x.grantedBy || "-")} · ${escapeHtml(feedbackWhenLabel(x.grantedAt))}</div></div>
+        <button class="secondary" style="flex:0 0 auto;" onclick="doRevokeFeedbackCatchUp('${arg(x.staffId)}')">Tutup</button>
+      </div>`).join("") : `<div class="hint">Tidak ada yang sedang dibuka.</div>`;
+  const missingHtml = res.missing.length ? res.missing.map(x => `
+      <div class="staff-row" style="cursor:default;">
+        <div><div class="name">${escapeHtml(x.name || "(tidak di roster)")} <span class="hint">· NIK ${escapeHtml(x.staffId)}</span></div>
+        <div class="hint">${escapeHtml([x.jobTitle, x.department].filter(Boolean).join(" · "))}</div></div>
+        <button class="primary" style="flex:0 0 auto;" onclick="doGrantFeedbackCatchUp('${arg(x.staffId)}')">Buka</button>
+      </div>`).join("") : `<div class="hint">Semua yang sudah Self Appraisal bulan ini sudah punya feedback. 🎉</div>`;
+  box.innerHTML = `
+    <div style="font-weight:700; margin:4px 0;">Sedang dibuka (${res.enabled.length})</div>${enabledHtml}
+    <div style="font-weight:700; margin:14px 0 4px;">Sudah Self Appraisal, belum ada feedback (${res.missing.length})</div>${missingHtml}`;
+}
+
+async function doGrantFeedbackCatchUp(staffIdArg) {
+  const input = document.getElementById("feedback-catchup-nik");
+  const note = document.getElementById("feedback-catchup-note");
+  const staffId = String(staffIdArg || (input ? input.value : "") || "").trim();
+  if (!staffId) { if (note) note.textContent = "Masukin NIK-nya dulu."; return; }
+  if (note) note.textContent = "";
+  const res = await apiPost("grantFeedbackCatchUp", { requesterId: state.user.staffId, staffId });
+  if (res.success) {
+    if (note) note.textContent = res.alreadyEnabled ? `${res.staffName} (NIK ${res.staffId}) memang sudah dibuka.` : `✅ Dibuka untuk ${res.staffName} (NIK ${res.staffId}). Menunya "Feedback ke Management" muncul di dashboard-nya, dan tertutup sendiri setelah dia menyimpan.`;
+    if (input) input.value = "";
+    doLoadFeedbackCatchUp();
+  } else if (note) {
+    note.textContent = `Gagal: ${friendlyError(res.error)}`;
+  }
+}
+
+async function doRevokeFeedbackCatchUp(staffId) {
+  const note = document.getElementById("feedback-catchup-note");
+  const res = await apiPost("revokeFeedbackCatchUp", { requesterId: state.user.staffId, staffId });
+  if (note) note.textContent = res.success ? "Ditutup." : `Gagal: ${friendlyError(res.error)}`;
+  doLoadFeedbackCatchUp();
 }
 
 function updateScoreHealthMode() {
@@ -4768,6 +4872,7 @@ async function renderDevTools() {
       <select id="override-mode" onchange="updateOverrideMode()" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border); margin-bottom:12px; font-weight:600;">
         <option value="window">🗓️ Buka Jendela Waktu (Access Override)</option>
         <option value="quota">🔓 Reset Jatah Submit (1x Limit)</option>
+        ${state.user.isSuperAdmin ? `<option value="feedback">💬 Izinkan Feedback Menyusul (sekali pakai)</option>` : ""}
       </select>
       <div id="override-mode-desc" class="hint" style="margin-bottom:10px;"></div>
       <div id="override-mode-controls"></div>
@@ -5353,6 +5458,66 @@ async function saveHistoricalAppraisal() {
   if (res.error || res.success === false) { showToast(t("hi_save_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
   showToast(`${t("hi_saved_toast_prefix")} ${state._historicalStaffName} ${t("hi_saved_toast_middle")} ${monthLabelID(month)} ${t("hi_saved_toast_suffix")} ${res.finalScore.toFixed(1)}`);
   loadHistoricalStaffList(month); // refresh list so the ✅ indicator updates immediately
+}
+
+/** "Feedback ke Management": the way in for someone who missed the feedback box, or wants to add to what they wrote. Always open
+ *  during the month; the box starts with what they already wrote, so adding means typing underneath it. */
+let _myFeedbackSaving = false;
+async function renderMyFeedback() {
+  app.innerHTML = topbar(t("myfb_title")) + `<div class="loading">Memuat...</div>`;
+  const res = await apiGet("getMyManagementFeedback", { staffId: state.user.staffId });
+  if (res.error) {
+    app.innerHTML = topbar(t("myfb_title")) + `<div class="card"><div class="error">${escapeHtml(friendlyError(res.error))}</div><button class="secondary" onclick="goToRoleMenu()" style="margin-top:10px;">${t("myfb_back")}</button></div>`;
+    return;
+  }
+  if (!res.catchUpEnabled) {
+    // reached without the superadmin having opened it (an old tile, a bookmark): nothing to type into
+    app.innerHTML = topbar(t("myfb_title")) + `
+      <div class="card">
+        <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; font-style:italic;">${t("form_feedback_privacy")}</div>
+        <div class="hint" style="margin-top:12px;">${escapeHtml(t("myfb_locked"))}</div>
+        <button class="secondary" onclick="goToRoleMenu()" style="margin-top:14px;">${t("myfb_back")}</button>
+      </div>`;
+    return;
+  }
+  const existing = res.found ? res.feedback : "";
+  app.innerHTML = topbar(t("myfb_title")) + `
+    <div class="card">
+      <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; font-style:italic;">${t("form_feedback_privacy")}</div>
+      <div class="hint" style="margin-top:10px;">${res.found ? escapeHtml(t("myfb_last_saved").replace("{when}", feedbackWhenLabel(res.timestamp))) : t("myfb_none_yet")}</div>
+      <div class="hint" style="margin:6px 0 10px;">${t("myfb_intro")}</div>
+      <textarea id="my-feedback" rows="8" oninput="clearFeedbackError()" placeholder="${escapeHtml(t("form_feedback_placeholder"))}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${escapeHtml(existing)}</textarea>
+      <div class="error" id="feedback-error"></div>
+      <div class="row-flex" style="margin-top:14px;">
+        <button class="secondary" onclick="goToRoleMenu()">${t("myfb_back")}</button>
+        <button class="primary" id="my-feedback-save" onclick="saveMyFeedback()">${t("myfb_save")}</button>
+      </div>
+    </div>`;
+}
+
+async function saveMyFeedback() {
+  if (_myFeedbackSaving) return; // one save at a time
+  if (!requireFeedbackField("my-feedback")) return;
+  _myFeedbackSaving = true;
+  const btn = document.getElementById("my-feedback-save");
+  if (btn) btn.disabled = true;
+  try {
+    const text = document.getElementById("my-feedback").value.trim();
+    const res = await apiPost("submitManagementFeedback", { staffId: state.user.staffId, feedback: text });
+    if (res && res.success && !res.error) {
+      showToast(t("myfb_saved"));
+      goToRoleMenu();
+    } else {
+      showToast(friendlyError((res && (res.error || res.reason)) || "unknown"), "error", 9000);
+      if (btn) btn.disabled = false;
+    }
+  } catch (err) {
+    console.error("saveMyFeedback failed:", err);
+    showToast("Terjadi error tak terduga: " + err.message, "error");
+    if (btn) btn.disabled = false;
+  } finally {
+    _myFeedbackSaving = false;
+  }
 }
 
 async function renderStaffFeedback() {
@@ -6957,11 +7122,13 @@ function renderCustomFormBody(evaluatorType, target, cfg) {
       ${(isSelf ? cfg.qualitativeSectionSelf : cfg.qualitativeSectionOther).criteria.map(c => textRow(c.name, (state.lang === "en" && c.nameEn) ? c.nameEn : c.name, "")).join("")}
 
       ${isSelf ? `
-        <div class="section-title">${t("form_feedback_section")}</div>
+        <div class="section-title">${t("form_feedback_section")} <span style="color:var(--coral); font-weight:700; font-size:12px; text-transform:none; letter-spacing:0;">· ${t("form_feedback_required_hint")}</span></div>
         <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
           ${t("form_feedback_privacy")}
         </div>
-        <textarea id="management-feedback" rows="4" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
+        <textarea id="management-feedback" rows="4" oninput="clearFeedbackError()" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
+        <div class="error" id="feedback-error"></div>
+        
       ` : ""}
 
       <div class="error" id="form-error"></div>
@@ -7063,11 +7230,13 @@ function renderFormBody(evaluatorType, target, cfg) {
       ${(isSelf ? cfg.qualitativeSectionSelf : cfg.qualitativeSectionOther).criteria.map(c => textRow(c.name, "")).join("")}
 
       ${isSelf ? `
-        <div class="section-title">${t("form_feedback_section")}</div>
+        <div class="section-title">${t("form_feedback_section")} <span style="color:var(--coral); font-weight:700; font-size:12px; text-transform:none; letter-spacing:0;">· ${t("form_feedback_required_hint")}</span></div>
         <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
           ${t("form_feedback_privacy")}
         </div>
-        <textarea id="management-feedback" rows="4" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
+        <textarea id="management-feedback" rows="4" oninput="clearFeedbackError()" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
+        <div class="error" id="feedback-error"></div>
+        
       ` : ""}
 
       <div class="error" id="form-error"></div>
@@ -7153,6 +7322,25 @@ function cancelForm() {
   goBack();
 }
 
+// Feedback to management is MANDATORY on the self form. The minimum must equal the server's FEEDBACK_MIN_CHARS (Code.gs); the
+// server is what actually enforces it — this just tells the person BEFORE they send.
+const FEEDBACK_MIN_CHARS = 5;
+// Only letters and digits count (any script) — "....." or "-----" is not feedback. Same rule as the server (isValidFeedbackText).
+function feedbackTextOk(text) { const m = String(text || "").match(/[\p{L}\p{N}]/gu); return !!m && m.length >= FEEDBACK_MIN_CHARS; }
+function clearFeedbackError() { const el = document.getElementById("feedback-error"); if (el) el.textContent = ""; }
+function requireFeedbackField(elId) {
+  const el = document.getElementById(elId);
+  const ok = !!el && feedbackTextOk(el.value);
+  const err = document.getElementById("feedback-error");
+  if (err) err.textContent = ok ? "" : t("form_feedback_required_error").replace("{n}", FEEDBACK_MIN_CHARS);
+  if (!ok) {
+    const formErr = document.getElementById("form-error");
+    if (formErr) formErr.textContent = "";
+    if (el) { el.focus(); if (el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  }
+  return ok;
+}
+
 function reviewBeforeSubmit(evaluatorType) {
   if (state.kpiConfig.isCustomStructure) { reviewCustomBeforeSubmit(evaluatorType); return; }
   const cfg = state.kpiConfig;
@@ -7165,8 +7353,8 @@ function reviewBeforeSubmit(evaluatorType) {
   }
 
   if (evaluatorType === "self") {
-    const feedbackEl = document.getElementById("management-feedback");
-    state._pendingFeedback = feedbackEl ? feedbackEl.value : "";
+    if (!requireFeedbackField("management-feedback")) return; // cannot continue without feedback
+    state._pendingFeedback = document.getElementById("management-feedback").value;
   }
 
   const bonusEntries = [];
@@ -7224,8 +7412,8 @@ function reviewCustomBeforeSubmit(evaluatorType) {
   }
 
   if (evaluatorType === "self") {
-    const feedbackEl = document.getElementById("management-feedback");
-    state._pendingFeedback = feedbackEl ? feedbackEl.value : "";
+    if (!requireFeedbackField("management-feedback")) return; // cannot continue without feedback
+    state._pendingFeedback = document.getElementById("management-feedback").value;
   }
 
   const bonusEntries = [];
@@ -7328,6 +7516,9 @@ async function confirmAndSubmit(evaluatorType) {
         ...qualitativeScores,
       ],
       bonusEntries: state._pendingBonusEntries || [],
+      // the mandatory feedback travels in the SAME request: the server refuses the whole send without it, so an appraisal can never be
+      // saved while its feedback is lost
+      feedback: evaluatorType === "self" ? String(state._pendingFeedback || "").trim() : undefined,
     };
     showToast(t("form_submit_working"), "success", 60000); // stays until the result replaces it
     const res = await apiPost("submitAppraisal", payload);
@@ -7344,18 +7535,12 @@ async function confirmAndSubmit(evaluatorType) {
       state.scores = {};
       state._pendingBonusEntries = null;
       if (evaluatorType === "self") {
-        let feedbackSent = true;
-        if (state._pendingFeedback && state._pendingFeedback.trim()) {
-          // This used to ignore the answer: if it failed (server busy, session trouble) the person was told
-          // "Appraisal tersimpan!" and believed their comment had been delivered, when it had been lost.
-          const feedbackRes = await apiPost("submitManagementFeedback", { staffId: target.staffId, feedback: state._pendingFeedback.trim() });
-          feedbackSent = !!(feedbackRes && feedbackRes.success && !feedbackRes.error);
-        }
-        if (feedbackSent) {
-          state._pendingFeedback = null;
+        if (res.feedbackSaved) {
+          state._pendingFeedback = null; // saved together with the appraisal
         } else {
-          // Keep what they typed (the form refills from it) and say so plainly.
-          showToast(t("form_feedback_send_failed"), "error", 12000);
+          // The server did not say it recorded the feedback (e.g. a server older than this screen): never let "saved" stand for a
+          // comment that was not. The text stays in state, and the person is pointed to the screen where it can be entered.
+          showToast(t("form_feedback_not_recorded"), "error", 15000);
         }
       }
       if (evaluatorType !== "self") {

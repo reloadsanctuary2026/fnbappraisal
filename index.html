@@ -385,7 +385,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-314-self-reset-and-compliance-per-unit — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-317-faster-screens-retry-and-warmup — LIVE</div>
 
 <script>
 // =================================================================
@@ -441,6 +441,12 @@ async function apiGetWithRetry(action, params = {}, maxRetries = 2, shouldRetry)
   }
   return lastRes;
 }
+/** Saves queue behind each other on the server's global lock. When the wait runs out the server answers "busy_try_again" — NOTHING was written (the lock is
+ *  taken before any work) — so for these actions the screen simply tries again by itself, after a RANDOM pause so the people who collided do not collide again. */
+const BUSY_RETRY_ACTIONS = ["submitAppraisal", "submitManagementFeedback", "approveStaff", "approveAll", "editDecision"];
+const BUSY_RETRY_MAX = 3;
+function busyRetryDelayMs() { return 1500 + Math.floor(Math.random() * 2000); }
+const busySleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 async function apiPost(action, payload) {
   // NOTE: no explicit Content-Type header — keeps this a "simple request"
   // so the browser skips the CORS preflight, which Apps Script can't answer.
@@ -449,17 +455,25 @@ async function apiPost(action, payload) {
     sessionToken: state.user ? state.user.sessionToken : null,
     sessionStaffId: state.user ? state.user.staffId : null,
   };
-  try {
-    const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload: fullPayload }) });
-    const json = await res.json();
-    if (json.error === "session_expired") {
-      showToast("Sesi kamu udah habis, login ulang ya.", "error");
-      setTimeout(() => { state.user = null; renderLogin(); }, 1500);
+  const retryable = BUSY_RETRY_ACTIONS.indexOf(action) !== -1;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload: fullPayload }) });
+      const json = await res.json();
+      if (json.error === "session_expired") {
+        showToast("Sesi kamu udah habis, login ulang ya.", "error");
+        setTimeout(() => { state.user = null; renderLogin(); }, 1500);
+      }
+      if (json.error === "busy_try_again" && retryable && attempt < BUSY_RETRY_MAX) {
+        showToast(`Server lagi ramai, mencoba lagi... (${attempt + 1}/${BUSY_RETRY_MAX})`, "info", 3000);
+        await busySleep(busyRetryDelayMs());
+        continue;
+      }
+      return json;
+    } catch (err) {
+      console.error("apiPost failed:", action, err);
+      return { error: "Gagal terhubung ke server — cek koneksi internetmu, lalu coba lagi." };
     }
-    return json;
-  } catch (err) {
-    console.error("apiPost failed:", action, err);
-    return { error: "Gagal terhubung ke server — cek koneksi internetmu, lalu coba lagi." };
   }
 }
 function currentMonth() {
@@ -5289,6 +5303,12 @@ async function renderDevTools() {
       <div id="kpi-sync-result" class="hint" style="margin-top:8px; overflow-wrap:anywhere;"></div>
     </div>
     <div class="card">
+      <h2>⏱️ Kecepatan sistem</h2>
+      <div class="hint" style="margin-bottom:10px;">Lama server memproses tiap aksi, dari 200 permintaan terakhir (disimpan 6 jam). <b>p95</b> = 95% permintaan lebih cepat dari angka itu. Untuk penyimpanan: <b>tunggu kunci</b> tinggi = antrean (banyak orang menyimpan bersamaan), <b>pegang kunci</b> tinggi = proses simpannya sendiri yang lama.</div>
+      <button class="secondary btn-auto" id="perf-load-btn" onclick="doLoadPerf()">🔄 Muat ringkasan</button>
+      <div id="perf-result" class="hint" style="margin-top:10px; overflow-wrap:anywhere;"></div>
+    </div>
+    <div class="card">
       <h2>♻️ Reset Self Appraisal Massal</h2>
       <div class="hint" style="margin-bottom:10px;">Untuk saat struktur KPI sebuah jabatan berubah <b>sesudah</b> staf mengisi Self Appraisal. Menghapus isian self <b>bulan ini</b> dari tiga tempat sekaligus (isian, status "Sudah Diisi", dan jatah kirim) supaya mereka bisa mengisi ulang. Slot Leader/HR dan feedback tidak disentuh. Pratinjau dulu: tidak mengubah apa pun. Semua baris yang dihapus dicadangkan di sheet <b>Reset_Backup</b>.</div>
       <label>Unit bisnis</label>
@@ -5647,11 +5667,18 @@ function rsPersonHtml(p) {
     <div class="dx-meta">${escapeHtml(p.jobTitle || "-")}${p.department && p.department !== "-" ? ` · ${escapeHtml(p.department)}` : ""} · ${escapeHtml(p.tier)}</div>
     <div class="dx-status">${escapeHtml(badge)}${others}</div></div></label></div>`;
 }
+/** Why somebody who filled in their Self Appraisal is NOT being reset. */
+function rsSkipReason(p) {
+  if (p.structure === "legacy") return `jabatan ini belum punya struktur KPI baru di sistem, jadi isiannya dianggap benar`;
+  return `isiannya SUDAH cocok dengan struktur KPI sekarang (${p.common} dari ${p.expected} kriteria sama)`;
+}
 function rsRenderPlan(plan) {
   const sel = plan.selected || [], skipped = plan.skippedFinal || [], rm = plan.removed || {};
   const parts = [`<div><b>${escapeHtml(unitDisplayLabel(plan.unit))}</b> · bulan ${escapeHtml(monthLabelID(plan.month))}: <b>${sel.length} orang</b> akan direset${plan.alreadyMatching ? `, ${plan.alreadyMatching} sudah cocok / tanpa struktur baru (dilewati)` : ""}.</div>`];
   if (sel.length) parts.push(`<div style="margin-top:6px; color:var(--text-muted); font-size:12px;">Baris yang dihapus: Submissions ${rm.submissions || 0}, Evaluator_Totals ${rm.totals || 0}, Submission_Counts ${rm.counts || 0}, Bonus ${rm.bonus || 0}.</div>`);
   else parts.push(`<div style="margin-top:6px; color:var(--teal);">✅ Tidak ada yang perlu direset.</div>`);
+  const skippedPeople = plan.skippedPeople || [];
+  if (skippedPeople.length) parts.push(`<details style="margin-top:8px; font-size:12px;"><summary style="cursor:pointer; color:var(--teal); font-weight:600;">Dilewati: ${skippedPeople.length} orang — kenapa?</summary><ul style="margin:6px 0 0; padding-left:20px; color:var(--text-muted); overflow-wrap:anywhere;">${skippedPeople.map(p => `<li><b style="color:var(--text);">${escapeHtml(p.name)}</b> (${escapeHtml(p.jobTitle || "-")}) — ${escapeHtml(rsSkipReason(p))}</li>`).join("")}</ul></details>`);
   if (skipped.length) parts.push(`<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">ℹ️ Tidak disentuh karena sudah punya nilai akhir bulan ini: ${escapeHtml(skipped.map(p => p.name).join(", "))}</div>`);
   rsNote(parts.join(""));
   const list = document.getElementById("reset-list");
@@ -5707,6 +5734,77 @@ async function doRsApply() {
     const list = document.getElementById("reset-list"); if (list) list.innerHTML = "";
   } finally {
     _rs.busy = false; rsSetButtons();
+  }
+}
+
+/* ---- Kecepatan sistem (Superadmin, Dev Tools) --------------------------------------------------------------------------- */
+let _perfBusy = false;
+function perfFmt(ms) {
+  if (ms === null || ms === undefined) return "–";
+  const n = Number(ms);
+  return n < 1000 ? `${Math.round(n)} ms` : `${(n / 1000).toFixed(1)} dtk`;
+}
+function perfTone(ms) { return ms >= 8000 ? "var(--red)" : (ms >= 3000 ? "var(--amber)" : "inherit"); }
+/** The cache warm-up: whether it runs, when it last ran, and whether the roster even FITS in the cache (Google refuses an entry over 100 KB, silently). */
+function perfWarmHtml(w) {
+  if (!w) return "";
+  const last = w.last;
+  const kb = last ? (Number(last.rosterBytes || 0) / 1024).toFixed(1) : null;
+  const status = w.installed
+    ? `✅ Penghangat cache <b>aktif</b> (tiap 5 menit).${last ? ` Terakhir jalan ${escapeHtml(new Date(last.at).toLocaleTimeString("id-ID"))}, ${perfFmt(last.ms)}.` : " Belum pernah jalan."}`
+    : `❌ Penghangat cache <b>belum aktif</b>: orang pertama setelah jeda panjang menunggu sheet HR dibuka ulang (beberapa detik).`;
+  const roster = last ? (last.rosterCached
+    ? `Roster ${kb} KB, muat di cache.`
+    : `<span style="color:var(--red);">⚠️ Roster ${kb} KB TIDAK muat di cache (batas 100 KB per entri): setiap permintaan membaca ulang dari HR sheet. Beri tahu pengembang.</span>`) : "";
+  const btn = w.installed
+    ? `<button class="secondary btn-auto" onclick="doSetWarm(false)">Matikan penghangat</button>`
+    : `<button class="primary btn-auto" onclick="doSetWarm(true)">Aktifkan penghangat cache</button>`;
+  return `<div style="margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border);"><div>${status}</div>${roster ? `<div style="margin-top:4px;">${roster}</div>` : ""}<div style="margin-top:8px;">${btn}</div></div>`;
+}
+let _warmBusy = false;
+async function doSetWarm(enabled) {
+  if (_warmBusy) return;
+  if (enabled === true && !confirm("Pasang penghangat cache?\n\nIa berjalan otomatis tiap 5 menit di Apps Script (memakai kuota waktu trigger harian, beberapa detik per jalan) supaya login dan Review tidak lambat setelah jeda sepi. Bisa dimatikan kapan saja dari sini.")) return;
+  _warmBusy = true;
+  const box = document.getElementById("perf-result");
+  try {
+    const res = await apiPost("setWarmCacheTrigger", { requesterId: state.user.staffId, enabled: enabled === true });
+    if (!res || res.success === false || res.error) { if (box) box.innerHTML = `<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`; return; }
+    showToast(enabled === true ? "Penghangat cache aktif." : "Penghangat cache dimatikan.");
+  } finally {
+    _warmBusy = false;
+  }
+  await doLoadPerf();
+}
+function perfSummaryHtml(res) {
+  const warm = perfWarmHtml(res.warm);
+  if (!res.count) return warm + `<div>Belum ada catatan. Pakai aplikasinya sebentar (login, buka Review, simpan satu penilaian), lalu muat lagi.</div>`;
+  const rows = (res.actions || []).map(a => `<tr>
+      <td style="padding:5px 8px 5px 0; font-weight:600; min-width:150px; overflow-wrap:anywhere;">${escapeHtml(a.action)}<div style="font-weight:400; font-size:11px; color:var(--text-muted);">${escapeHtml(a.kind)}${a.errors ? ` · <span style="color:var(--red);">${a.errors} gagal</span>` : ""}</div></td>
+      <td style="padding:5px 6px; text-align:right; white-space:nowrap;">${a.n}</td>
+      <td style="padding:5px 6px; text-align:right; white-space:nowrap;">${perfFmt(a.p50)}</td>
+      <td style="padding:5px 6px; text-align:right; white-space:nowrap; font-weight:700; color:${perfTone(a.p95)};">${perfFmt(a.p95)}</td>
+      <td style="padding:5px 6px; text-align:right; white-space:nowrap;">${perfFmt(a.max)}</td>
+      <td style="padding:5px 6px; text-align:right; white-space:nowrap; color:${perfTone(a.lockWaitAvg || 0)};">${perfFmt(a.lockWaitAvg)}</td>
+      <td style="padding:5px 0 5px 6px; text-align:right; white-space:nowrap; color:${perfTone(a.lockHoldAvg || 0)};">${perfFmt(a.lockHoldAvg)}</td></tr>`).join("");
+  const slow = (res.slowest || []).map(x => `<li>${escapeHtml(x.action)} — <b>${perfFmt(x.ms)}</b>${x.lockWaitMs !== null && x.lockWaitMs !== undefined ? ` (tunggu kunci ${perfFmt(x.lockWaitMs)}, pegang ${perfFmt(x.lockHoldMs)})` : ""}${x.ok ? "" : ` <span style="color:var(--red);">gagal</span>`} · ${escapeHtml(new Date(x.at).toLocaleTimeString("id-ID"))}</li>`).join("");
+  return warm + `<div style="margin-bottom:6px;">${res.count} permintaan, ${escapeHtml(new Date(res.from).toLocaleString("id-ID"))} – ${escapeHtml(new Date(res.to).toLocaleTimeString("id-ID"))}</div>
+    <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px; min-width:560px;">
+      <thead><tr style="text-align:right; color:var(--text-muted);"><th style="text-align:left; padding:4px 8px 4px 0; min-width:150px;">Aksi</th><th style="padding:4px 6px; white-space:nowrap;">Jml</th><th style="padding:4px 6px; white-space:nowrap;">Median</th><th style="padding:4px 6px; white-space:nowrap;">p95</th><th style="padding:4px 6px; white-space:nowrap;">Terlama</th><th style="padding:4px 6px; white-space:nowrap;">Tunggu kunci</th><th style="padding:4px 0 4px 6px; white-space:nowrap;">Pegang kunci</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Geser tabel ke samping bila ada kolom yang terpotong.</div>
+    <div style="margin-top:10px; font-weight:600;">10 permintaan paling lambat</div><ul style="margin:4px 0 0; padding-left:20px;">${slow}</ul>`;
+}
+async function doLoadPerf() {
+  if (_perfBusy) return;
+  const box = document.getElementById("perf-result"), btn = document.getElementById("perf-load-btn");
+  _perfBusy = true; if (btn) btn.disabled = true; if (box) box.textContent = "Memuat...";
+  try {
+    const res = await apiGet("getPerfSummary", { requesterId: state.user.staffId });
+    if (!res || res.success === false || res.error) { if (box) box.innerHTML = `<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`; return; }
+    if (box) box.innerHTML = perfSummaryHtml(res);
+  } finally {
+    _perfBusy = false; if (btn) btn.disabled = false;
   }
 }
 
@@ -7689,7 +7787,12 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   }
 
   app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div><div class="loading">${t("form_loading")}</div>`;
-  const cfg = await apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId, monthKey: access.month || currentMonth() });
+  // Access was already checked above (checkAccess is NOT started together with the config: the config locks this person's position for the month, which must
+  // never happen for someone who is not allowed to appraise). The reference scores are read-only, so they load WITH the config instead of after it.
+  const cfgPromise = apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId, monthKey: access.month || currentMonth() });
+  const selfRefPromise = evaluatorType !== "self" ? apiGet("getSelfScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId }) : null;
+  const leaderRefPromise = evaluatorType === "hr" ? apiGet("getLeaderScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId }) : null;
+  const cfg = await cfgPromise;
   if (cfg.error) {
     app.innerHTML = topbar("Appraisal — " + target.name) + `<div class="hint" style="margin:-10px 0 12px;">${subtitle}</div>
       <div class="card"><div class="error">${friendlyError(cfg.error)}</div>
@@ -7704,14 +7807,14 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   // scores as reference context, if they've already submitted it.
   state.selfReference = null;
   state.leaderReference = null;
-  if (evaluatorType !== "self") {
-    const selfRes = await apiGet("getSelfScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId });
+  if (selfRefPromise) {
+    const selfRes = await selfRefPromise;
     if (selfRes.found) state.selfReference = selfRes.scores;
   }
   // HR appraises LAST (day 18-27) — by then Self AND Leader/Mgmt should both already be
   // submitted, so HR gets both as reference instead of just Self.
-  if (evaluatorType === "hr") {
-    const leaderRes = await apiGet("getLeaderScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId });
+  if (leaderRefPromise) {
+    const leaderRes = await leaderRefPromise;
     if (leaderRes.found) state.leaderReference = leaderRes.scores;
   }
 
@@ -8262,6 +8365,8 @@ function changeGmMonth(value) {
 
 async function renderGm() {
   app.innerHTML = topbar("Approve Final Decisions") + `<div class="loading">Memuat data...</div>`;
+  // The one-on-one options do not depend on anything: they load WITH the list instead of after it.
+  const oneOnOnePromise = state.oneOnOneOptions ? null : apiGet("getOneOnOneOptions", {});
   const final = await apiGet("getFinalAppraisal", { requesterId: state.user.staffId, month: state.month });
   if (final.error) {
     app.innerHTML = topbar("Approve Final Decisions") + `<div class="card"><div class="error">${friendlyError(final.error)}</div></div>`;
@@ -8275,24 +8380,15 @@ async function renderGm() {
   // Decision options depend on the target's tier — fetch once per distinct tier present.
   const tiers = [...new Set(list.map(s => s.tier).filter(Boolean))];
   state.decisionOptionsByTier = state.decisionOptionsByTier || {};
-  for (const t of tiers) {
-    if (!state.decisionOptionsByTier[t]) {
-      const res = await apiGet("getDecisionOptions", { tier: t });
-      state.decisionOptionsByTier[t] = res.options || [];
-    }
-  }
-  if (!state.oneOnOneOptions) {
-    const oneOnOneRes = await apiGet("getOneOnOneOptions", {});
-    state.oneOnOneOptions = oneOnOneRes.options || [];
-  }
-
   if (!state.positionTitlesByTier) state.positionTitlesByTier = {};
+  // ALL the lists this screen still needs load in ONE wave (they used to load one after another: up to 8 round trips in a row).
+  const optionJobs = [];
   for (const t of tiers) {
-    if (!state.positionTitlesByTier[t]) {
-      const posRes = await apiGet("getAllPositionTitles", { tier: t });
-      state.positionTitlesByTier[t] = posRes.titles || [];
-    }
+    if (!state.decisionOptionsByTier[t]) optionJobs.push(apiGet("getDecisionOptions", { tier: t }).then(res => { state.decisionOptionsByTier[t] = res.options || []; }));
+    if (!state.positionTitlesByTier[t]) optionJobs.push(apiGet("getAllPositionTitles", { tier: t }).then(posRes => { state.positionTitlesByTier[t] = posRes.titles || []; }));
   }
+  if (oneOnOnePromise) optionJobs.push(oneOnOnePromise.then(oneOnOneRes => { state.oneOnOneOptions = oneOnOneRes.options || []; }));
+  await Promise.all(optionJobs);
 
   const decisionForm = (s, isEdit) => {
     const opts = state.decisionOptionsByTier[s.tier] || [];

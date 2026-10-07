@@ -385,7 +385,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-311-department-exclusion — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-312-department-exclusion-superadmin-only — LIVE</div>
 
 <script>
 // =================================================================
@@ -2371,7 +2371,6 @@ function availableScreensGrouped(user) {
     const reportGroupItems = [];
     if (user.isHR) reportGroupItems.push({ key: "myEvaluationsHR", label: user.appraiseLabel || t("menu_appraise_all") });
     if (user.isAdminOperational) reportGroupItems.push({ key: "historical", label: t("menu_input_historical") });
-    if (user.isHR) reportGroupItems.push({ key: "exclusions", label: t("menu_exclusions") });
     reportGroupItems.push(
       { key: "review", label: t("menu_review_all") },
       { key: "feedback", label: t("menu_read_feedback") },
@@ -4927,7 +4926,7 @@ async function renderExclusions() {
       <input type="month" id="dx-month" min="${escapeHtml(res.month)}" value="${escapeHtml(res.month)}">
       <label>Alasan (wajib untuk menjeda)</label>
       <textarea id="dx-reason" rows="3" placeholder="Contoh: Kepala Maintenance belum jelas diperpanjang atau tidak."></textarea>
-      <div class="hint">Alasan hanya terlihat oleh HR dan Superadmin. Staf hanya melihat bahwa penilaian department mereka dijeda.</div>
+      <div class="hint">Alasan hanya terlihat oleh Superadmin. Staf hanya melihat bahwa penilaian department mereka dijeda.</div>
     </div>
     <div class="card">
       <div class="fbc-title" style="margin-top:0;">Department (<span id="dx-n">${res.departments.length}</span>)</div>

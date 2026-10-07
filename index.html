@@ -216,7 +216,7 @@
   .tag-savebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0 12px; }
   @media (max-width: 480px) { .tag-apply, .tag-grid { grid-template-columns: 1fr; } }
   /* Jeda Department (HR / Superadmin) */
-  .dx-card { border: 1.5px solid var(--border); border-radius: 14px; background: #fff; margin-bottom: 8px; overflow: hidden; }
+  .dx-card { flex: none; border: 1.5px solid var(--border); border-radius: 14px; background: #fff; margin-bottom: 8px; overflow: hidden; } /* flex: none — inside a scrolling flex list a card with overflow:hidden would otherwise SHRINK and clip its own content */
   .dx-card.sel { border-color: var(--coral); background: #FFF6F2; }
   label.dx-row { display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 12px 14px; font-size: 13px; color: var(--text); cursor: pointer; }
   .dx-row input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--coral); cursor: pointer; }
@@ -385,7 +385,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-312-department-exclusion-superadmin-only — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-314-self-reset-and-compliance-per-unit — LIVE</div>
 
 <script>
 // =================================================================
@@ -539,6 +539,11 @@ function friendlyError(code) {
     target_not_found: "Data kamu tidak ditemukan di roster. Hubungi admin.",
     too_many: "Terlalu banyak sekaligus (maksimal 500 NIK per kali) — bagi jadi beberapa kali.",
     primary_issue_required: "Pilih isu utamanya dulu.",
+    invalid_unit: "Unit bisnis tidak dikenal.",
+    invalid_scope: "Pilihan siapa yang direset tidak dikenal.",
+    month_not_current: "Reset hanya untuk bulan berjalan.",
+    no_template_tab: "Sheet itu belum punya tab contoh. Buat satu tab job title (atau satu tab bernama TEMPLATE) dulu.",
+    sheet_not_found: "Sheet tidak bisa dibuka. Cek linknya, dan pastikan akun pemilik skrip punya akses ke Sheet itu.",
     department_excluded: "Department orang ini sedang dijeda dari penilaian.",
     month_in_past: "Bulan tidak boleh di masa lalu — pilih bulan ini atau bulan depan.",
     reason_required: "Alasan wajib diisi (minimal 3 huruf).",
@@ -1058,7 +1063,8 @@ const translations = {
     review_month_start_label: "Bulan Awal",
     review_month_end_label: "Bulan Akhir",
     review_underperform_count_suffix: "underperform",
-    selfcompliance_title: "Status Self Appraisal Bulan Ini",
+    selfcompliance_failed: "Status Self Appraisal tidak bisa dimuat sekarang ({err}). Muat ulang halaman Review dalam beberapa saat.",
+  selfcompliance_title: "Status Self Appraisal Bulan Ini",
     selfcompliance_hint: "Siapa saja di bawah cakupan Anda yang belum mengisi Self Appraisal-nya sendiri bulan ini.",
     selfcompliance_done_suffix: "sudah isi",
     selfcompliance_view_missing: "Lihat {n} orang yang belum mengisi",
@@ -1536,7 +1542,8 @@ const translations = {
     review_month_start_label: "Start Month",
     review_month_end_label: "End Month",
     review_underperform_count_suffix: "underperform",
-    selfcompliance_title: "This Month's Self Appraisal Status",
+    selfcompliance_failed: "The Self Appraisal status could not be loaded right now ({err}). Reload the Review page in a moment.",
+  selfcompliance_title: "This Month's Self Appraisal Status",
     selfcompliance_hint: "Everyone under your scope who hasn't filled in their own Self Appraisal this month.",
     selfcompliance_done_suffix: "submitted",
     selfcompliance_view_missing: "View {n} people who haven't submitted",
@@ -5272,6 +5279,31 @@ async function renderDevTools() {
       </div>
       <button class="primary" id="kpi-import-btn" style="margin-top:8px;" onclick="doImportKpiFromWorkbook()">Import Sekarang</button>
       <div id="kpi-import-result" class="hint" style="margin-top:8px;"></div>
+      <div style="border-top:1px solid var(--border); margin:16px 0 12px;"></div>
+      <div style="font-weight:700; margin-bottom:4px;">🔄 Sinkronkan tab dari HR sheet</div>
+      <div class="hint" style="margin-bottom:10px;">Cari job title di HR sheet yang belum punya tab di Sheet di atas, lalu buatkan tabnya otomatis (salinan format tab yang sudah ada, isinya kosong) dan rapikan tab INDEX. Pakai link di atas. Pratinjau dulu: tidak mengubah apa pun. Tidak menimpa KPI yang sudah ada, karena tab kosong dilewati saat import.</div>
+      <div class="row-flex" style="gap:8px;">
+        <button class="secondary" id="kpi-sync-preview-btn" onclick="doKpiSyncPreview()">🔍 Pratinjau tab yang kurang</button>
+        <button class="primary" id="kpi-sync-apply-btn" onclick="doKpiSyncApply()" disabled>➕ Buat tab yang kurang</button>
+      </div>
+      <div id="kpi-sync-result" class="hint" style="margin-top:8px; overflow-wrap:anywhere;"></div>
+    </div>
+    <div class="card">
+      <h2>♻️ Reset Self Appraisal Massal</h2>
+      <div class="hint" style="margin-bottom:10px;">Untuk saat struktur KPI sebuah jabatan berubah <b>sesudah</b> staf mengisi Self Appraisal. Menghapus isian self <b>bulan ini</b> dari tiga tempat sekaligus (isian, status "Sudah Diisi", dan jatah kirim) supaya mereka bisa mengisi ulang. Slot Leader/HR dan feedback tidak disentuh. Pratinjau dulu: tidak mengubah apa pun. Semua baris yang dihapus dicadangkan di sheet <b>Reset_Backup</b>.</div>
+      <label>Unit bisnis</label>
+      <select id="reset-unit" onchange="rsInvalidate()"><option value="fnb">F&amp;B</option><option value="gym">Gym</option><option value="backoffice">Back Office</option></select>
+      <label style="margin-top:8px; display:block;">Siapa yang direset</label>
+      <select id="reset-scope" onchange="rsInvalidate()"><option value="mismatched">Hanya yang isiannya TIDAK cocok dengan struktur KPI sekarang (disarankan)</option><option value="all">Semua yang sudah mengisi bulan ini</option></select>
+      <label style="margin-top:8px; display:block;">Tenggat isi ulang (untuk pesan ke staf, boleh kosong)</label>
+      <input type="text" id="reset-deadline" maxlength="60" placeholder="Contoh: Jumat 10 Okt" />
+      <label style="display:flex; align-items:center; gap:8px; margin:10px 0 0; font-weight:400;"><input type="checkbox" id="reset-notify" checked /> Kirim notifikasi ke staf yang direset</label>
+      <div class="row-flex" style="gap:8px; margin-top:10px;">
+        <button class="secondary" id="reset-preview-btn" onclick="doRsPreview()">🔍 Pratinjau</button>
+        <button class="primary" id="reset-apply-btn" onclick="doRsApply()" disabled>♻️ Reset yang dipilih (0)</button>
+      </div>
+      <div id="reset-note" class="hint" style="margin-top:8px; overflow-wrap:anywhere;"></div>
+      <div id="reset-list" class="fbc-list" style="margin-top:6px;"></div>
     </div>
     <div class="card">
       <div class="hint">${t("dt_backend_version_label")} ${state.user._debugVersion || "-"}</div>
@@ -5510,6 +5542,171 @@ async function doRestoreStructureFromAuditLog() {
   } finally {
     btn.disabled = false;
     btn.textContent = originalLabel;
+  }
+}
+
+/* ---- Sinkronkan tab KPI dari HR sheet (Superadmin, Dev Tools) --------------------------------------------------------------
+ * Preview first (changes nothing), then apply: creates the tabs the HR sheet's Job Titles are missing, fixes cut-off tab names and keeps
+ * INDEX in step. Apply only works on the link that was previewed. */
+let _kpiSync = { sheet: "", plan: null, busy: false };
+function kpiSyncSetButtons() {
+  const pv = document.getElementById("kpi-sync-preview-btn"), ap = document.getElementById("kpi-sync-apply-btn");
+  const hasWork = !!(_kpiSync.plan && ((_kpiSync.plan.create || []).length + (_kpiSync.plan.rename || []).length) > 0);
+  if (pv) pv.disabled = _kpiSync.busy;
+  if (ap) ap.disabled = _kpiSync.busy || !hasWork;
+}
+function kpiSyncNote(html) { const el = document.getElementById("kpi-sync-result"); if (el) el.innerHTML = html; }
+function kpiSyncList(items, fmt, max) {
+  const shown = items.slice(0, max || 40).map(x => `<li>${escapeHtml(fmt(x))}</li>`).join("");
+  const more = items.length > (max || 40) ? `<li>… dan ${items.length - (max || 40)} lagi</li>` : "";
+  return `<ul style="margin:4px 0 0; padding-left:20px;">${shown}${more}</ul>`;
+}
+function kpiSyncPlanHtml(r) {
+  const create = r.create || [], rename = r.rename || [];
+  const parts = [`<div><b>${r.titleCount || 0}</b> job title di HR sheet yang dinilai.</div>`];
+  if (create.length) parts.push(`<div style="margin-top:8px;">➕ <b>Akan dibuat: ${create.length} tab</b>${kpiSyncList(create, c => `${c.jobTitle} — ${(c.units && c.units.length ? c.units.join(" + ") : c.unit)} · ${c.people} orang`)}</div>`);
+  if (rename.length) parts.push(`<div style="margin-top:8px;">✏️ <b>Nama tab terpotong, akan diperbaiki: ${rename.length}</b>${kpiSyncList(rename, x => `${x.from}  →  ${x.to}`)}</div>`);
+  if (!create.length && !rename.length) parts.push(`<div style="margin-top:8px; color:var(--teal);">✅ Semua job title di HR sheet sudah punya tab.</div>`);
+  if (r.indexMissing) parts.push(`<div style="margin-top:8px; color:var(--red);">⚠️ Tab INDEX tidak ditemukan (atau tanpa baris judul “Business Unit”). Tab tetap dibuat, INDEX tidak diubah.</div>`);
+  else if (create.length || rename.length) parts.push(`<div style="margin-top:8px;">📋 INDEX: tambah <b>${r.indexAdd || 0}</b> baris, perbaiki <b>${r.indexFix || 0}</b> baris.</div>`);
+  const info = [];
+  if ((r.tabsNotInRoster || []).length) info.push(`<div>ℹ️ Tab yang tidak cocok dengan job title mana pun di HR sheet (tidak diubah): ${escapeHtml(r.tabsNotInRoster.join(", "))}</div>`);
+  if ((r.indexWithoutTab || []).length) info.push(`<div>ℹ️ Ada di INDEX tapi tanpa tab dan tanpa orang di HR sheet (tidak diubah): ${escapeHtml(r.indexWithoutTab.join(", "))}</div>`);
+  if ((r.multiUnit || []).length) info.push(`<div>ℹ️ Dipakai di lebih dari satu unit, satu tab untuk semua unit: ${escapeHtml(r.multiUnit.map(m => `${m.jobTitle} (${m.units.join(", ")})`).join("; "))}</div>`);
+  if (r.notAppraisedTitles) info.push(`<div>ℹ️ ${r.notAppraisedTitles} job title tidak dinilai (Executive / tanpa tier), tidak dibuatkan tab.</div>`);
+  if (info.length) parts.push(`<div style="margin-top:10px; color:var(--text-muted); font-size:12px; line-height:1.5;">${info.join("")}</div>`);
+  return parts.join("");
+}
+async function doKpiSyncPreview() {
+  if (_kpiSync.busy) return;
+  const sheetIdOrUrl = ((document.getElementById("kpi-import-sheet-id") || {}).value || "").trim();
+  if (!sheetIdOrUrl) { kpiSyncNote("Tempel link Google Sheet-nya dulu (kolom di atas)."); return; }
+  _kpiSync.busy = true; _kpiSync.plan = null; kpiSyncSetButtons(); kpiSyncNote("Memeriksa...");
+  try {
+    const res = await apiPost("syncKpiWorkbookTabs", { requesterId: state.user.staffId, sheetIdOrUrl, apply: false });
+    if (!res || res.success === false || res.error) { kpiSyncNote(`<span style="color:var(--red);">Gagal: ${escapeHtml((res && res.detail) || friendlyError(res && res.error))}</span>`); return; }
+    _kpiSync.sheet = sheetIdOrUrl; _kpiSync.plan = res;
+    kpiSyncNote(kpiSyncPlanHtml(res));
+  } finally {
+    _kpiSync.busy = false; kpiSyncSetButtons();
+  }
+}
+async function doKpiSyncApply() {
+  if (_kpiSync.busy) return;
+  const sheetIdOrUrl = ((document.getElementById("kpi-import-sheet-id") || {}).value || "").trim();
+  const plan = _kpiSync.plan;
+  if (!plan || _kpiSync.sheet !== sheetIdOrUrl) { kpiSyncNote("Pratinjau dulu untuk link ini."); _kpiSync.plan = null; kpiSyncSetButtons(); return; }
+  const nCreate = (plan.create || []).length, nRename = (plan.rename || []).length;
+  if (!nCreate && !nRename) { kpiSyncNote("Tidak ada yang perlu dibuat."); return; }
+  const question = `${nCreate ? `Buat ${nCreate} tab baru` : ""}${nCreate && nRename ? " dan " : ""}${nRename ? `perbaiki ${nRename} nama tab terpotong` : ""} di Sheet itu?\n\nTiap tab baru adalah salinan format tab yang sudah ada dengan isi dikosongkan, dan tab INDEX ikut dirapikan.`;
+  if (!confirm(question)) return;
+  _kpiSync.busy = true; kpiSyncSetButtons(); kpiSyncNote("Membuat tab... (bisa memakan waktu sampai satu menit)");
+  try {
+    const res = await apiPost("syncKpiWorkbookTabs", { requesterId: state.user.staffId, sheetIdOrUrl, apply: true });
+    if (!res || (res.success === false && !res.created && !res.failed) || (res.error && !res.created)) { kpiSyncNote(`<span style="color:var(--red);">Gagal: ${escapeHtml((res && res.detail) || friendlyError(res && res.error))}</span>`); return; }
+    const created = res.created || [], renamed = res.renamed || [], failed = res.failed || [];
+    const lines = [];
+    if (created.length) lines.push(`✅ Tab dibuat: ${created.length}`);
+    if (renamed.length) lines.push(`✅ Nama tab diperbaiki: ${renamed.length}`);
+    lines.push(`📋 INDEX: ${res.indexAdded || 0} baris ditambah, ${res.indexFixed || 0} diperbaiki.`);
+    if (failed.length) lines.push(`<span style="color:var(--red);">⚠️ Gagal (${failed.length}):</span>${kpiSyncList(failed, f => `${f.jobTitle}${f.detail ? " — " + f.detail : ""}`)}`);
+    if (res.remaining) lines.push(`Masih ada <b>${res.remaining}</b> tab lagi. Tekan “Pratinjau” lalu “Buat tab yang kurang” sekali lagi.`);
+    else if (!failed.length) lines.push(`Selesai. Tab yang baru masih kosong: isi KPI-nya di Sheet, lalu jalankan Import KPI.`);
+    kpiSyncNote(lines.join("<br>"));
+    _kpiSync.plan = null; // what was previewed has changed: a new preview is needed before anything else is applied
+  } finally {
+    _kpiSync.busy = false; kpiSyncSetButtons();
+  }
+}
+
+/* ---- Reset Self Appraisal massal (Superadmin, Dev Tools) --------------------------------------------------------------------
+ * Preview first (changes nothing): who would be reset, and why. Then apply to the people ticked. The server decides who is eligible; what is
+ * ticked here can only NARROW that. Apply works only for the settings that were previewed. */
+let _rs = { plan: null, params: null, sel: new Set(), busy: false };
+function rsParams() { return { unit: (document.getElementById("reset-unit") || {}).value || "fnb", scope: (document.getElementById("reset-scope") || {}).value || "mismatched" }; }
+function rsNote(html) { const el = document.getElementById("reset-note"); if (el) el.innerHTML = html; }
+function rsSetButtons() {
+  const pv = document.getElementById("reset-preview-btn"), ap = document.getElementById("reset-apply-btn"), n = _rs.sel.size;
+  if (pv) pv.disabled = _rs.busy;
+  if (ap) { ap.disabled = _rs.busy || !_rs.plan || n === 0; ap.textContent = `♻️ Reset yang dipilih (${n})`; }
+}
+/** A setting changed after the preview: what was previewed no longer applies. */
+function rsInvalidate() {
+  const had = !!_rs.plan;
+  _rs.plan = null; _rs.params = null; _rs.sel = new Set();
+  const list = document.getElementById("reset-list"); if (list) list.innerHTML = "";
+  if (had) rsNote("Pengaturan berubah — tekan Pratinjau lagi.");
+  rsSetButtons();
+}
+function rsPersonHtml(p) {
+  const sel = _rs.sel.has(p.staffId);
+  const badge = p.structure === "legacy" ? "struktur lama" : (p.status === "match" ? "✓ cocok" : `⚠ tidak cocok: ${p.common} dari ${p.expected} kriteria sama · diisi ${p.submitted}`);
+  const others = (p.otherSlots || []).length ? ` · <span style="color:var(--amber);">sudah ada slot: ${escapeHtml(p.otherSlots.join(", "))}</span>` : "";
+  return `<div class="dx-card${sel ? " sel" : ""}"><label class="dx-row"><input type="checkbox" ${sel ? "checked" : ""} data-staff="${escapeHtml(p.staffId)}" onchange="rsToggle(this)">
+    <div class="dx-main"><div class="dx-name">${escapeHtml(p.name)}</div>
+    <div class="dx-meta">${escapeHtml(p.jobTitle || "-")}${p.department && p.department !== "-" ? ` · ${escapeHtml(p.department)}` : ""} · ${escapeHtml(p.tier)}</div>
+    <div class="dx-status">${escapeHtml(badge)}${others}</div></div></label></div>`;
+}
+function rsRenderPlan(plan) {
+  const sel = plan.selected || [], skipped = plan.skippedFinal || [], rm = plan.removed || {};
+  const parts = [`<div><b>${escapeHtml(unitDisplayLabel(plan.unit))}</b> · bulan ${escapeHtml(monthLabelID(plan.month))}: <b>${sel.length} orang</b> akan direset${plan.alreadyMatching ? `, ${plan.alreadyMatching} sudah cocok / tanpa struktur baru (dilewati)` : ""}.</div>`];
+  if (sel.length) parts.push(`<div style="margin-top:6px; color:var(--text-muted); font-size:12px;">Baris yang dihapus: Submissions ${rm.submissions || 0}, Evaluator_Totals ${rm.totals || 0}, Submission_Counts ${rm.counts || 0}, Bonus ${rm.bonus || 0}.</div>`);
+  else parts.push(`<div style="margin-top:6px; color:var(--teal);">✅ Tidak ada yang perlu direset.</div>`);
+  if (skipped.length) parts.push(`<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">ℹ️ Tidak disentuh karena sudah punya nilai akhir bulan ini: ${escapeHtml(skipped.map(p => p.name).join(", "))}</div>`);
+  rsNote(parts.join(""));
+  const list = document.getElementById("reset-list");
+  if (list) list.innerHTML = sel.length ? `<label class="fbc-all" style="display:flex; align-items:center; gap:8px; margin:8px 0; font-weight:600;"><input type="checkbox" id="reset-all" checked onchange="rsSelectAll(this.checked)"> Pilih semua (${sel.length})</label>` + sel.map(rsPersonHtml).join("") : "";
+}
+function rsToggle(el) {
+  if (el.checked) _rs.sel.add(el.dataset.staff); else _rs.sel.delete(el.dataset.staff);
+  const card = el.closest(".dx-card"); if (card) card.classList.toggle("sel", el.checked);
+  const all = document.getElementById("reset-all"), total = ((_rs.plan && _rs.plan.selected) || []).length;
+  if (all) { all.checked = _rs.sel.size === total; all.indeterminate = _rs.sel.size > 0 && _rs.sel.size < total; }
+  rsSetButtons();
+}
+function rsSelectAll(checked) {
+  const people = (_rs.plan && _rs.plan.selected) || [];
+  _rs.sel = new Set(checked ? people.map(p => p.staffId) : []);
+  const list = document.getElementById("reset-list");
+  if (list) list.querySelectorAll("input[data-staff]").forEach(cb => { cb.checked = checked; const card = cb.closest(".dx-card"); if (card) card.classList.toggle("sel", checked); });
+  rsSetButtons();
+}
+async function doRsPreview() {
+  if (_rs.busy) return;
+  const params = rsParams();
+  _rs.busy = true; _rs.plan = null; _rs.sel = new Set(); rsSetButtons(); rsNote("Memeriksa..."); const list = document.getElementById("reset-list"); if (list) list.innerHTML = "";
+  try {
+    const res = await apiPost("resetSelfSubmissions", { requesterId: state.user.staffId, businessUnit: params.unit, scope: params.scope, apply: false });
+    if (!res || res.success === false || res.error) { rsNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    _rs.plan = res; _rs.params = params; _rs.sel = new Set((res.selected || []).map(p => p.staffId));
+    rsRenderPlan(res);
+  } finally {
+    _rs.busy = false; rsSetButtons();
+  }
+}
+async function doRsApply() {
+  if (_rs.busy) return;
+  const params = rsParams(), plan = _rs.plan;
+  if (!plan || !_rs.params || JSON.stringify(params) !== JSON.stringify(_rs.params)) { rsNote("Pratinjau dulu untuk pengaturan ini."); _rs.plan = null; rsSetButtons(); return; }
+  const ids = [..._rs.sel];
+  if (!ids.length) { rsNote("Centang dulu siapa yang direset."); return; }
+  const notify = !!(document.getElementById("reset-notify") || {}).checked;
+  const deadlineText = ((document.getElementById("reset-deadline") || {}).value || "").trim();
+  const question = `Reset Self Appraisal ${ids.length} orang di ${unitDisplayLabel(params.unit)}?\n\nIsian self mereka bulan ini DIHAPUS dan mereka HARUS mengisi ulang${notify ? " (mereka diberi notifikasi)" : ""}.\nSemua baris yang dihapus dicadangkan di sheet Reset_Backup.`;
+  if (!confirm(question)) return;
+  _rs.busy = true; rsSetButtons(); rsNote("Mereset... (bisa memakan waktu sampai satu menit)");
+  try {
+    const res = await apiPost("resetSelfSubmissions", { requesterId: state.user.staffId, businessUnit: params.unit, scope: params.scope, apply: true, staffIds: ids, notify, deadlineText });
+    if (!res || res.success === false || res.error) { rsNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    const done = (res.selected || []).length, rm = res.removed || {};
+    const lines = done
+      ? [`✅ <b>${done} orang</b> direset (ID ${escapeHtml(res.resetId)}).`, `Dihapus: Submissions ${rm.submissions || 0}, Evaluator_Totals ${rm.totals || 0}, Submission_Counts ${rm.counts || 0}, Bonus ${rm.bonus || 0}.`, `🔔 ${res.notified || 0} notifikasi terkirim.`, `Cadangan baris yang dihapus: sheet <b>Reset_Backup</b>. Mereka kini tampil sebagai “belum mengisi” di Review → Kepatuhan.`]
+      : ["Tidak ada yang direset."];
+    rsNote(lines.join("<br>"));
+    _rs.plan = null; _rs.params = null; _rs.sel = new Set(); // what was previewed has changed: a new preview is needed
+    const list = document.getElementById("reset-list"); if (list) list.innerHTML = "";
+  } finally {
+    _rs.busy = false; rsSetButtons();
   }
 }
 
@@ -6223,19 +6420,41 @@ function changeReviewEndMonth(value) {
  *  tracks whether Leaders/Management/HR have finished EVALUATING others). Scoped to
  *  whatever the viewer can already see (their own team/oversight), broken down by tier,
  *  each with an expandable list of exactly who's still missing. */
-function renderSelfAppraisalComplianceCard(res) {
+/** The unit values the server sends are CODES (fnb / gym / backoffice); this is what a person reads. */
+function unitDisplayLabel(code) { return ({ fnb: "F&B", gym: "Gym", backoffice: "Back Office" })[code] || String(code || ""); }
+function sortUnitCodes(codes) { const order = ["fnb", "gym", "backoffice"]; return [...codes].sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || String(a).localeCompare(String(b)); }); }
+/** The self-appraisal status of ONE unit: its own done/total counts and only its own people. An older backend (no byUnit) gets everything in scope, as before. */
+function selfComplianceViewForUnit(res, unit) {
+  if (!unit || !res.byUnit) return res.byTier;
+  const out = {};
+  ["Staff", "Leader", "Management"].forEach(tier => {
+    const b = res.byTier[tier] || {};
+    const c = (res.byUnit[unit] && res.byUnit[unit][tier]) || { total: 0, done: 0 };
+    const inUnit = (arr) => (arr || []).filter(m => m.businessUnit === unit);
+    out[tier] = { total: c.total, done: c.done, missing: inUnit(b.missing), contractPending: inUnit(b.contractPending), newHire: inUnit(b.newHire), notYetActive: inUnit(b.notYetActive) };
+  });
+  return out;
+}
+/** The card, or — when the server call failed — a visible message (it used to vanish silently, so nobody knew anything was missing). */
+function renderSelfAppraisalComplianceBlock(res, unit) {
+  if (!res) return "";
+  if (!res.found) return `<div class="card"><div class="error">${escapeHtml(t("selfcompliance_failed").replace("{err}", friendlyError(res.error)))}</div></div>`;
+  return renderSelfAppraisalComplianceCard(res, unit);
+}
+function renderSelfAppraisalComplianceCard(res, unit) {
   if (!res || !res.found) return "";
+  const byTier = selfComplianceViewForUnit(res, unit);
   const tierOrder = ["Staff", "Leader", "Management"];
   const tierLabel = { Staff: "Staff", Leader: "Leader", Management: "Management" };
-  const anyData = tierOrder.some(t => res.byTier[t] && (res.byTier[t].total > 0 || res.byTier[t].contractPending.length > 0 || res.byTier[t].newHire.length > 0 || (res.byTier[t].notYetActive || []).length > 0));
+  const anyData = tierOrder.some(t => byTier[t] && (byTier[t].total > 0 || byTier[t].contractPending.length > 0 || byTier[t].newHire.length > 0 || (byTier[t].notYetActive || []).length > 0));
   if (!anyData) return "";
 
   return `
     <div class="card">
-      <h2>${t("selfcompliance_title")}</h2>
+      <h2>${t("selfcompliance_title")}${unit ? ` — ${escapeHtml(unitDisplayLabel(unit))}` : ""}</h2>
       <div class="hint" style="margin-bottom:10px;">${t("selfcompliance_hint")}</div>
       ${tierOrder.map(tier => {
-        const bucket = res.byTier[tier];
+        const bucket = byTier[tier];
         if (!bucket || (bucket.total === 0 && !bucket.contractPending.length && !bucket.newHire.length && !(bucket.notYetActive || []).length)) return "";
         const missingCount = bucket.total - bucket.done;
         const percentage = bucket.total ? Math.round((bucket.done / bucket.total) * 100) : 100;
@@ -6254,8 +6473,8 @@ function renderSelfAppraisalComplianceCard(res) {
             ${missingCount > 0 ? `
               <details>
                 <summary style="cursor:pointer; font-size:13px; color:var(--coral); font-weight:600;">${t("selfcompliance_view_missing").replace("{n}", missingCount)}</summary>
-                <ul style="margin:8px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
-                  ${bucket.missing.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
+                <ul style="margin:8px 0 0; padding-left:20px; font-size:13px; line-height:1.9; overflow-wrap:anywhere;">
+                  ${bucket.missing.map(m => `<li>${escapeHtml(m.name)}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${escapeHtml(m.department)}</span>` : ""}</li>`).join("")}
                 </ul>
               </details>
             ` : (bucket.total > 0 ? `<div class="hint" style="color:var(--green);">${t("selfcompliance_all_done")}</div>` : "")}
@@ -6263,8 +6482,8 @@ function renderSelfAppraisalComplianceCard(res) {
               <details style="margin-top:6px;">
                 <summary style="cursor:pointer; font-size:13px; color:var(--amber); font-weight:600;">${t("selfcompliance_contract_pending").replace("{n}", bucket.contractPending.length)}</summary>
                 <div class="hint" style="margin:6px 0 4px;">${t("selfcompliance_contract_pending_note")}</div>
-                <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
-                  ${bucket.contractPending.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
+                <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9; overflow-wrap:anywhere;">
+                  ${bucket.contractPending.map(m => `<li>${escapeHtml(m.name)}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${escapeHtml(m.department)}</span>` : ""}</li>`).join("")}
                 </ul>
               </details>
             ` : ""}
@@ -6272,8 +6491,8 @@ function renderSelfAppraisalComplianceCard(res) {
               <details style="margin-top:6px;">
                 <summary style="cursor:pointer; font-size:13px; color:var(--text-muted); font-weight:600;">${t("selfcompliance_new_hire").replace("{n}", bucket.newHire.length)}</summary>
                 <div class="hint" style="margin:6px 0 4px;">${t("selfcompliance_new_hire_note")}</div>
-                <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
-                  ${bucket.newHire.map(m => `<li>${m.name}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${m.department}</span>` : ""}</li>`).join("")}
+                <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9; overflow-wrap:anywhere;">
+                  ${bucket.newHire.map(m => `<li>${escapeHtml(m.name)}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${escapeHtml(m.department)}</span>` : ""}</li>`).join("")}
                 </ul>
               </details>
             ` : ""}
@@ -6281,8 +6500,8 @@ function renderSelfAppraisalComplianceCard(res) {
               <details style="margin-top:6px;">
                 <summary style="cursor:pointer; font-size:13px; color:var(--text-muted); font-weight:600;">${bucket.notYetActive.length} orang unit-nya belum mulai siklus appraisal</summary>
                 <div class="hint" style="margin:6px 0 4px;">Business Unit mereka belum aktif bulan ini (dijadwalkan mulai bulan lain) — bukan lalai, sistemnya sendiri belum kasih akses isi Self Appraisal.</div>
-                <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9;">
-                  ${bucket.notYetActive.map(m => `<li>${m.name} <span style="color:var(--text-muted);">— ${m.businessUnit}${m.department && m.department !== "-" ? ` / ${m.department}` : ""}</span></li>`).join("")}
+                <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9; overflow-wrap:anywhere;">
+                  ${bucket.notYetActive.map(m => `<li>${escapeHtml(m.name)} <span style="color:var(--text-muted);">— ${escapeHtml(unitDisplayLabel(m.businessUnit))}${m.department && m.department !== "-" ? ` / ${escapeHtml(m.department)}` : ""}</span></li>`).join("")}
                 </ul>
               </details>
             ` : ""}
@@ -6337,8 +6556,10 @@ async function renderReview(skipFetch) {
       bodyHtml = `<div class="card"><div class="error">${friendlyError(progressRes.error)}</div></div>`;
     } else {
       const allProgress = progressRes.progress || [];
-      const complianceUnit = state._complianceBusinessUnit || allProgress.find(p => p.businessUnit)?.businessUnit || "F&B";
-      const unitOptions = [...new Set(allProgress.map(p => p.businessUnit).filter(Boolean))].sort();
+      // the unit values are CODES (fnb / gym / backoffice). The card used to be shown only when the tab equalled the text "F&B", which a code
+      // never is — so it never appeared (since 24/09/2026). Tabs are now in a fixed order, labelled for people, and the card follows the tab.
+      const unitOptions = sortUnitCodes([...new Set([...allProgress.map(p => p.businessUnit), ...Object.keys((selfComplianceRes && selfComplianceRes.byUnit) || {})].filter(Boolean))]);
+      const complianceUnit = unitOptions.indexOf(state._complianceBusinessUnit) !== -1 ? state._complianceBusinessUnit : (unitOptions[0] || "fnb");
       const afterUnitFilter = allProgress.filter(p => p.businessUnit === complianceUnit);
       const deptOptions = [...new Set(afterUnitFilter.flatMap(p => p.oversees || []))].sort();
       const complianceDept = state._complianceDept || "";
@@ -6375,7 +6596,7 @@ async function renderReview(skipFetch) {
           <div class="hint">${t("review_compliance_hint")}</div>
         </div>
         ${(unitOptions.length > 1 || deptOptions.length) ? `<div class="card">
-          ${unitOptions.length > 1 ? tabSwitcher(unitOptions.map(u => ({ key: u, label: u })), complianceUnit, "switchComplianceUnit") : ""}
+          ${unitOptions.length > 1 ? tabSwitcher(unitOptions.map(u => ({ key: u, label: unitDisplayLabel(u) })), complianceUnit, "switchComplianceUnit") : ""}
           ${deptOptions.length ? `
             <label style="margin-top:10px; display:block;">Department</label>
             <select onchange="switchComplianceDept(this.value)" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
@@ -6383,7 +6604,7 @@ async function renderReview(skipFetch) {
               ${deptOptions.map(d => `<option value="${escapeAttr(d)}" ${d === complianceDept ? "selected" : ""}>${d}</option>`).join("")}
             </select>` : ""}
         </div>` : ""}
-        ${complianceUnit === "F&B" && !complianceDept ? renderSelfAppraisalComplianceCard(selfComplianceRes) : ""}
+        ${!complianceDept ? renderSelfAppraisalComplianceBlock(selfComplianceRes, complianceUnit) : ""}
         ${groupOrder.map(tier => {
           const group = progress.filter(p => p.tier === tier);
           if (!group.length) return "";

@@ -196,6 +196,42 @@
   .staff-row:active { transform: scale(0.99); }
   .staff-row .name { font-size: 14px; font-weight: 600; }
   .staff-row .dept { font-size: 12px; color: var(--text-muted); }
+  /* Feedback catch-up panel (Dev Tools): a card per person, tick to select, buttons that size to their label.
+     button.primary is width:100% app-wide, so inside a flex row it must be told to size to its content. */
+  .fbc-paste { display: block; width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; font-size: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: #fff; color: var(--text); resize: vertical; margin-bottom: 8px; }
+  .fbc-paste:focus, .fbc-filter:focus { outline: none; border-color: var(--coral); }
+  .fbc-filter { margin-bottom: 8px !important; }
+  /* Read Staff Feedback — tagging many at once (Admin Operational) */
+  .tag-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 8px; }
+  .tag-bar .fbc-count { margin-left: auto; }
+  .tag-apply, .tag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tag-apply select, .tag-grid select { margin: 0; padding: 9px 10px; font-size: 14px; min-width: 0; }
+  .tag-apply { margin-bottom: 10px; }
+  .tag-grid { margin-top: 8px; }
+  .tag-card { border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .tag-card.sel { border-color: var(--coral); background: #FFF6F2; }
+  .tag-card.dirty { border-left: 5px solid var(--coral); }
+  .tag-head { display: flex; align-items: flex-start; gap: 10px; }
+  .tag-head > input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--coral); cursor: pointer; }
+  .tag-savebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0 12px; }
+  @media (max-width: 480px) { .tag-apply, .tag-grid { grid-template-columns: 1fr; } }
+  button.btn-auto { width: auto; padding: 9px 16px; font-size: 13px; border-radius: 12px; white-space: nowrap; }
+  button.fbc-btn { width: auto; padding: 9px 16px; font-size: 13px; border-radius: 12px; white-space: nowrap; }
+  button.fbc-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+  .fbc-note { margin-top: 8px; line-height: 1.5; overflow-wrap: anywhere; }
+  .fbc-title { font-weight: 700; font-size: 14px; margin: 16px 0 6px; }
+  .fbc-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 4px 0 10px; }
+  .fbc-bar .fbc-count { margin-left: auto; font-size: 12px; color: var(--text-muted); }
+  label.fbc-all { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--text); cursor: pointer; }
+  .fbc-list { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow-y: auto; padding: 2px; }
+  label.fbc-row { display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 12px 14px; font-size: 13px; color: var(--text); background: #fff; border: 1.5px solid var(--border); border-radius: 14px; cursor: pointer; }
+  label.fbc-row.sel { border-color: var(--coral); background: #FFF6F2; }
+  .fbc-row input[type=checkbox], label.fbc-all input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--coral); cursor: pointer; }
+  .fbc-main { flex: 1; min-width: 0; }
+  .fbc-name { font-size: 14px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+  .fbc-nik { margin-left: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  .fbc-meta { margin-top: 2px; font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; }
+  .fbc-empty { padding: 10px 2px; font-size: 13px; color: var(--text-muted); }
   .badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 700; }
   .badge.done { background: var(--green-bg); color: var(--green); }
   .badge.pending { background: var(--sand); color: var(--text-muted); }
@@ -231,6 +267,7 @@
   .row-flex > * { flex: 1; }
   table.mini { width: 100%; font-size: 13px; border-collapse: collapse; font-variant-numeric: tabular-nums; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table.mini td { padding: 6px 0; border-bottom: 1px solid var(--border); }
+  table.mini td:first-child { padding-right: 12px; }
   table.mini td:last-child { text-align: right; font-weight: 600; }
   .org-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; border: 1.5px solid var(--border); }
   table.org-table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 13px; }
@@ -329,7 +366,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-06-308-feedback-staff-error-messages — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-06-310-bulk-tagging-and-approval-authorization — LIVE</div>
 
 <script>
 // =================================================================
@@ -481,7 +518,13 @@ function friendlyError(code) {
     feedback_required: "Feedback ke management wajib diisi (minimal 5 huruf atau angka). Penilaianmu BELUM tersimpan. Kalau halaman ini sudah lama terbuka, refresh dulu lalu isi ulang, termasuk kotak feedback.",
     feedback_catchup_not_enabled: "Kesempatan menyusul feedback tidak sedang terbuka (belum dibuka, sudah terpakai, atau sudah ditutup admin). Feedback wajib diisi saat Self Appraisal — hubungi admin kalau perlu membukanya lagi.",
     target_not_found: "Data kamu tidak ditemukan di roster. Hubungi admin.",
+    too_many: "Terlalu banyak sekaligus (maksimal 500 NIK per kali) — bagi jadi beberapa kali.",
     primary_issue_required: "Pilih isu utamanya dulu.",
+    invalid_month: "Bulan tidak valid.",
+    nothing_to_save: "Tidak ada perubahan untuk disimpan.",
+    feedback_not_found: "Feedback orang itu tidak ditemukan di bulan ini.",
+    invalid_issue: "Kategori isu tidak dikenal.",
+    secondary_same_as_primary: "Secondary Issue tidak boleh sama dengan Primary Issue.",
     staff_not_found: "NIK itu tidak ditemukan di roster.",
     staff_id_required: "Masukin NIK-nya dulu.",
     busy_try_again: "Server lagi sibuk — tunggu beberapa detik lalu coba lagi.",
@@ -490,6 +533,7 @@ function friendlyError(code) {
     pin_not_set: "PIN belum di-set. Hubungi HR.",
   };
   if (map[code]) return map[code];
+  if (code && /^Unknown action/i.test(code)) return "Server belum diperbarui ke versi terbaru (backend belum di-deploy). Hubungi admin, lalu muat ulang halaman ini.";
   if (code && /lock/i.test(code)) return "Server lagi sibuk (banyak orang submit bersamaan) — tunggu beberapa detik lalu coba lagi.";
   return code || "Terjadi kendala tidak dikenal";
 }
@@ -815,6 +859,7 @@ const translations = {
     gm_approve_all_skipped_closed: "{n} dilewati: jendela approval sudah ditutup.",
     gm_approve_all_skipped_early: "{n} dilewati: jendela approval belum dibuka.",
     gm_approve_all_needs_manual: "{n} Underperform perlu keputusan manual (tidak ikut approve massal).",
+    gm_approve_all_out_of_scope: "{n} orang di luar unit bisnismu (bukan wewenangmu, tidak disentuh).",
     gm_approve_all_ask_admin: "Minta Superadmin membuka jendelanya, atau minta akses \"ApprovalWindow\" supaya kamu bisa membukanya sendiri.",
     gm_open_window_failed_prefix: "Gagal membuka jendela approval:",
     gm_approve_all_working: "⏳ Memproses Approve Semua… (jangan tutup halaman, jangan klik lagi)",
@@ -1285,6 +1330,7 @@ const translations = {
     gm_approve_all_skipped_closed: "{n} skipped: approval window has closed.",
     gm_approve_all_skipped_early: "{n} skipped: approval window is not open yet.",
     gm_approve_all_needs_manual: "{n} Underperform need a manual decision (not part of bulk approve).",
+    gm_approve_all_out_of_scope: "{n} people are outside your business unit (not yours to approve, left untouched).",
     gm_approve_all_ask_admin: "Ask a Superadmin to open the window, or ask for the \"ApprovalWindow\" access so you can open it yourself.",
     gm_open_window_failed_prefix: "Failed to open the approval window:",
     gm_approve_all_working: "⏳ Running Approve All… (keep the page open, don't click again)",
@@ -4727,64 +4773,170 @@ function updateOverrideMode() {
       <button class="primary" id="reset-submission-btn" style="margin-top:8px;" onclick="doResetSubmissionCount()">Reset Jatah Submit</button>
       <div id="reset-submission-result" class="hint" style="margin-top:8px;"></div>`;
   } else if (mode === "feedback") {
-    descEl.textContent = "Feedback ke management WAJIB diisi saat Self Appraisal. Ini satu-satunya jalan untuk menyusul atau menambah: kamu membukanya untuk SATU orang, dan tertutup sendiri begitu feedback-nya tersimpan. Hanya superadmin yang bisa.";
+    descEl.textContent = "Feedback ke management WAJIB diisi saat Self Appraisal. Ini satu-satunya jalan untuk menyusul atau menambah: kamu membukanya per orang (boleh banyak sekaligus), dan tiap pintu tertutup sendiri begitu feedback orangnya tersimpan. Hanya superadmin yang bisa.";
+    _fbc = { enabled: [], missing: [], selMissing: new Set(), selEnabled: new Set(), filter: "", busy: false };
     controlsEl.innerHTML = `
-      <label>NIK Staff</label>
-      <div class="row-flex">
-        <input type="text" id="feedback-catchup-nik" placeholder="Contoh: 1198" style="flex:1;" />
-        <button class="primary" id="feedback-catchup-btn" style="flex:0 0 auto;" onclick="doGrantFeedbackCatchUp()">Buka</button>
-      </div>
-      <div id="feedback-catchup-note" class="hint" style="margin-top:8px;"></div>
-      <div id="feedback-catchup-lists" style="margin-top:12px;"></div>`;
+      <label>Tempel NIK (boleh banyak — pisahkan dengan koma, spasi, atau baris baru)</label>
+      <textarea id="feedback-catchup-paste" class="fbc-paste" rows="3" placeholder="Contoh: 1198, 1022, 1092"></textarea>
+      <button class="primary fbc-btn" id="feedback-catchup-paste-btn" onclick="doBulkGrantFeedbackCatchUp('paste')">Buka untuk NIK di atas</button>
+      <div id="feedback-catchup-note" class="hint fbc-note"></div>
+      <div id="feedback-catchup-lists"></div>`;
     doLoadFeedbackCatchUp();
   }
+}
+
+/** State of the "Izinkan Feedback Menyusul" panel. Selections live here, so filtering or reloading never loses them. */
+let _fbc = { enabled: [], missing: [], selMissing: new Set(), selEnabled: new Set(), filter: "", busy: false };
+
+/** "1198, 1022\n1092 ; 1198" -> ["1198","1022","1092"] (no blanks, no repeats). Pasting a column from Excel / WhatsApp works. */
+function parseNikList(text) {
+  const seen = new Set(), out = [];
+  String(text || "").split(/[\s,;]+/).forEach(x => { const id = x.trim(); if (id && !seen.has(id)) { seen.add(id); out.push(id); } });
+  return out;
+}
+
+function fbcVisibleMissing() {
+  const q = _fbc.filter.trim().toLowerCase();
+  if (!q) return _fbc.missing;
+  return _fbc.missing.filter(x => [x.name, x.staffId, x.jobTitle, x.department].some(v => String(v || "").toLowerCase().includes(q)));
+}
+
+/** "Cook · Kitchen"; just "Runner" when job title and department are the same word; a department of "-" (not set in the roster) is left out. */
+function fbcRoleLine(x) {
+  const seen = new Set();
+  return [x.jobTitle, x.department].filter(v => { const k = String(v || "").trim().toLowerCase(); if (!k || k === "-" || seen.has(k)) return false; seen.add(k); return true; }).join(" · ");
+}
+
+function fbcRowHtml(kind, x, selected) {
+  const id = escapeHtml(escapeAttr(String(x.staffId)));
+  const meta = kind === "enabled"
+    ? `Dibuka oleh ${escapeHtml(x.grantedBy || "-")} · ${escapeHtml(feedbackWhenLabel(x.grantedAt))}`
+    : escapeHtml(fbcRoleLine(x));
+  return `<label class="fbc-row${selected ? " sel" : ""}">
+      <input type="checkbox" ${selected ? "checked" : ""} onchange="fbcToggle('${kind}', '${id}', this.checked, this)">
+      <div class="fbc-main"><div class="fbc-name">${escapeHtml(x.name || "(tidak di roster)")}<span class="fbc-nik">NIK ${escapeHtml(x.staffId)}</span></div>${meta ? `<div class="fbc-meta">${meta}</div>` : ""}</div>
+    </label>`;
+}
+
+/** Counters, the select-all tick and the action buttons for one list. Cheap: touches no rows. */
+function fbcRefreshBar(kind) {
+  const sel = kind === "enabled" ? _fbc.selEnabled : _fbc.selMissing;
+  const visible = kind === "enabled" ? _fbc.enabled : fbcVisibleMissing();
+  const visibleSelected = visible.filter(x => sel.has(String(x.staffId))).length;
+  const all = document.getElementById(`fbc-${kind}-all`), count = document.getElementById(`fbc-${kind}-count`), act = document.getElementById(`fbc-${kind}-act`);
+  if (all) { all.checked = visible.length > 0 && visibleSelected === visible.length; all.indeterminate = visibleSelected > 0 && visibleSelected < visible.length; all.disabled = visible.length === 0; }
+  if (count) count.textContent = `${sel.size} dipilih`;
+  if (act) { act.disabled = _fbc.busy || sel.size === 0; act.textContent = `${kind === "enabled" ? "Tutup" : "Buka"} yang dipilih (${sel.size})`; }
+  const paste = document.getElementById("feedback-catchup-paste-btn"); if (paste) paste.disabled = _fbc.busy;
+}
+
+function renderFbcLists() {
+  const en = document.getElementById("fbc-enabled-list"), mi = document.getElementById("fbc-missing-list");
+  if (!en || !mi) return;
+  en.innerHTML = _fbc.enabled.length ? _fbc.enabled.map(x => fbcRowHtml("enabled", x, _fbc.selEnabled.has(String(x.staffId)))).join("") : `<div class="fbc-empty">Tidak ada yang sedang dibuka.</div>`;
+  const vis = fbcVisibleMissing();
+  mi.innerHTML = vis.length ? vis.map(x => fbcRowHtml("missing", x, _fbc.selMissing.has(String(x.staffId)))).join("")
+    : `<div class="fbc-empty">${_fbc.missing.length ? "Tidak ada yang cocok dengan pencarian." : "Semua yang sudah Self Appraisal bulan ini sudah punya feedback. 🎉"}</div>`;
+  const setN = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setN("fbc-enabled-n", _fbc.enabled.length); setN("fbc-missing-n", _fbc.missing.length);
+  fbcRefreshBar("enabled"); fbcRefreshBar("missing");
 }
 
 async function doLoadFeedbackCatchUp() {
   const box = document.getElementById("feedback-catchup-lists");
   if (!box) return;
-  box.innerHTML = `<div class="hint">Memuat...</div>`;
+  if (!document.getElementById("fbc-missing-list")) box.innerHTML = `<div class="hint">Memuat...</div>`;
   const res = await apiGet("listFeedbackCatchUp", { requesterId: state.user.staffId });
   if (res.error || res.success === false) { box.innerHTML = `<div class="error">${escapeHtml(friendlyError(res.error))}</div>`; return; }
-  const arg = (id) => escapeHtml(escapeAttr(String(id)));
-  const enabledHtml = res.enabled.length ? res.enabled.map(x => `
-      <div class="staff-row" style="cursor:default;">
-        <div><div class="name">${escapeHtml(x.name || "(tidak di roster)")} <span class="hint">· NIK ${escapeHtml(x.staffId)}</span></div>
-        <div class="hint">Dibuka oleh ${escapeHtml(x.grantedBy || "-")} · ${escapeHtml(feedbackWhenLabel(x.grantedAt))}</div></div>
-        <button class="secondary" style="flex:0 0 auto;" onclick="doRevokeFeedbackCatchUp('${arg(x.staffId)}')">Tutup</button>
-      </div>`).join("") : `<div class="hint">Tidak ada yang sedang dibuka.</div>`;
-  const missingHtml = res.missing.length ? res.missing.map(x => `
-      <div class="staff-row" style="cursor:default;">
-        <div><div class="name">${escapeHtml(x.name || "(tidak di roster)")} <span class="hint">· NIK ${escapeHtml(x.staffId)}</span></div>
-        <div class="hint">${escapeHtml([x.jobTitle, x.department].filter(Boolean).join(" · "))}</div></div>
-        <button class="primary" style="flex:0 0 auto;" onclick="doGrantFeedbackCatchUp('${arg(x.staffId)}')">Buka</button>
-      </div>`).join("") : `<div class="hint">Semua yang sudah Self Appraisal bulan ini sudah punya feedback. 🎉</div>`;
-  box.innerHTML = `
-    <div style="font-weight:700; margin:4px 0;">Sedang dibuka (${res.enabled.length})</div>${enabledHtml}
-    <div style="font-weight:700; margin:14px 0 4px;">Sudah Self Appraisal, belum ada feedback (${res.missing.length})</div>${missingHtml}`;
+  _fbc.enabled = res.enabled; _fbc.missing = res.missing;
+  const still = (set, list) => { const ids = new Set(list.map(x => String(x.staffId))); [...set].forEach(id => { if (!ids.has(id)) set.delete(id); }); };
+  still(_fbc.selEnabled, res.enabled); still(_fbc.selMissing, res.missing);   // ones that left the list are no longer selected
+  if (!document.getElementById("fbc-missing-list")) {
+    box.innerHTML = `
+      <div class="fbc-title">Sedang dibuka (<span id="fbc-enabled-n"></span>)</div>
+      <div class="fbc-bar">
+        <label class="fbc-all"><input type="checkbox" id="fbc-enabled-all" onchange="fbcSelectAll('enabled', this.checked)"> Pilih semua</label>
+        <span class="fbc-count" id="fbc-enabled-count"></span>
+        <button class="secondary fbc-btn" id="fbc-enabled-act" onclick="doBulkRevokeFeedbackCatchUp()">Tutup yang dipilih</button>
+      </div>
+      <div class="fbc-list" id="fbc-enabled-list"></div>
+      <div class="fbc-title">Sudah Self Appraisal, belum ada feedback (<span id="fbc-missing-n"></span>)</div>
+      <input type="text" id="feedback-catchup-filter" class="fbc-filter" placeholder="Cari nama, NIK, atau jabatan…" value="${escapeHtml(_fbc.filter)}" oninput="fbcFilter(this.value)">
+      <div class="fbc-bar">
+        <label class="fbc-all"><input type="checkbox" id="fbc-missing-all" onchange="fbcSelectAll('missing', this.checked)"> Pilih semua yang tampil</label>
+        <span class="fbc-count" id="fbc-missing-count"></span>
+        <button class="primary fbc-btn" id="fbc-missing-act" onclick="doBulkGrantFeedbackCatchUp('selected')">Buka yang dipilih</button>
+      </div>
+      <div class="fbc-list" id="fbc-missing-list"></div>`;
+  }
+  renderFbcLists();
 }
 
-async function doGrantFeedbackCatchUp(staffIdArg) {
-  const input = document.getElementById("feedback-catchup-nik");
-  const note = document.getElementById("feedback-catchup-note");
-  const staffId = String(staffIdArg || (input ? input.value : "") || "").trim();
-  if (!staffId) { if (note) note.textContent = "Masukin NIK-nya dulu."; return; }
-  if (note) note.textContent = "";
-  const res = await apiPost("grantFeedbackCatchUp", { requesterId: state.user.staffId, staffId });
-  if (res.success) {
-    if (note) note.textContent = res.alreadyEnabled ? `${res.staffName} (NIK ${res.staffId}) memang sudah dibuka.` : `✅ Dibuka untuk ${res.staffName} (NIK ${res.staffId}). Menunya "Feedback ke Management" muncul di dashboard-nya, dan tertutup sendiri setelah dia menyimpan.`;
-    if (input) input.value = "";
-    doLoadFeedbackCatchUp();
-  } else if (note) {
-    note.textContent = `Gagal: ${friendlyError(res.error)}`;
+function fbcToggle(kind, id, checked, el) {
+  const set = kind === "enabled" ? _fbc.selEnabled : _fbc.selMissing;
+  if (checked) set.add(String(id)); else set.delete(String(id));
+  const row = el && el.closest ? el.closest(".fbc-row") : null;
+  if (row) row.classList.toggle("sel", !!checked);
+  fbcRefreshBar(kind);
+}
+/** "Select all" acts on what is VISIBLE: with a search typed it selects only the matches. */
+function fbcSelectAll(kind, checked) {
+  const set = kind === "enabled" ? _fbc.selEnabled : _fbc.selMissing;
+  (kind === "enabled" ? _fbc.enabled : fbcVisibleMissing()).forEach(x => { if (checked) set.add(String(x.staffId)); else set.delete(String(x.staffId)); });
+  renderFbcLists();
+}
+function fbcFilter(value) { _fbc.filter = String(value || ""); renderFbcLists(); }
+
+function fbcNote(html) { const el = document.getElementById("feedback-catchup-note"); if (el) el.innerHTML = html; }
+function fbcNames(list) {   // "1111, 2222, 3333 dan 17 lainnya"
+  const shown = list.slice(0, 15).map(x => escapeHtml(String(x))).join(", ");
+  return list.length > 15 ? `${shown} dan ${list.length - 15} lainnya` : shown;
+}
+function fbcSetBusy(on) { _fbc.busy = on; fbcRefreshBar("enabled"); fbcRefreshBar("missing"); }
+
+/** Open for MANY people in ONE request. source "selected" = the ticked cards; "paste" = the NIKs typed or pasted in the box. */
+async function doBulkGrantFeedbackCatchUp(source) {
+  if (_fbc.busy) return;   // one run at a time: a second tap while it is working does nothing
+  const ids = source === "paste" ? parseNikList((document.getElementById("feedback-catchup-paste") || {}).value) : [..._fbc.selMissing];
+  if (!ids.length) { fbcNote(source === "paste" ? "Tempel atau ketik NIK-nya dulu." : "Centang dulu siapa yang mau dibuka."); return; }
+  if (ids.length > 1 && !confirm(`Buka feedback menyusul untuk ${ids.length} orang?`)) return;
+  fbcSetBusy(true); fbcNote("Memproses...");
+  try {
+    const res = await apiPost("grantFeedbackCatchUpBatch", { requesterId: state.user.staffId, staffIds: ids });
+    if (!res || !res.success) { fbcNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    const granted = res.granted || [], already = res.alreadyEnabled || [], notFound = res.notFound || [];   // tolerate an answer without a list
+    const lines = [`✅ Dibuka untuk <b>${granted.length}</b> orang. Menu "Feedback ke Management" muncul di dashboard mereka, dan tertutup sendiri setelah masing-masing menyimpan.`];
+    if (already.length) lines.push(`ℹ️ ${already.length} orang memang sudah dibuka: ${fbcNames(already.map(x => x.name || x.staffId))}.`);
+    if (notFound.length) lines.push(`⚠️ ${notFound.length} NIK tidak ditemukan di roster: ${fbcNames(notFound)}.`);
+    fbcNote(lines.join("<br>"));
+    if (source === "paste") { const box = document.getElementById("feedback-catchup-paste"); if (box && !notFound.length) box.value = ""; else if (box) box.value = notFound.join("\n"); }
+    ids.forEach(id => _fbc.selMissing.delete(String(id)));
+    await doLoadFeedbackCatchUp();   // ONE reload for the whole batch
+  } finally {
+    fbcSetBusy(false);
   }
 }
 
-async function doRevokeFeedbackCatchUp(staffId) {
-  const note = document.getElementById("feedback-catchup-note");
-  const res = await apiPost("revokeFeedbackCatchUp", { requesterId: state.user.staffId, staffId });
-  if (note) note.textContent = res.success ? "Ditutup." : `Gagal: ${friendlyError(res.error)}`;
-  doLoadFeedbackCatchUp();
+/** Close the ticked ones in ONE request. */
+async function doBulkRevokeFeedbackCatchUp() {
+  if (_fbc.busy) return;
+  const ids = [..._fbc.selEnabled];
+  if (!ids.length) { fbcNote("Centang dulu siapa yang mau ditutup."); return; }
+  if (ids.length > 1 && !confirm(`Tutup feedback menyusul untuk ${ids.length} orang?`)) return;
+  fbcSetBusy(true); fbcNote("Memproses...");
+  try {
+    const res = await apiPost("revokeFeedbackCatchUpBatch", { requesterId: state.user.staffId, staffIds: ids });
+    if (!res || !res.success) { fbcNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    const revoked = res.revoked || [], notEnabled = res.notEnabled || [];
+    const lines = [`✅ Ditutup untuk <b>${revoked.length}</b> orang.`];
+    if (notEnabled.length) lines.push(`ℹ️ ${notEnabled.length} orang memang tidak sedang dibuka.`);
+    if (res.conflicts) lines.push(`⚠️ ${res.conflicts} baris berubah saat diproses dan dilewati demi keamanan — muat ulang lalu coba lagi.`);
+    fbcNote(lines.join("<br>"));
+    ids.forEach(id => _fbc.selEnabled.delete(String(id)));
+    await doLoadFeedbackCatchUp();
+  } finally {
+    fbcSetBusy(false);
+  }
 }
 
 function updateScoreHealthMode() {
@@ -4884,7 +5036,7 @@ async function renderDevTools() {
       <select id="override-mode" onchange="updateOverrideMode()" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border); margin-bottom:12px; font-weight:600;">
         <option value="window">🗓️ Buka Jendela Waktu (Access Override)</option>
         <option value="quota">🔓 Reset Jatah Submit (1x Limit)</option>
-        ${state.user.isSuperAdmin ? `<option value="feedback">💬 Izinkan Feedback Menyusul (sekali pakai)</option>` : ""}
+        ${state.user.isSuperAdmin ? `<option value="feedback">💬 Izinkan Feedback Menyusul</option>` : ""}
       </select>
       <div id="override-mode-desc" class="hint" style="margin-bottom:10px;"></div>
       <div id="override-mode-controls"></div>
@@ -5587,7 +5739,7 @@ async function renderStaffFeedback() {
     <div class="card">
       <label>Business Unit</label>
       <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;">
-        ${unitKeys.map(k => `<button class="${k === unit ? "primary" : "secondary"}" style="flex:0 0 auto;" onclick="changeFeedbackUnit('${escapeHtml(escapeAttr(k))}')">${escapeHtml(unitLabels[k])} (${inMonth.filter(f => unitOf(f) === k).length})</button>`).join("")}
+        ${unitKeys.map(k => `<button class="${k === unit ? "primary btn-auto" : "secondary"}" style="flex:0 0 auto;" onclick="changeFeedbackUnit('${escapeHtml(escapeAttr(k))}')">${escapeHtml(unitLabels[k])} (${inMonth.filter(f => unitOf(f) === k).length})</button>`).join("")}
       </div>
     </div>` : "";
   const summary = summaryRes.summary || [];
@@ -5624,21 +5776,38 @@ async function renderStaffFeedback() {
 
     <div class="card">
       <h2>2. Comment Master${escapeHtml(unitTitle)} — ${feedback.length} feedback</h2>
+      ${state.user.isAdminOperational && feedback.length ? `
+        <div class="hint" style="margin-bottom:8px;">Isi tag di tiap kartu, atau centang beberapa kartu lalu <b>Terapkan</b> satu tag ke semuanya. Semua perubahan disimpan <b>sekaligus</b> dengan satu tombol.</div>
+        <div class="tag-bar">
+          <label class="fbc-all"><input type="checkbox" id="tag-all" onchange="fbTagSelectAll(this.checked)"> Pilih semua</label>
+          <span class="fbc-count" id="tag-sel-count">0 dipilih</span>
+        </div>
+        <div class="tag-apply">
+          <select id="tag-apply-primary">${catOptions("")}</select>
+          <select id="tag-apply-secondary">${catOptions("")}</select>
+        </div>
+        <button class="secondary btn-auto" id="tag-apply-btn" onclick="fbTagApply()" disabled>Terapkan ke yang dipilih</button>
+        <div class="tag-savebar">
+          <button class="primary btn-auto" id="tag-save-btn" onclick="doSaveAllTags()" disabled>Simpan semua tag (0)</button>
+          <span class="hint" id="tag-save-note" style="margin:0;"></span>
+        </div>` : ""}
       ${feedback.map(f => `
-        <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px;">
-            <div>
-              <div class="name">${escapeHtml(f.staffName)}</div>
-              <div class="hint" style="font-size:12px;">Posisi: ${escapeHtml(f.jobTitle || "—")}</div>
+        <div class="tag-card" ${state.user.isAdminOperational ? `data-staff="${escapeHtml(f.staffId)}" data-name="${escapeHtml(f.staffName)}"` : ""}>
+          <div class="tag-head">
+            ${state.user.isAdminOperational ? `<input type="checkbox" class="tag-sel" aria-label="Pilih" onchange="fbTagToggle(this)">` : ""}
+            <div style="flex:1; min-width:0; display:flex; justify-content:space-between; align-items:baseline; gap:10px;">
+              <div style="min-width:0;">
+                <div class="name" style="overflow-wrap:anywhere;">${escapeHtml(f.staffName)}</div>
+                <div class="hint" style="font-size:12px;">Posisi: ${escapeHtml(f.jobTitle || "—")}</div>
+              </div>
+              <div class="hint" style="font-size:11px; text-align:right;">${escapeHtml(feedbackWhenLabel(f.timestamp))}</div>
             </div>
-            <div class="hint" style="font-size:11px; text-align:right;">${escapeHtml(feedbackWhenLabel(f.timestamp))}</div>
           </div>
           <div style="font-size:14px; color:var(--text); margin:8px 0; white-space:pre-wrap;">"${escapeHtml(f.feedback)}"</div>
           ${state.user.isAdminOperational ? `
-            <div class="row-flex" style="gap:8px;">
-              <select id="tag-primary-${escapeHtml(f.staffId)}">${catOptions(f.primaryIssue)}</select>
-              <select id="tag-secondary-${escapeHtml(f.staffId)}">${catOptions(f.secondaryIssue)}</select>
-              <button class="secondary" style="flex:0 0 auto;" onclick="doTagFeedback('${escapeHtml(escapeAttr(f.staffId))}')">Simpan Tag</button>
+            <div class="tag-grid">
+              <select class="tag-primary" data-orig="${escapeHtml(f.primaryIssue || "")}" onchange="fbTagRefresh()">${catOptions(f.primaryIssue)}</select>
+              <select class="tag-secondary" data-orig="${escapeHtml(f.secondaryIssue || "")}" onchange="fbTagRefresh()">${catOptions(f.secondaryIssue)}</select>
             </div>
           ` : (f.primaryIssue ? `<div class="hint">Tag: ${escapeHtml(f.primaryIssue)}${f.secondaryIssue ? " / " + escapeHtml(f.secondaryIssue) : ""}</div>` : `<div class="hint">Belum di-tag.</div>`)}
         </div>`).join("")}
@@ -5662,14 +5831,17 @@ async function renderStaffFeedback() {
       ${!actions.length ? '<div class="hint">Belum ada action item.</div>' : ""}
     </div>
   `;
+  if (state.user.isAdminOperational) fbTagRestorePending();
 }
 
 async function changeFeedbackUnit(unit) {
+  if (!fbTagConfirmDiscard()) return;
   state._feedbackUnit = unit;
   renderStaffFeedback();
 }
 
 async function changeFeedbackMonth(month) {
+  if (!fbTagConfirmDiscard()) { const m = document.querySelector('input[type=month]'); if (m) m.value = state._feedbackMonth; return; }
   state._feedbackMonth = month;
   renderStaffFeedback();
 }
@@ -5685,16 +5857,84 @@ async function doExportFeedbackReport() {
   noteEl.innerHTML = `Sheet siap! <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">Buka di Google Sheets</a> — lalu File → Download → Excel.`;
 }
 
-async function doTagFeedback(staffId) {
-  const primaryIssue = document.getElementById(`tag-primary-${staffId}`).value;
-  const secondaryIssue = document.getElementById(`tag-secondary-${staffId}`).value;
-  if (!primaryIssue) { showToast("Pilih Primary Issue dulu.", "error"); return; }
-  const res = await apiPost("tagFeedback", {
-    enteredById: state.user.staffId, staffId, month: state._feedbackMonth, primaryIssue, secondaryIssue,
+/* ---- Tagging feedback in BULK (Admin Operational) --------------------------------------------------------------------
+ * Fill the pickers on any cards, or tick several cards and APPLY one tag to all of them; ONE button saves every change in ONE
+ * request and the screen reloads ONCE. (It used to be: save one, the whole screen reloads, save the next, reload again.) */
+let _tagBusy = false;
+function fbTagCards() { return [...document.querySelectorAll(".tag-card[data-staff]")]; }
+/** A card's state: what it holds now against what the server has, and whether the change can be saved. */
+function fbTagRowState(card) {
+  const p = card.querySelector(".tag-primary"), s2 = card.querySelector(".tag-secondary");
+  const changed = p.value !== (p.dataset.orig || "") || s2.value !== (s2.dataset.orig || "");
+  // a tag cannot be removed, and the second issue must differ from the first: such a row is flagged, not saved
+  const problem = !changed ? "" : (!p.value ? "no_primary" : (s2.value && s2.value === p.value ? "same" : ""));
+  return { id: card.dataset.staff, name: card.dataset.name, primary: p.value, secondary: s2.value, changed, problem };
+}
+function fbTagDirtyCount() { return fbTagCards().filter(c => fbTagRowState(c).changed).length; }
+function fbTagConfirmDiscard() { const n = fbTagDirtyCount(); return n === 0 || confirm(`Ada ${n} perubahan tag yang belum disimpan. Lanjut dan buang perubahan itu?`); }
+/** Counters, highlights and the buttons. Touches no pickers. */
+function fbTagRefresh() {
+  const cards = fbTagCards(); if (!cards.length) return;
+  let sel = 0, savable = 0, flagged = 0;
+  cards.forEach(c => {
+    const st = fbTagRowState(c), checked = c.querySelector(".tag-sel").checked;
+    c.classList.toggle("sel", checked); c.classList.toggle("dirty", st.changed);
+    if (checked) sel++;
+    if (st.changed && !st.problem) savable++; else if (st.problem) flagged++;
   });
-  if (res.error || res.success === false) { showToast("Gagal simpan tag: " + friendlyError(res.error), "error"); return; }
-  showToast("Tag tersimpan!");
-  renderStaffFeedback();
+  const set = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+  set("tag-sel-count", el => { el.textContent = `${sel} dipilih`; });
+  set("tag-all", el => { el.checked = sel === cards.length; el.indeterminate = sel > 0 && sel < cards.length; });
+  set("tag-apply-btn", el => { el.disabled = _tagBusy || sel === 0; });
+  set("tag-save-btn", el => { el.disabled = _tagBusy || savable === 0; el.textContent = `Simpan semua tag (${savable})`; });
+  set("tag-save-note", el => { el.textContent = flagged ? `${flagged} kartu dilewati: Primary Issue wajib diisi, dan Secondary tidak boleh sama dengan Primary.` : ""; });
+}
+function fbTagToggle(el) { fbTagRefresh(); }
+function fbTagSelectAll(checked) { fbTagCards().forEach(c => { c.querySelector(".tag-sel").checked = checked; }); fbTagRefresh(); }
+/** Put the chosen tag on every ticked card (the pickers on the cards change, so nothing is saved until the one Save button). */
+function fbTagApply() {
+  const p = document.getElementById("tag-apply-primary").value, s2 = document.getElementById("tag-apply-secondary").value;
+  const note = document.getElementById("tag-save-note");
+  if (!p) { if (note) note.textContent = "Pilih Primary Issue yang mau diterapkan dulu."; return; }
+  if (s2 && s2 === p) { if (note) note.textContent = "Secondary tidak boleh sama dengan Primary."; return; }
+  fbTagCards().filter(c => c.querySelector(".tag-sel").checked).forEach(c => {
+    c.querySelector(".tag-primary").value = p;
+    if (s2) c.querySelector(".tag-secondary").value = s2;   // no Secondary chosen = leave each card's own Secondary alone
+  });
+  fbTagRefresh();
+}
+/** After the reload, put back the edits the server REFUSED, so they are not lost. */
+function fbTagRestorePending() {
+  const pending = state._pendingTagEdits; state._pendingTagEdits = null;
+  if (pending) fbTagCards().forEach(c => { const e = pending[c.dataset.staff]; if (e) { c.querySelector(".tag-primary").value = e.primary; c.querySelector(".tag-secondary").value = e.secondary; } });
+  fbTagRefresh();
+}
+/** Save EVERY changed card in ONE request, then reload ONCE (the issue summary above needs the new counts). */
+async function doSaveAllTags() {
+  if (_tagBusy) return;
+  const rows = fbTagCards().map(fbTagRowState).filter(r => r.changed && !r.problem);
+  if (!rows.length) return;
+  _tagBusy = true; fbTagRefresh();
+  const note = document.getElementById("tag-save-note"); if (note) note.textContent = "Menyimpan...";
+  try {
+    const res = await apiPost("tagFeedbackBatch", { enteredById: state.user.staffId, month: state._feedbackMonth,
+      items: rows.map(r => ({ staffId: r.id, primaryIssue: r.primary, secondaryIssue: r.secondary })) });
+    if (!res || res.success === false || res.error) { if (note) note.textContent = `Gagal menyimpan: ${friendlyError(res && res.error)}`; return; }
+    const saved = (res.saved || []).length, same = (res.unchanged || []).length, rejected = res.rejected || [];
+    if (rejected.length) {
+      const nameOf = (id) => (rows.find(r => r.id === String(id)) || {}).name || id;
+      state._pendingTagEdits = {}; rejected.forEach(x => { const r = rows.find(q => q.id === String(x.staffId)); if (r) state._pendingTagEdits[r.id] = { primary: r.primary, secondary: r.secondary }; });
+      showToast(`✅ ${saved} tag tersimpan. ⚠️ ${rejected.length} gagal: ` + rejected.slice(0, 5).map(x => `${nameOf(x.staffId)} (${friendlyError(x.error)})`).join("; ") + (rejected.length > 5 ? ` dan ${rejected.length - 5} lainnya` : ""), "error", 12000);
+    } else {
+      showToast(`✅ ${saved} tag tersimpan${same ? ` (${same} tidak berubah)` : ""}.`, "success", 4000);
+    }
+    const y = window.scrollY;
+    _tagBusy = false;
+    await renderStaffFeedback();   // ONE reload for the whole batch
+    window.scrollTo(0, y);
+  } finally {
+    _tagBusy = false; fbTagRefresh();
+  }
 }
 
 function actionFormHtml(a) {
@@ -8172,7 +8412,7 @@ async function approveAll(afterOpening) {
   if (res.error) { showToast(t("gm_approve_all_failed_prefix") + " " + friendlyError(res.error), "error", 9000); return; }
     // An old deployment never sends `version`: say so plainly instead of reading its missing fields as "0 / nothing".
     if (!res.version) { showToast(t("gm_approve_all_stale_server"), "error", 20000); return; }
-    const approved = res.approvedCount || 0, closed = res.skippedClosed || 0, early = res.skippedEarly || 0, manual = res.needsManualCount || 0;
+    const approved = res.approvedCount || 0, closed = res.skippedClosed || 0, early = res.skippedEarly || 0, manual = res.needsManualCount || 0, outScope = res.skippedOutOfScope || 0;
     const canOpen = !!res.canOpenWindow; // decided by the SERVER (Superadmin, or an Executive granted "ApprovalWindow")
 
     // The usual reason for "nothing happened": the window closed (e.g. the day after it ended). Someone allowed to
@@ -8204,8 +8444,9 @@ async function approveAll(afterOpening) {
     if (closed) parts.push(t("gm_approve_all_skipped_closed").replace("{n}", closed) + (canOpen ? "" : " " + t("gm_approve_all_ask_admin")));
     if (early) parts.push(t("gm_approve_all_skipped_early").replace("{n}", early));
     if (manual) parts.push(t("gm_approve_all_needs_manual").replace("{n}", manual));
+    if (outScope) parts.push(t("gm_approve_all_out_of_scope").replace("{n}", outScope));
     const skipped = closed + early;
-    if (!approved && !skipped && !manual) { // nothing pending at all: wrong month, or already done
+    if (!approved && !skipped && !manual && !outScope) { // nothing pending at all: wrong month, or already done
       showToast(t("gm_approve_all_nothing").replace("{month}", monthLabelID(state.month)) + `  [${res.version}]`, "error", 12000);
       renderGm();
       return;

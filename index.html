@@ -215,6 +215,25 @@
   .tag-head > input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--coral); cursor: pointer; }
   .tag-savebar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 6px 0 12px; }
   @media (max-width: 480px) { .tag-apply, .tag-grid { grid-template-columns: 1fr; } }
+  /* Jeda Department (HR / Superadmin) */
+  .dx-card { border: 1.5px solid var(--border); border-radius: 14px; background: #fff; margin-bottom: 8px; overflow: hidden; }
+  .dx-card.sel { border-color: var(--coral); background: #FFF6F2; }
+  label.dx-row { display: flex; align-items: flex-start; gap: 12px; margin: 0; padding: 12px 14px; font-size: 13px; color: var(--text); cursor: pointer; }
+  .dx-row input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--coral); cursor: pointer; }
+  .dx-main { flex: 1; min-width: 0; }
+  .dx-name { font-size: 14px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+  .dx-meta { margin-top: 2px; font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; }
+  .dx-status { margin-top: 6px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+  .dx-badge { display: inline-block; margin-left: 8px; padding: 1px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; vertical-align: 1px; }
+  .dx-badge.active { background: var(--green-bg); color: var(--green); }
+  .dx-badge.paused { background: var(--amber-bg); color: var(--amber); }
+  .dx-badge.scheduled { background: #E6EEF9; color: #2F5C9E; }
+  .dx-people { border-top: 1px solid var(--border); padding: 8px 14px 10px; font-size: 12px; }
+  .dx-people summary { cursor: pointer; color: var(--teal); font-weight: 600; }
+  .dx-people ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-muted); max-height: 220px; overflow-y: auto; }
+  .dx-people li { margin: 1px 0; overflow-wrap: anywhere; }
+  .dx-form textarea { display: block; width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; font-size: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: #fff; color: var(--text); resize: vertical; margin-bottom: 10px; }
+  .dx-form input[type=month] { margin-bottom: 10px; }
   button.btn-auto { width: auto; padding: 9px 16px; font-size: 13px; border-radius: 12px; white-space: nowrap; }
   button.fbc-btn { width: auto; padding: 9px 16px; font-size: 13px; border-radius: 12px; white-space: nowrap; }
   button.fbc-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
@@ -366,7 +385,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-06-310-bulk-tagging-and-approval-authorization — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-311-department-exclusion — LIVE</div>
 
 <script>
 // =================================================================
@@ -520,6 +539,12 @@ function friendlyError(code) {
     target_not_found: "Data kamu tidak ditemukan di roster. Hubungi admin.",
     too_many: "Terlalu banyak sekaligus (maksimal 500 NIK per kali) — bagi jadi beberapa kali.",
     primary_issue_required: "Pilih isu utamanya dulu.",
+    department_excluded: "Department orang ini sedang dijeda dari penilaian.",
+    month_in_past: "Bulan tidak boleh di masa lalu — pilih bulan ini atau bulan depan.",
+    reason_required: "Alasan wajib diisi (minimal 3 huruf).",
+    departments_required: "Pilih department dulu.",
+    invalid_action: "Aksi tidak dikenal.",
+    exclusion_sheet_invalid: "Sheet Config_Exclusion tidak punya kolom yang diperlukan (Value, FromMonth, ToMonth). Periksa judul kolomnya.",
     invalid_month: "Bulan tidak valid.",
     nothing_to_save: "Tidak ada perubahan untuk disimpan.",
     feedback_not_found: "Feedback orang itu tidak ditemukan di bulan ini.",
@@ -605,6 +630,13 @@ const translations = {
     menu_training_needs: "Training Needs",
     menu_review_all: "Everyone's Performance",
     menu_read_feedback: "Read Staff Feedback",
+  menu_exclusions: "⏸️ Jeda Department",
+  dash_paused_title: "Penilaian dijeda",
+  dash_paused_body: "Penilaian untuk department {dept} sedang dijeda sejak {month}. Kamu tidak perlu mengisi apa pun untuk sementara. Kalau ada pertanyaan, hubungi HR.",
+  dash_paused_badge: "Dijeda",
+  form_dept_excluded: "Penilaian untuk department {dept} sedang dijeda sejak {month}. Tidak ada yang perlu diisi untuk sementara. Kalau ada pertanyaan, hubungi HR.",
+  dt_reason_department_excluded: "Department sedang dijeda dari penilaian",
+  gm_approve_all_skipped_excluded: "{n} orang di department yang sedang dijeda (tidak disentuh).",
     menu_appraise_all: "Appraise All Staff",
     menu_calc_sc: "Calculate Service Charge",
     menu_input_historical: "Input Data Historis",
@@ -1076,6 +1108,13 @@ const translations = {
     menu_training_needs: "Training Needs",
     menu_review_all: "Everyone's Performance",
     menu_read_feedback: "Read Staff Feedback",
+  menu_exclusions: "⏸️ Pause Department",
+  dash_paused_title: "Appraisal paused",
+  dash_paused_body: "The appraisal for the {dept} department has been paused since {month}. You do not need to fill in anything for now. If you have questions, please contact HR.",
+  dash_paused_badge: "Paused",
+  form_dept_excluded: "The appraisal for the {dept} department has been paused since {month}. There is nothing to fill in for now. If you have questions, please contact HR.",
+  dt_reason_department_excluded: "Department is paused from the appraisal",
+  gm_approve_all_skipped_excluded: "{n} people are in a paused department (left untouched).",
     menu_appraise_all: "Appraise All Staff",
     menu_calc_sc: "Calculate Service Charge",
     menu_input_historical: "Enter Historical Data",
@@ -1570,6 +1609,7 @@ function render() {
   if (state.screen === "historical") return renderHistoricalInput();
   if (state.screen === "settings") return renderSettings();
   if (state.screen === "devTools") return renderDevTools();
+  if (state.screen === "exclusions") return renderExclusions();
   if (state.screen === "orgStructure") return renderOrgStructure();
   if (state.screen === "evalWizard") return renderEvaluationWizard();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
@@ -2285,6 +2325,7 @@ function availableScreensGrouped(user) {
     add("gm", t("menu_approve_final"));
     add("trainingNeeds", t("menu_training_needs"));
     add("feedback", t("menu_read_feedback"));
+    add("exclusions", t("menu_exclusions"));
     add("historical", t("menu_input_historical"));
     return [
       { name: "MyTeams", items },
@@ -2330,6 +2371,7 @@ function availableScreensGrouped(user) {
     const reportGroupItems = [];
     if (user.isHR) reportGroupItems.push({ key: "myEvaluationsHR", label: user.appraiseLabel || t("menu_appraise_all") });
     if (user.isAdminOperational) reportGroupItems.push({ key: "historical", label: t("menu_input_historical") });
+    if (user.isHR) reportGroupItems.push({ key: "exclusions", label: t("menu_exclusions") });
     reportGroupItems.push(
       { key: "review", label: t("menu_review_all") },
       { key: "feedback", label: t("menu_read_feedback") },
@@ -2413,6 +2455,7 @@ async function renderDashboard() {
   let selfDoneThisMonth = false;
   let feedbackDoneThisMonth = false;
   let feedbackCatchUpEnabled = false;
+  let excludedInfo = null; // set when this person's department is paused from the appraisal
 
   if (hasSelfCapability) {
     const [historyRes, statusRes, peerRes] = await Promise.all([
@@ -2424,6 +2467,7 @@ async function renderDashboard() {
     selfDoneThisMonth = !!statusRes.selfDone;
     feedbackDoneThisMonth = !!statusRes.feedbackDone;
     feedbackCatchUpEnabled = !!statusRes.feedbackCatchUpEnabled;
+    excludedInfo = statusRes.excluded || null;
 
     if (history.length > 1) {
       const latest = history[history.length - 1];
@@ -2456,12 +2500,26 @@ async function renderDashboard() {
     MyHR: { accent: "#6C4FB6", light: "#EEE8F7" },
   };
 
-  app.innerHTML = topbar("Dashboard Saya") + chartBlock +
+  const pausedBanner = excludedInfo ? `
+    <div class="card" style="background:var(--amber-bg); border-color:#EBD3A6;">
+      <div style="font-weight:800; color:var(--amber); margin-bottom:4px;">⏸️ ${t("dash_paused_title")}</div>
+      <div class="hint" style="font-size:13px; color:var(--text); margin:0;">${escapeHtml(t("dash_paused_body").replace("{dept}", excludedInfo.department || "").replace("{month}", monthLabelID(excludedInfo.since)))}</div>
+    </div>` : "";
+
+  app.innerHTML = topbar("Dashboard Saya") + pausedBanner + chartBlock +
     groups.map((g, gi) => {
       const color = groupColors[g.name] || groupColors.MyAppraisal;
       const groupId = `group-${gi}`;
       const soleGroup = groups.length === 1;
       const itemsHtml = g.items.map(item => {
+        if (item.key === "self" && excludedInfo) {
+          // the department is paused: nothing to fill in, and the tile says so instead of leading to a refusal
+          return `
+            <div class="staff-row" style="opacity:0.55; cursor:not-allowed; border-left: 4px solid var(--border);">
+              <div class="name">${item.label}</div>
+              <span class="badge pending">${t("dash_paused_badge")}</span>
+            </div>`;
+        }
         if (item.key === "self" && selfDoneThisMonth) {
           return `
             <div class="staff-row" style="opacity:0.55; cursor:not-allowed; border-left: 4px solid var(--border);">
@@ -4785,6 +4843,143 @@ function updateOverrideMode() {
   }
 }
 
+/* ---- Jeda Department (HR / Superadmin) ------------------------------------------------------------------------------------
+ * Take whole departments out of the appraisal for a stretch of months — e.g. Maintenance while its head is undecided. Pause or
+ * resume MANY at once: ONE request, ONE reload. The reason is for HR only; staff just see that the appraisal is paused. */
+let _dx = { current: "", departments: [], sel: new Set(), filter: "", busy: false };
+
+function dxVisible() {
+  const q = _dx.filter.trim().toLowerCase();
+  return q ? _dx.departments.filter(d => d.department.toLowerCase().includes(q)) : _dx.departments;
+}
+function dxStatusLine(d) {
+  const r = d.rule; if (!r) return "";
+  const span = d.state === "scheduled" ? `Dijadwalkan mulai ${monthLabelID(r.from)}` : (r.to ? `Dijeda ${monthLabelID(r.from)} – ${monthLabelID(r.to)}` : `Dijeda sejak ${monthLabelID(r.from)}`);
+  const extra = [r.setBy ? `oleh ${r.setBy}` : "", r.reason ? `alasan: ${r.reason}` : ""].filter(Boolean).join(" · ");
+  return extra ? `${span} · ${extra}` : span;
+}
+function dxCardHtml(d) {
+  const sel = _dx.sel.has(d.department);
+  const tiers = Object.keys(d.tiers).map(k => `${d.tiers[k]} ${k}`).join(", ");
+  const badge = { active: ["active", "Aktif"], paused: ["paused", "Dijeda"], scheduled: ["scheduled", "Dijadwalkan"] }[d.state] || ["active", "Aktif"];
+  const people = d.people.length
+    ? `<details class="dx-people"><summary>Lihat siapa saja (${d.people.length})</summary><ul>${d.people.map(p => `<li>${escapeHtml(p.name)}${p.jobTitle ? ` · ${escapeHtml(p.jobTitle)}` : ""}</li>`).join("")}</ul></details>` : "";
+  return `<div class="dx-card${sel ? " sel" : ""}">
+    <label class="dx-row"><input type="checkbox" ${sel ? "checked" : ""} data-dept="${escapeHtml(d.department)}" onchange="dxToggle(this)">
+      <div class="dx-main">
+        <div class="dx-name">${escapeHtml(d.department)}<span class="dx-badge ${badge[0]}">${badge[1]}</span></div>
+        <div class="dx-meta">${d.orphan ? "Tidak ada lagi di roster" : `${d.headcount} orang${tiers ? " · " + escapeHtml(tiers) : ""}`}</div>
+        ${d.rule ? `<div class="dx-status">${escapeHtml(dxStatusLine(d))}</div>` : ""}
+      </div></label>${people}</div>`;
+}
+/** Counters and the action buttons. Touches no cards. */
+function dxRefreshBar() {
+  const vis = dxVisible(), n = _dx.sel.size, shown = vis.filter(d => _dx.sel.has(d.department)).length;
+  const set = (id, fn) => { const el = document.getElementById(id); if (el) fn(el); };
+  set("dx-count", el => { el.textContent = `${n} dipilih`; });
+  set("dx-all", el => { el.checked = vis.length > 0 && shown === vis.length; el.indeterminate = shown > 0 && shown < vis.length; el.disabled = vis.length === 0; });
+  set("dx-pause", el => { el.disabled = _dx.busy || n === 0; el.textContent = `Jeda yang dipilih (${n})`; });
+  set("dx-resume", el => { el.disabled = _dx.busy || n === 0; el.textContent = `Aktifkan kembali yang dipilih (${n})`; });
+}
+function dxRenderList() {
+  const box = document.getElementById("dx-list"); if (!box) return;
+  const vis = dxVisible();
+  box.innerHTML = vis.length ? vis.map(dxCardHtml).join("") : `<div class="fbc-empty">${_dx.departments.length ? "Tidak ada department yang cocok." : "Belum ada department di roster."}</div>`;
+  const n = document.getElementById("dx-n"); if (n) n.textContent = String(_dx.departments.length);
+  dxRefreshBar();
+}
+function dxNote(html) { const el = document.getElementById("dx-note"); if (el) el.innerHTML = html; }
+function dxToggle(el) {
+  const name = el.dataset.dept;
+  if (el.checked) _dx.sel.add(name); else _dx.sel.delete(name);
+  const card = el.closest(".dx-card"); if (card) card.classList.toggle("sel", el.checked);
+  dxRefreshBar();
+}
+function dxSelectAll(checked) { dxVisible().forEach(d => { if (checked) _dx.sel.add(d.department); else _dx.sel.delete(d.department); }); dxRenderList(); }
+function dxFilter(value) { _dx.filter = String(value || ""); dxRenderList(); }
+/** Fetch the overview and update the list in place (the form above it keeps what was typed). */
+async function dxReload() {
+  const res = await apiGet("getExclusionOverview", { requesterId: state.user.staffId });
+  if (!res || res.success === false || res.error) { dxNote(`<span style="color:var(--red);">${escapeHtml(friendlyError(res && res.error))}</span>`); return false; }
+  _dx.current = res.month; _dx.departments = res.departments;
+  const names = new Set(res.departments.map(d => d.department));
+  [..._dx.sel].forEach(n => { if (!names.has(n)) _dx.sel.delete(n); });
+  dxRenderList();
+  return true;
+}
+async function renderExclusions() {
+  _dx = { current: "", departments: [], sel: new Set(), filter: "", busy: false };
+  app.innerHTML = topbar("Jeda Department") + `<div class="loading">Memuat...</div>`;
+  const res = await apiGet("getExclusionOverview", { requesterId: state.user.staffId });
+  const showMenuLink = availableScreens(state.user).length > 1;
+  const back = showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; Kembali ke menu</button>` : "";
+  if (!res || res.success === false || res.error) {
+    app.innerHTML = topbar("Jeda Department") + back + `<div class="card"><div class="error">${escapeHtml(friendlyError(res && res.error))}</div></div>`;
+    return;
+  }
+  _dx.current = res.month; _dx.departments = res.departments;
+  app.innerHTML = topbar("Jeda Department") + back + `
+    <div class="card">
+      <div class="hint" style="font-size:13px; line-height:1.5;">Jeda penilaian <b>per department</b>, misalnya saat kepala department belum jelas diperpanjang atau tidak. Department yang dijeda <b>tidak bisa mengisi Self Appraisal</b>, tidak dinilai, dan hilang dari daftar tugas atasan, Review, Approve, laporan, dan pengingat. <b>Data yang sudah ada tetap tersimpan</b>, dan bulan sebelum jeda tidak berubah.</div>
+    </div>
+    <div class="card dx-form">
+      <label>Mulai bulan</label>
+      <input type="month" id="dx-month" min="${escapeHtml(res.month)}" value="${escapeHtml(res.month)}">
+      <label>Alasan (wajib untuk menjeda)</label>
+      <textarea id="dx-reason" rows="3" placeholder="Contoh: Kepala Maintenance belum jelas diperpanjang atau tidak."></textarea>
+      <div class="hint">Alasan hanya terlihat oleh HR dan Superadmin. Staf hanya melihat bahwa penilaian department mereka dijeda.</div>
+    </div>
+    <div class="card">
+      <div class="fbc-title" style="margin-top:0;">Department (<span id="dx-n">${res.departments.length}</span>)</div>
+      <input type="text" id="dx-filter" class="fbc-filter" placeholder="Cari department…" oninput="dxFilter(this.value)">
+      <div class="fbc-bar">
+        <label class="fbc-all"><input type="checkbox" id="dx-all" onchange="dxSelectAll(this.checked)"> Pilih semua yang tampil</label>
+        <span class="fbc-count" id="dx-count">0 dipilih</span>
+      </div>
+      <div class="row-flex" style="gap:8px; margin-bottom:8px;">
+        <button class="primary btn-auto" id="dx-pause" onclick="doDxAction('pause')" disabled>Jeda yang dipilih (0)</button>
+        <button class="secondary btn-auto" id="dx-resume" onclick="doDxAction('resume')" disabled>Aktifkan kembali yang dipilih (0)</button>
+      </div>
+      <div id="dx-note" class="hint fbc-note"></div>
+      <div id="dx-list"></div>
+    </div>`;
+  dxRenderList();
+}
+/** Pause / resume every ticked department in ONE request, then reload ONCE. */
+async function doDxAction(action) {
+  if (_dx.busy) return;
+  const names = [..._dx.sel];
+  if (!names.length) { dxNote("Centang dulu department-nya."); return; }
+  const month = (document.getElementById("dx-month") || {}).value || "";
+  const reasonEl = document.getElementById("dx-reason"), reason = reasonEl ? reasonEl.value.trim() : "";
+  if (!/^\d{4}-\d{2}$/.test(month)) { dxNote("Pilih bulannya dulu."); return; }
+  if (month < _dx.current) { dxNote("Bulan tidak boleh di masa lalu — pilih bulan ini atau bulan depan."); return; }
+  if (action === "pause" && (reason.match(/[\p{L}\p{N}]/gu) || []).length < 3) { dxNote("Isi alasannya dulu (minimal 3 huruf) — ini tercatat untuk jejak audit."); if (reasonEl) reasonEl.focus(); return; }
+  const people = names.reduce((a, n) => a + ((_dx.departments.find(d => d.department === n) || {}).headcount || 0), 0);
+  const question = action === "pause"
+    ? `Jeda penilaian ${names.length} department (${people} orang) mulai ${monthLabelID(month)}?\n\nMereka tidak bisa mengisi atau dinilai, dan hilang dari daftar tugas, Review, Approve, dan laporan.`
+    : `Aktifkan kembali ${names.length} department (${people} orang) mulai ${monthLabelID(month)}?`;
+  if (!confirm(question)) return;
+  _dx.busy = true; dxRefreshBar(); dxNote("Memproses...");
+  try {
+    const res = await apiPost("setDepartmentExclusions", { requesterId: state.user.staffId, action, departments: names, month, reason });
+    if (!res || res.success === false || res.error) { dxNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    const list = (arr, fmt) => arr.map(x => escapeHtml(fmt(x))).join(", ");
+    const lines = [];
+    if ((res.paused || []).length) lines.push(`✅ Dijeda mulai ${escapeHtml(monthLabelID(res.month))}: ${list(res.paused, x => `${x.department} (${x.people} orang)`)}.`);
+    if ((res.resumed || []).length) lines.push(`✅ Diaktifkan kembali mulai ${escapeHtml(monthLabelID(res.month))}: ${list(res.resumed, x => `${x.department} (${x.people} orang)`)}.`);
+    if ((res.alreadyPaused || []).length) lines.push(`ℹ️ Sudah dijeda sebelumnya: ${list(res.alreadyPaused, x => `${x.department} (sejak ${monthLabelID(x.since)})`)}.`);
+    if ((res.notPaused || []).length) lines.push(`ℹ️ Memang tidak sedang dijeda: ${list(res.notPaused, x => x)}.`);
+    if ((res.notFound || []).length) lines.push(`⚠️ Tidak ditemukan di roster: ${list(res.notFound, x => x)}.`);
+    dxNote(lines.join("<br>") || "Tidak ada yang berubah.");
+    names.forEach(n => _dx.sel.delete(n));
+    if ((res.paused || []).length && reasonEl) reasonEl.value = "";
+    await dxReload();   // ONE reload for the whole batch
+  } finally {
+    _dx.busy = false; dxRefreshBar();
+  }
+}
+
 /** State of the "Izinkan Feedback Menyusul" panel. Selections live here, so filtering or reloading never loses them. */
 let _fbc = { enabled: [], missing: [], selMissing: new Set(), selEnabled: new Set(), filter: "", busy: false };
 
@@ -5129,6 +5324,7 @@ function accessOverrideReasonLabel(reason) {
     too_early: "dt_reason_too_early",
     already_submitted: "dt_reason_already_submitted",
     business_unit_not_yet_active: "dt_reason_business_unit_not_yet_active",
+    department_excluded: "dt_reason_department_excluded",
   };
   return map[reason] ? t(map[reason]) : reason;
 }
@@ -7257,6 +7453,8 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       msg = t("form_deferred");
     } else if (access.reason === "new_hire_this_month") {
       msg = t("form_new_hire");
+    } else if (access.reason === "department_excluded") {
+      msg = escapeHtml(t("form_dept_excluded").replace("{dept}", access.department || "").replace("{month}", monthLabelID(access.since)));
     } else if (access.reason === "business_unit_not_yet_active") {
       msg = `Unit kamu belum mulai siklus appraisal — dijadwalkan aktif mulai <strong>${access.activatesOn}</strong>. Bukan masalah teknis, memang belum waktunya.`;
     } else {
@@ -7740,6 +7938,7 @@ function submitDeniedMessage(res) {
     case "deferred_to_previous_cycle": return { text: "Gagal menyimpan: " + plain(t("form_deferred")), type: "error" };
     case "new_hire_this_month": return { text: "Gagal menyimpan: " + plain(t("form_new_hire")), type: "error" };
     case "business_unit_not_yet_active": return { text: "Gagal menyimpan: " + plain(t("form_unit_not_active")), type: "error" };
+    case "department_excluded": return { text: "Gagal menyimpan: " + plain(t("form_dept_excluded").replace("{dept}", res.department || "").replace("{month}", monthLabelID(res.since))), type: "error" };
     default: return null;
   }
 }
@@ -8412,7 +8611,7 @@ async function approveAll(afterOpening) {
   if (res.error) { showToast(t("gm_approve_all_failed_prefix") + " " + friendlyError(res.error), "error", 9000); return; }
     // An old deployment never sends `version`: say so plainly instead of reading its missing fields as "0 / nothing".
     if (!res.version) { showToast(t("gm_approve_all_stale_server"), "error", 20000); return; }
-    const approved = res.approvedCount || 0, closed = res.skippedClosed || 0, early = res.skippedEarly || 0, manual = res.needsManualCount || 0, outScope = res.skippedOutOfScope || 0;
+    const approved = res.approvedCount || 0, closed = res.skippedClosed || 0, early = res.skippedEarly || 0, manual = res.needsManualCount || 0, outScope = res.skippedOutOfScope || 0, pausedN = res.skippedExcluded || 0;
     const canOpen = !!res.canOpenWindow; // decided by the SERVER (Superadmin, or an Executive granted "ApprovalWindow")
 
     // The usual reason for "nothing happened": the window closed (e.g. the day after it ended). Someone allowed to
@@ -8445,8 +8644,9 @@ async function approveAll(afterOpening) {
     if (early) parts.push(t("gm_approve_all_skipped_early").replace("{n}", early));
     if (manual) parts.push(t("gm_approve_all_needs_manual").replace("{n}", manual));
     if (outScope) parts.push(t("gm_approve_all_out_of_scope").replace("{n}", outScope));
+    if (pausedN) parts.push(t("gm_approve_all_skipped_excluded").replace("{n}", pausedN));
     const skipped = closed + early;
-    if (!approved && !skipped && !manual && !outScope) { // nothing pending at all: wrong month, or already done
+    if (!approved && !skipped && !manual && !outScope && !pausedN) { // nothing pending at all: wrong month, or already done
       showToast(t("gm_approve_all_nothing").replace("{month}", monthLabelID(state.month)) + `  [${res.version}]`, "error", 12000);
       renderGm();
       return;

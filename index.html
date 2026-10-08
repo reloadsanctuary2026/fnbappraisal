@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-319-correct-appraisal — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-08-321-trigger-manager — LIVE</div>
 
 <script>
 // =================================================================
@@ -571,6 +571,9 @@ function friendlyError(code) {
     sheet_not_found: "Sheet tidak bisa dibuka. Cek linknya, dan pastikan akun pemilik skrip punya akses ke Sheet itu.",
     department_excluded: "Department orang ini sedang dijeda dari penilaian.",
     unit_off_cycle: "Bulan ini bukan bulan penilaian untuk unit orang ini.",
+    invalid_enabled: "Permintaan tidak lengkap: tidak jelas mau memasang atau melepas.",
+    invalid_trigger: "Trigger tidak dikenal.",
+    trigger_limit: "Batas 20 trigger per proyek akan terlampaui. Hapus trigger lain yang tidak terpakai dulu di panel Triggers Apps Script.",
     invalid_slot: "Slot tidak dikenal (Self, Leader, atau HR).",
     month_in_future: "Bulan itu belum terjadi.",
     invalid_unit: "Unit bisnis tidak dikenal. Pilih F&B, Gym, atau Back Office.",
@@ -5079,6 +5082,12 @@ async function renderDevTools() {
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
+      <h2>⏰ Trigger otomatis</h2>
+      <div class="hint" style="margin-bottom:10px;">Pekerjaan yang harus berjalan sendiri tiap hari (finalisasi, pengingat tenggat, pemeriksaan, pembersihan, penghangat cache). Dulu dipasang manual di Apps Script. Sekarang cukup centang lalu pasang di sini, dan memasang ulang <b>tidak pernah</b> membuat trigger ganda.</div>
+      <button class="secondary btn-auto" id="tg-load-btn" onclick="tgLoad()">⏰ Muat status trigger</button>
+      <div id="tg-box" style="margin-top:12px;"></div>
+    </div>
+    <div class="card">
       <h2>📥 Import KPI dari Google Sheet</h2>
       <div class="hint" style="margin-bottom:10px;">Baca langsung dari Sheet (bukan hardcode di kode) — 1 tab per Job Title, format: Section | Nama Kriteria | Target | Rubrik Skor 1 | Rubrik Skor 3 | Rubrik Skor 5 | Bobot % Kriteria (opsional) | Bobot % Section (opsional). Section tanpa bobot dibagi rata dari SISA persentase (bukan dari 100 lagi) — jadi bisa pin 1 section ke angka tertentu (misal 50%), sisanya otomatis dibagi rata ke section lain. Tab "INDEX" dilewatin otomatis. Salah/typo tinggal edit di Sheet, jalanin lagi.</div>
       <div class="hint" style="margin-bottom:10px; color:var(--teal);">Contoh: 3 section, section pertama dikasih 50% di kolom Bobot Section, 2 section lain dikosongin → otomatis jadi 50/25/25 (SISA 50% dibagi rata ke 2 section yang kosong).</div>
@@ -5508,6 +5517,90 @@ async function doKcApply() {
   }
 }
 
+/* ---- Trigger otomatis (Superadmin, Dev Tools) ---------------------------------------------------------------------------------
+ * Every trigger the app needs, in one list: see which are installed, install or remove several in ONE request. Installing always replaces what
+ * exists for that function, so a trigger can never run twice. The script's time zone is shown because the daily hours follow it. */
+let _tg = { managed: [], others: [], sel: new Set(), busy: false };
+function tgRowHtml(t) {
+  const sel = _tg.sel.has(t.key);
+  const badge = t.count > 1 ? `<span style="color:var(--red); font-weight:700;">⚠️ Ganda (${t.count}×), pasang untuk merapikan</span>` : (t.installed ? `<span style="color:var(--green); font-weight:700;">✅ Aktif</span>` : `<span style="color:var(--amber); font-weight:700;">❌ Belum dipasang</span>`);
+  return `<div class="us-unit${sel ? " sel" : ""}"><label class="us-unit-row"><input type="checkbox" data-trigger="${escapeHtml(t.key)}" ${sel ? "checked" : ""} onchange="tgToggle(this)">
+    <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:700;">${escapeHtml(t.label)}${t.critical ? ` <span style="font-size:11px; font-weight:700; color:var(--coral);">· penting</span>` : ""}</div>
+      <div style="margin-top:2px; font-size:12px;">${badge} · ${escapeHtml(t.schedule)}</div>
+      <div style="margin-top:4px; font-size:12px; color:var(--text-muted);">${escapeHtml(t.desc)}</div>
+      <div style="margin-top:2px; font-size:11px; color:var(--text-muted);">fungsi: ${escapeHtml(t.key)}</div></div></label></div>`;
+}
+function tgRefreshBar() {
+  const n = _tg.sel.size, on = document.getElementById("tg-install-btn"), off = document.getElementById("tg-remove-btn");
+  if (on) { on.disabled = _tg.busy || n === 0; on.textContent = `Pasang yang dipilih (${n})`; }
+  if (off) { off.disabled = _tg.busy || n === 0; off.textContent = `Lepas yang dipilih (${n})`; }
+}
+function tgRender(res) {
+  const box = document.getElementById("tg-box"); if (!box) return;
+  const missing = _tg.managed.filter(t => !t.installed || t.count > 1).length;
+  const others = (_tg.others || []).length ? `<details style="margin-top:10px; font-size:12px;"><summary style="cursor:pointer; color:var(--teal); font-weight:600;">Trigger lain di proyek ini (${_tg.others.length}) — tidak dikelola di sini</summary><ul style="margin:6px 0 0; padding-left:20px; color:var(--text-muted); overflow-wrap:anywhere;">${_tg.others.map(o => `<li>${escapeHtml(o.handler)} <span style="opacity:.7;">(${escapeHtml(o.type)})</span></li>`).join("")}</ul></details>` : "";
+  box.innerHTML = `<div class="hint" style="margin-bottom:8px; overflow-wrap:anywhere;">${res.timeZone ? `Zona waktu skrip: <b>${escapeHtml(res.timeZone)}</b> · sekarang <b>${escapeHtml(res.now || "-")}</b>. Jam harian mengikuti zona ini.` : "Zona waktu skrip tidak terbaca."} Terpakai ${res.total} dari ${res.limit} trigger.</div>
+    <div>${_tg.managed.map(tgRowHtml).join("")}</div>
+    <div class="row-flex" style="gap:8px; margin-top:6px; flex-wrap:wrap;">
+      <button class="secondary" style="flex:1 1 auto; white-space:nowrap;" onclick="tgSelectMissing()">Pilih yang belum aktif (${missing})</button>
+      <button class="primary" id="tg-install-btn" style="flex:1 1 auto; white-space:nowrap;" onclick="doTgApply(true)" disabled>Pasang yang dipilih (0)</button>
+      <button class="secondary" id="tg-remove-btn" style="flex:1 1 auto; white-space:nowrap;" onclick="doTgApply(false)" disabled>Lepas yang dipilih (0)</button>
+    </div>
+    <div id="tg-note" class="hint" style="margin-top:8px; overflow-wrap:anywhere;"></div>${others}`;
+  tgRefreshBar();
+}
+function tgNote(html) { const el = document.getElementById("tg-note"); if (el) el.innerHTML = html; }
+function tgToggle(el) {
+  const k = el.dataset.trigger; if (el.checked) _tg.sel.add(k); else _tg.sel.delete(k);
+  const card = el.closest(".us-unit"); if (card) card.classList.toggle("sel", el.checked);
+  tgRefreshBar();
+}
+function tgSelectMissing() {
+  _tg.sel = new Set(_tg.managed.filter(t => !t.installed || t.count > 1).map(t => t.key));
+  document.querySelectorAll("#tg-box input[data-trigger]").forEach(cb => { cb.checked = _tg.sel.has(cb.dataset.trigger); const card = cb.closest(".us-unit"); if (card) card.classList.toggle("sel", cb.checked); });
+  tgRefreshBar();
+}
+async function tgLoad() {
+  if (_tg.busy) return;
+  const btn = document.getElementById("tg-load-btn"), box = document.getElementById("tg-box");
+  _tg.busy = true; if (btn) btn.disabled = true; if (box && !_tg.managed.length) box.textContent = "Memuat...";
+  try {
+    const res = await apiGet("getTriggerOverview", { requesterId: state.user.staffId });
+    if (!res || res.success === false || res.error) { if (box) box.innerHTML = `<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`; return; }
+    const keepNote = (document.getElementById("tg-note") || {}).innerHTML || "";
+    _tg.managed = res.managed || []; _tg.others = res.others || [];
+    const known = new Set(_tg.managed.map(t => t.key)); Array.from(_tg.sel).forEach(k => { if (!known.has(k)) _tg.sel.delete(k); });
+    tgRender(res); tgNote(keepNote);
+  } finally {
+    _tg.busy = false; if (btn) btn.disabled = false; tgRefreshBar();
+  }
+}
+async function doTgApply(enabled) {
+  if (_tg.busy) return;
+  const keys = Array.from(_tg.sel);
+  if (!keys.length) { tgNote("Centang dulu triggernya."); return; }
+  const labels = keys.map(k => (_tg.managed.find(t => t.key === k) || {}).label || k).join(", ");
+  const critical = keys.some(k => (_tg.managed.find(t => t.key === k) || {}).critical);
+  const question = enabled === true
+    ? `Pasang ${keys.length} trigger?\n\n${labels}\n\nYang sudah ada untuk fungsi yang sama diganti, jadi tidak pernah jadi ganda.`
+    : `Lepas ${keys.length} trigger?\n\n${labels}\n\n${critical ? "Ada yang bertanda PENTING: tanpa trigger itu pekerjaannya berhenti berjalan otomatis.\n\n" : ""}Bisa dipasang lagi kapan saja dari sini.`;
+  if (!confirm(question)) return;
+  _tg.busy = true; tgRefreshBar(); tgNote("Memproses...");
+  try {
+    const res = await apiPost("setTriggers", { requesterId: state.user.staffId, keys, enabled: enabled === true });
+    if (!res || res.success === false || res.error) { tgNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    const lines = (res.results || []).map(r => {
+      const label = (_tg.managed.find(t => t.key === r.key) || {}).label || r.key;
+      if (r.error) return `<span style="color:var(--red);">⚠️ ${escapeHtml(label)}: gagal (${escapeHtml(r.error)})</span>`;
+      return r.installed ? `✅ ${escapeHtml(label)}: dipasang${r.replaced ? ` (menggantikan ${r.replaced} yang lama)` : ""}.` : `🗑️ ${escapeHtml(label)}: dilepas${r.replaced ? "" : " (memang belum ada)"}.`;
+    });
+    tgNote(lines.join("<br>")); _tg.sel.clear();
+  } finally {
+    _tg.busy = false;
+  }
+  await tgLoad();   // ONE reload for the whole change
+}
+
 /* ---- Kecepatan sistem (Superadmin, Dev Tools) --------------------------------------------------------------------------- */
 let _perfBusy = false;
 function perfFmt(ms) {
@@ -5527,25 +5620,8 @@ function perfWarmHtml(w) {
   const roster = last ? (last.rosterCached
     ? `Roster ${kb} KB, muat di cache.`
     : `<span style="color:var(--red);">⚠️ Roster ${kb} KB TIDAK muat di cache (batas 100 KB per entri): setiap permintaan membaca ulang dari HR sheet. Beri tahu pengembang.</span>`) : "";
-  const btn = w.installed
-    ? `<button class="secondary btn-auto" onclick="doSetWarm(false)">Matikan penghangat</button>`
-    : `<button class="primary btn-auto" onclick="doSetWarm(true)">Aktifkan penghangat cache</button>`;
+  const btn = `<span style="font-size:12px; color:var(--text-muted);">Pasang atau lepas lewat kartu <b>⏰ Trigger otomatis</b>.</span>`;
   return `<div style="margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border);"><div>${status}</div>${roster ? `<div style="margin-top:4px;">${roster}</div>` : ""}<div style="margin-top:8px;">${btn}</div></div>`;
-}
-let _warmBusy = false;
-async function doSetWarm(enabled) {
-  if (_warmBusy) return;
-  if (enabled === true && !confirm("Pasang penghangat cache?\n\nIa berjalan otomatis tiap 5 menit di Apps Script (memakai kuota waktu trigger harian, beberapa detik per jalan) supaya login dan Review tidak lambat setelah jeda sepi. Bisa dimatikan kapan saja dari sini.")) return;
-  _warmBusy = true;
-  const box = document.getElementById("perf-result");
-  try {
-    const res = await apiPost("setWarmCacheTrigger", { requesterId: state.user.staffId, enabled: enabled === true });
-    if (!res || res.success === false || res.error) { if (box) box.innerHTML = `<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`; return; }
-    showToast(enabled === true ? "Penghangat cache aktif." : "Penghangat cache dimatikan.");
-  } finally {
-    _warmBusy = false;
-  }
-  await doLoadPerf();
 }
 function perfSummaryHtml(res) {
   const warm = perfWarmHtml(res.warm);
@@ -7783,7 +7859,7 @@ function renderCustomFormBody(evaluatorType, target, cfg) {
         <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
           ${t("form_feedback_privacy")}
         </div>
-        <textarea id="management-feedback" rows="4" oninput="clearFeedbackError()" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
+        <textarea id="management-feedback" rows="4" oninput="clearFeedbackError(); stashFeedbackDraft()" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
         <div class="error" id="feedback-error"></div>
         
       ` : ""}
@@ -7795,14 +7871,18 @@ function renderCustomFormBody(evaluatorType, target, cfg) {
       </div>
     </div>`;
 
+  restorePendingFeedback(); // FIRST: whatever happens below, the feedback the person already wrote must come back
   Object.keys(state.scores).forEach(criterion => {
     const row = app.querySelector(`.criterion-row[data-criterion="${CSS.escape(criterion)}"]`);
     if (!row) return;
     const val = state.scores[criterion];
-    const opt = row.querySelector(`.score-opt:nth-child(${val})`);
-    if (opt) { opt.classList.add("selected"); }
     const textarea = row.querySelector(".custom-text-answer");
-    if (textarea && typeof val === "string") textarea.value = val;
+    // A text row's answer is TEXT. It used to be pasted into ".score-opt:nth-child(<the sentence>)" — an invalid selector that throws and aborts the whole
+    // restore, so every score after it, the progress counter and the feedback box all came back empty.
+    if (textarea) { if (typeof val === "string") textarea.value = val; return; }
+    const k = Number(val);
+    const opt = Number.isInteger(k) && k >= 1 ? row.querySelector(`.score-opt:nth-child(${k})`) : null;
+    if (opt) opt.classList.add("selected");
   });
   updateProgressCounter();
 }
@@ -7891,7 +7971,7 @@ function renderFormBody(evaluatorType, target, cfg) {
         <div class="hint" style="background:var(--sand); padding:10px 12px; border-radius:10px; margin-bottom:10px; font-style:italic;">
           ${t("form_feedback_privacy")}
         </div>
-        <textarea id="management-feedback" rows="4" oninput="clearFeedbackError()" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
+        <textarea id="management-feedback" rows="4" oninput="clearFeedbackError(); stashFeedbackDraft()" placeholder="${t("form_feedback_placeholder")}" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;"></textarea>
         <div class="error" id="feedback-error"></div>
         
       ` : ""}
@@ -7925,10 +8005,7 @@ function renderFormBody(evaluatorType, target, cfg) {
       if (notesEl) notesEl.value = b.notes || "";
     });
   }
-  if (state._pendingFeedback) {
-    const feedbackEl = document.getElementById("management-feedback");
-    if (feedbackEl) feedbackEl.value = state._pendingFeedback;
-  }
+  restorePendingFeedback();
   updateProgressCounter();
 }
 
@@ -7984,6 +8061,18 @@ function cancelForm() {
 const FEEDBACK_MIN_CHARS = 5;
 // Only letters and digits count (any script) — "....." or "-----" is not feedback. Same rule as the server (isValidFeedbackText).
 function feedbackTextOk(text) { const m = String(text || "").match(/[\p{L}\p{N}]/gu); return !!m && m.length >= FEEDBACK_MIN_CHARS; }
+/** The feedback text lives in state between the form and its confirmation screen ("Kembali, Cek Lagi" redraws the form). EVERY form variant must put it back:
+ *  the custom-structure form used to forget, so the box came back empty and the person was told feedback is required right after writing it. */
+function restorePendingFeedback() {
+  if (!state._pendingFeedback) return;
+  const el = document.getElementById("management-feedback");
+  if (el) el.value = state._pendingFeedback;
+}
+/** Keep the draft in state as it is typed, so no redraw, back button or error can ever cost the person their text. */
+function stashFeedbackDraft() {
+  const el = document.getElementById("management-feedback");
+  if (el) state._pendingFeedback = el.value;
+}
 function clearFeedbackError() { const el = document.getElementById("feedback-error"); if (el) el.textContent = ""; }
 function requireFeedbackField(elId) {
   const el = document.getElementById(elId);

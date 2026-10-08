@@ -234,6 +234,19 @@
   .dx-people li { margin: 1px 0; overflow-wrap: anywhere; }
   .dx-form textarea { display: block; width: 100%; box-sizing: border-box; padding: 10px 12px; font: inherit; font-size: 14px; border: 1.5px solid var(--border); border-radius: 12px; background: #fff; color: var(--text); resize: vertical; margin-bottom: 10px; }
   .dx-form input[type=month] { margin-bottom: 10px; }
+  /* Jadwal penilaian per unit */
+  .us-chip { display: inline-block; min-width: 36px; text-align: center; padding: 2px 6px; margin: 2px 4px 2px 0; border-radius: 8px; font-size: 11px; font-weight: 700; }
+  .us-chip.on { background: var(--green-bg); color: var(--green); }
+  .us-chip.off { background: #F1ECE6; color: var(--text-muted); }
+  .us-unit { border: 1.5px solid var(--border); border-radius: 14px; background: #fff; margin-bottom: 8px; padding: 12px 14px; overflow-wrap: anywhere; }
+  .us-unit.sel { border-color: var(--coral); background: #FFF6F2; }
+  label.us-unit-row { display: flex; align-items: flex-start; gap: 12px; margin: 0; font-size: 13px; color: var(--text); cursor: pointer; }
+  .us-unit-row input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--coral); cursor: pointer; }
+  .us-months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0 10px; }
+  label.us-month { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0; padding: 8px 4px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 12px; font-weight: 600; background: #fff; cursor: pointer; }
+  label.us-month.on { border-color: var(--teal); background: var(--green-bg); color: var(--green); }
+  .us-month input { display: none; }
+  .us-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
   button.btn-auto { width: auto; padding: 9px 16px; font-size: 13px; border-radius: 12px; white-space: nowrap; }
   button.fbc-btn { width: auto; padding: 9px 16px; font-size: 13px; border-radius: 12px; white-space: nowrap; }
   button.fbc-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
@@ -385,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-317-faster-screens-retry-and-warmup — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-07-319-correct-appraisal — LIVE</div>
 
 <script>
 // =================================================================
@@ -535,7 +548,6 @@ function friendlyError(code) {
     training_notes_required: "Isi dulu apa yang perlu di-training/coaching.",
     record_not_found: "Gak ketemu record buat NIK dan bulan itu.",
     not_currently_approved: "Record ini belum/gak lagi berstatus Approved — gak ada yang perlu di-revert.",
-    reason_required: "Alasan wajib diisi.",
     backoffice_override_has_no_effect: "Ini Back Office — otomatis Self+Leader, override di sini gak akan ngefek.",
     decision_required: "Decision belum dipilih.",
     one_on_one_status_required: "1-on-1 Status belum dipilih.",
@@ -553,12 +565,17 @@ function friendlyError(code) {
     target_not_found: "Data kamu tidak ditemukan di roster. Hubungi admin.",
     too_many: "Terlalu banyak sekaligus (maksimal 500 NIK per kali) — bagi jadi beberapa kali.",
     primary_issue_required: "Pilih isu utamanya dulu.",
-    invalid_unit: "Unit bisnis tidak dikenal.",
     invalid_scope: "Pilihan siapa yang direset tidak dikenal.",
     month_not_current: "Reset hanya untuk bulan berjalan.",
     no_template_tab: "Sheet itu belum punya tab contoh. Buat satu tab job title (atau satu tab bernama TEMPLATE) dulu.",
     sheet_not_found: "Sheet tidak bisa dibuka. Cek linknya, dan pastikan akun pemilik skrip punya akses ke Sheet itu.",
     department_excluded: "Department orang ini sedang dijeda dari penilaian.",
+    unit_off_cycle: "Bulan ini bukan bulan penilaian untuk unit orang ini.",
+    invalid_slot: "Slot tidak dikenal (Self, Leader, atau HR).",
+    month_in_future: "Bulan itu belum terjadi.",
+    invalid_unit: "Unit bisnis tidak dikenal. Pilih F&B, Gym, atau Back Office.",
+    invalid_months: "Pilih minimal satu bulan penilaian (Januari sampai Desember).",
+    unit_schedule_sheet_invalid: "Sheet Config_UnitSchedule tidak punya kolom yang diperlukan (Unit, FromMonth, ToMonth, Months). Periksa judul kolomnya.",
     month_in_past: "Bulan tidak boleh di masa lalu — pilih bulan ini atau bulan depan.",
     reason_required: "Alasan wajib diisi (minimal 3 huruf).",
     departments_required: "Pilih department dulu.",
@@ -653,6 +670,11 @@ const translations = {
   dash_paused_title: "Penilaian dijeda",
   dash_paused_body: "Penilaian untuk department {dept} sedang dijeda sejak {month}. Kamu tidak perlu mengisi apa pun untuk sementara. Kalau ada pertanyaan, hubungi HR.",
   dash_paused_badge: "Dijeda",
+  dash_offcycle_title: "Bukan bulan penilaian",
+  dash_offcycle_body: "Unit {unit} dinilai sesuai jadwalnya sendiri, dan bulan ini bukan jadwalnya. Kamu tidak perlu mengisi apa pun. Penilaian berikutnya: {month}.",
+  dash_offcycle_badge: "Bukan bulannya",
+  form_unit_offcycle: "Bulan ini bukan bulan penilaian untuk unit {unit}. Tidak ada yang perlu diisi. Penilaian berikutnya: {month}.",
+  dt_reason_unit_off_cycle: "Bukan bulan penilaian unit ini (sesuai jadwal unit)",
   form_dept_excluded: "Penilaian untuk department {dept} sedang dijeda sejak {month}. Tidak ada yang perlu diisi untuk sementara. Kalau ada pertanyaan, hubungi HR.",
   dt_reason_department_excluded: "Department sedang dijeda dari penilaian",
   gm_approve_all_skipped_excluded: "{n} orang di department yang sedang dijeda (tidak disentuh).",
@@ -1132,6 +1154,11 @@ const translations = {
   dash_paused_title: "Appraisal paused",
   dash_paused_body: "The appraisal for the {dept} department has been paused since {month}. You do not need to fill in anything for now. If you have questions, please contact HR.",
   dash_paused_badge: "Paused",
+  dash_offcycle_title: "Not an appraisal month",
+  dash_offcycle_body: "The {unit} unit is appraised on its own schedule, and this month is not part of it. You do not need to fill in anything. Next appraisal: {month}.",
+  dash_offcycle_badge: "Not this month",
+  form_unit_offcycle: "This month is not an appraisal month for the {unit} unit. There is nothing to fill in. Next appraisal: {month}.",
+  dt_reason_unit_off_cycle: "Not an appraisal month for this unit (unit schedule)",
   form_dept_excluded: "The appraisal for the {dept} department has been paused since {month}. There is nothing to fill in for now. If you have questions, please contact HR.",
   dt_reason_department_excluded: "Department is paused from the appraisal",
   gm_approve_all_skipped_excluded: "{n} people are in a paused department (left untouched).",
@@ -2520,11 +2547,16 @@ async function renderDashboard() {
     MyHR: { accent: "#6C4FB6", light: "#EEE8F7" },
   };
 
-  const pausedBanner = excludedInfo ? `
+  const offCycle = !!(excludedInfo && excludedInfo.kind === "unit_schedule");
+  const pausedBanner = excludedInfo ? (offCycle ? `
+    <div class="card" style="background:var(--amber-bg); border-color:#EBD3A6;">
+      <div style="font-weight:800; color:var(--amber); margin-bottom:4px;">📅 ${t("dash_offcycle_title")}</div>
+      <div class="hint" style="font-size:13px; color:var(--text); margin:0;">${escapeHtml(t("dash_offcycle_body").replace("{unit}", excludedInfo.unitLabel || excludedInfo.unit || "").replace("{month}", excludedInfo.nextActive ? monthLabelID(excludedInfo.nextActive) : "-"))}</div>
+    </div>` : `
     <div class="card" style="background:var(--amber-bg); border-color:#EBD3A6;">
       <div style="font-weight:800; color:var(--amber); margin-bottom:4px;">⏸️ ${t("dash_paused_title")}</div>
       <div class="hint" style="font-size:13px; color:var(--text); margin:0;">${escapeHtml(t("dash_paused_body").replace("{dept}", excludedInfo.department || "").replace("{month}", monthLabelID(excludedInfo.since)))}</div>
-    </div>` : "";
+    </div>`) : "";
 
   app.innerHTML = topbar("Dashboard Saya") + pausedBanner + chartBlock +
     groups.map((g, gi) => {
@@ -2537,7 +2569,7 @@ async function renderDashboard() {
           return `
             <div class="staff-row" style="opacity:0.55; cursor:not-allowed; border-left: 4px solid var(--border);">
               <div class="name">${item.label}</div>
-              <span class="badge pending">${t("dash_paused_badge")}</span>
+              <span class="badge pending">${t(offCycle ? "dash_offcycle_badge" : "dash_paused_badge")}</span>
             </div>`;
         }
         if (item.key === "self" && selfDoneThisMonth) {
@@ -4646,182 +4678,10 @@ async function doDeletePositionMapEntry(idx) {
   await renderOrgStructure();
 }
 
-async function doFindSuspiciousHrScores(btnEl) {
-  const month = document.getElementById("suspicious-hr-month").value.trim();
-  const threshold = document.getElementById("suspicious-hr-threshold").value.trim();
-  const resultEl = document.getElementById("suspicious-hr-result");
-  btnEl.disabled = true;
-  const originalLabel = btnEl.textContent;
-  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Mencari...`;
 
-  const res = await apiGet("findSuspiciousHrScores", { requesterId: state.user.staffId, month: month || undefined, threshold: threshold || undefined });
-  btnEl.disabled = false;
-  btnEl.textContent = originalLabel;
 
-  if (res.error || res.success === false) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
-    return;
-  }
-  const flagged = res.flagged || [];
-  if (!flagged.length) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Gak ada yang selisihnya ≥ ${res.threshold} bulan ini.</div>`;
-    return;
-  }
-  resultEl.innerHTML = `
-    <div style="background:#fff; border-radius:8px; padding:10px;">
-      <strong style="color:var(--red);">⚠️ ${flagged.length} orang selisih HR-nya ≥ ${res.threshold} poin dari rata-rata Self+Leader:</strong>
-      ${flagged.map(f => `
-        <div class="hint" style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border); color:var(--text);">
-          <strong>${escapeAttr(f.name)}</strong> (NIK ${f.staffId}) — Self ${f.selfTotal.toFixed(1)}, Leader ${f.leaderTotal.toFixed(1)}, <span style="color:var(--red); font-weight:700;">HR ${f.hrTotal.toFixed(1)}</span> — selisih ${f.deviation}
-        </div>`).join("")}
-    </div>`;
-}
 
-async function doSyncStaleLeaderCopies(btnEl) {
-  const month = document.getElementById("stale-sync-month").value.trim();
-  const resultEl = document.getElementById("stale-sync-result");
-  btnEl.disabled = true;
-  const originalLabel = btnEl.textContent;
-  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Nyari & nyamain ulang...`;
-  resultEl.innerHTML = "";
 
-  const res = await apiPost("syncStaleLeaderCopies", { requesterId: state.user.staffId, month: month || undefined });
-  btnEl.disabled = false;
-  btnEl.textContent = originalLabel;
-
-  if (res.error || res.success === false) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
-    return;
-  }
-  const fixed = res.fixed || [];
-  const skippedApproved = res.skippedApproved || [];
-  if (!fixed.length && !skippedApproved.length) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Semua HR yang pernah "Samakan" masih sinkron sama Leader-nya. Gak ada yang ketinggalan.</div>`;
-    return;
-  }
-  resultEl.innerHTML = `
-    ${fixed.length ? `
-      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
-        <strong style="color:var(--teal);">✅ ${fixed.length} berhasil disamakan ulang (Leader-nya emang udah berubah):</strong>
-        ${fixed.map(f => `<div class="hint" style="margin-top:4px;">${escapeAttr(f.name)}</div>`).join("")}
-      </div>` : ""}
-    ${skippedApproved.length ? `
-      <div style="background:#fff; border-radius:8px; padding:10px;">
-        <strong style="color:var(--red);">⚠️ ${skippedApproved.length} ketinggalan TAPI udah di-Approve, perlu Revert dulu:</strong>
-        ${skippedApproved.map(s => `<div class="hint" style="margin-top:4px;">${escapeAttr(s.name)}</div>`).join("")}
-      </div>` : ""}
-  `;
-}
-
-async function doBulkRecopyLeaderToHr(btnEl) {
-  const month = document.getElementById("bulk-recopy-month").value.trim();
-  const resultEl = document.getElementById("bulk-recopy-result");
-  btnEl.disabled = true;
-  const originalLabel = btnEl.textContent;
-  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Menyamakan ulang...`;
-  resultEl.innerHTML = "";
-
-  const res = await apiPost("bulkRecopyLeaderToHr", { requesterId: state.user.staffId, month: month || undefined });
-  btnEl.disabled = false;
-  btnEl.textContent = originalLabel;
-
-  if (res.error || res.success === false) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
-    return;
-  }
-  const fixed = res.fixed || [];
-  const skippedApproved = res.skippedApproved || [];
-  const skippedNoLeaderCopy = res.skippedNoLeaderCopy || [];
-  if (!fixed.length && !skippedApproved.length && !skippedNoLeaderCopy.length) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Gak ada yang kena bug ini bulan tersebut.</div>`;
-    return;
-  }
-  resultEl.innerHTML = `
-    ${fixed.length ? `
-      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
-        <strong style="color:var(--teal);">✅ ${fixed.length} berhasil disamakan ulang:</strong>
-        ${fixed.map(f => `<div class="hint" style="margin-top:4px;">${escapeAttr(f.name)}</div>`).join("")}
-      </div>` : ""}
-    ${skippedApproved.length ? `
-      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
-        <strong style="color:var(--red);">⚠️ ${skippedApproved.length} udah di-Approve, perlu revert dulu:</strong>
-        ${skippedApproved.map(s => `<div class="hint" style="margin-top:4px;">${escapeAttr(s.name)}</div>`).join("")}
-      </div>` : ""}
-    ${skippedNoLeaderCopy.length ? `
-      <div style="background:#fff; border-radius:8px; padding:10px;">
-        <strong>ℹ️ ${skippedNoLeaderCopy.length} dilewatin (bukan hasil "Samakan", kemungkinan genuinely diisi manual):</strong>
-        ${skippedNoLeaderCopy.map(s => `<div class="hint" style="margin-top:4px;">${escapeAttr(s.name)}</div>`).join("")}
-      </div>` : ""}
-  `;
-}
-
-async function doRevertApproval(btnEl) {
-  const staffId = document.getElementById("revert-approval-staffid").value.trim();
-  const month = document.getElementById("revert-approval-month").value.trim();
-  const reason = document.getElementById("revert-approval-reason").value.trim();
-  const resultEl = document.getElementById("revert-approval-result");
-  if (!staffId || !month || !reason) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">NIK, bulan, dan alasan wajib diisi semua.</div>`;
-    return;
-  }
-  if (!confirm(`Yakin buka kunci Approval buat NIK ${staffId}, bulan ${month}? Record-nya bakal balik ke "Pending" — perlu di-Approve ulang setelah dibenerin.`)) return;
-
-  btnEl.disabled = true;
-  const originalLabel = btnEl.textContent;
-  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Memproses...`;
-  const res = await apiPost("revertApproval", { requesterId: state.user.staffId, staffId, month, reason });
-  btnEl.disabled = false;
-  btnEl.textContent = originalLabel;
-
-  if (res.error || res.success === false) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
-    return;
-  }
-  resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ ${escapeAttr(res.staffName || staffId)} bulan ${month} udah balik ke "Pending" — sekarang bisa dibenerin/direcompute, terus di-Approve ulang.</div>`;
-}
-
-async function doRecomputeForgottenHrScores(btnEl) {
-  const monthInput = document.getElementById("recompute-hr-month").value.trim();
-  const resultEl = document.getElementById("recompute-hr-result");
-  btnEl.disabled = true;
-  const originalLabel = btnEl.textContent;
-  btnEl.innerHTML = `<span class="btn-spinner dark"></span>Menghitung ulang...`;
-  resultEl.innerHTML = "";
-
-  const res = await apiPost("recomputeForgottenHrScores", { requesterId: state.user.staffId, month: monthInput || undefined });
-  btnEl.disabled = false;
-  btnEl.textContent = originalLabel;
-
-  if (res.error || res.success === false) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">Gagal: ${friendlyError(res.error)}</div>`;
-    return;
-  }
-
-  const autoFixed = res.autoFixed || [];
-  const needsReview = res.needsManualReview || [];
-  const negativeScoresFixed = res.negativeScoresFixed || [];
-  if (!autoFixed.length && !needsReview.length && !negativeScoresFixed.length) {
-    resultEl.innerHTML = `<div class="hint" style="color:#fff;">✅ Gak ada skor HR 0.0 atau skor negatif bulan ini.</div>`;
-    return;
-  }
-  resultEl.innerHTML = `
-    ${negativeScoresFixed.length ? `
-      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
-        <strong style="color:var(--red);">🔴 ${negativeScoresFixed.length} skor NEGATIF dibenerin ke 0:</strong>
-        ${negativeScoresFixed.map(n => `<div class="hint" style="margin-top:4px;">${escapeAttr(n.name)} (${n.evaluatorType}): ${n.oldValue} → 0</div>`).join("")}
-      </div>` : ""}
-    ${autoFixed.length ? `
-      <div style="background:#fff; border-radius:8px; padding:10px; margin-bottom:8px;">
-        <strong style="color:var(--teal);">✅ ${autoFixed.length} langsung dibenerin otomatis:</strong>
-        ${autoFixed.map(a => `<div class="hint" style="margin-top:4px;">${escapeAttr(a.name)}: ${a.oldScore} → <strong>${a.newScore}</strong></div>`).join("")}
-      </div>` : ""}
-    ${needsReview.length ? `
-      <div style="background:#fff; border-radius:8px; padding:10px;">
-        <strong style="color:var(--red);">⚠️ ${needsReview.length} UDAH di-Approve, perlu kamu review manual:</strong>
-        ${needsReview.map(n => `<div class="hint" style="margin-top:4px;">${escapeAttr(n.name)} (skor sekarang: ${n.oldScore})</div>`).join("")}
-      </div>` : ""}
-  `;
-}
 
 function updateOverrideMode() {
   const mode = document.getElementById("override-mode").value;
@@ -4837,19 +4697,6 @@ function updateOverrideMode() {
         <button class="secondary" style="flex:0 0 auto;" onclick="doLoadAccessOverrideStatus()">${t("dt_search_btn")}</button>
       </div>
       <div id="access-override-results" style="margin-top:12px;"></div>`;
-  } else if (mode === "quota") {
-    descEl.textContent = "Tiap orang cuma boleh submit 1x per slot per bulan. Kalau ada yang submit dengan struktur KPI yang udah ketinggalan (misal Job Title-nya baru di-redirect/di-migrasi ke struktur baru SETELAH dia submit), pakai ini buat kasih jatah submit 1x lagi — data lama otomatis KETIMPA begitu dia submit ulang, bukan numpuk. Ini CUMA buka kuncinya; data lama TETAP ada sampai orangnya beneran submit ulang.";
-    controlsEl.innerHTML = `
-      <label>NIK Staff</label>
-      <input type="text" id="reset-submission-nik" placeholder="Contoh: 1198" />
-      <label style="margin-top:8px; display:block;">Slot</label>
-      <select id="reset-submission-slot" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border);">
-        <option value="self">Self</option>
-        <option value="leader">Leader</option>
-        <option value="hr">HR</option>
-      </select>
-      <button class="primary" id="reset-submission-btn" style="margin-top:8px;" onclick="doResetSubmissionCount()">Reset Jatah Submit</button>
-      <div id="reset-submission-result" class="hint" style="margin-top:8px;"></div>`;
   } else if (mode === "feedback") {
     descEl.textContent = "Feedback ke management WAJIB diisi saat Self Appraisal. Ini satu-satunya jalan untuk menyusul atau menambah: kamu membukanya per orang (boleh banyak sekaligus), dan tiap pintu tertutup sendiri begitu feedback orangnya tersimpan. Hanya superadmin yang bisa.";
     _fbc = { enabled: [], missing: [], selMissing: new Set(), selEnabled: new Set(), filter: "", busy: false };
@@ -5154,57 +5001,6 @@ async function doBulkRevokeFeedbackCatchUp() {
   }
 }
 
-function updateScoreHealthMode() {
-  const mode = document.getElementById("score-health-mode").value;
-  const descEl = document.getElementById("score-health-desc");
-  const controlsEl = document.getElementById("score-health-controls");
-  document.getElementById("score-health-result").innerHTML = "";
-
-  if (mode === "autofix") {
-    descEl.textContent = "Cari skor HR PERSIS 0.0 (lupa isi) dan skor NEGATIF di evaluator manapun (deduksi kebablasan) — dibenerin otomatis. Yang udah di-Approve gak disentuh, cuma direview manual.";
-    controlsEl.innerHTML = `
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="recompute-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
-        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRecomputeForgottenHrScores(this)">Cari & Benerin</button>
-      </div>
-      <div id="recompute-hr-result" style="margin-top:10px;"></div>`;
-  } else if (mode === "bulkrecopy") {
-    descEl.textContent = "Khusus buat korban bug \"Samakan dgn Leader/Mgmt\" (v188) — samakan ULANG semua yang HR-nya 0 gara-gara bug itu, pakai fungsi yang udah bener. Cuma nyentuh yang emang hasil \"Samakan\", dan gak nyentuh yang udah di-Approve.";
-    controlsEl.innerHTML = `
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="bulk-recopy-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
-        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doBulkRecopyLeaderToHr(this)">Cari & Samakan Ulang</button>
-      </div>
-      <div id="bulk-recopy-result" style="margin-top:10px;"></div>`;
-  } else if (mode === "stalesync") {
-    descEl.textContent = "Cari SEMUA yang HR-nya pernah pakai \"Samakan dgn Leader/Mgmt\" TAPI Leader-nya udah berubah/resubmit sejak itu — gak peduli angka HR-nya kelihatan wajar atau enggak. Beda sama mode 2 (yang cuma nyari HR=0), ini nyari yang KETINGGALAN.";
-    controlsEl.innerHTML = `
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="stale-sync-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:160px; padding:8px; border-radius:8px; border:none;" />
-        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doSyncStaleLeaderCopies(this)">Cari & Samakan Ulang</button>
-      </div>
-      <div id="stale-sync-result" style="margin-top:10px;"></div>`;
-  } else if (mode === "detect") {
-    descEl.textContent = "Cari HR yang beda JAUH dari rata-rata Self+Leader (bukan cuma yang PERSIS 0) — misal Self 74.8, Leader 84.2, tapi HR cuma 5.0. Ini CUMA nampilin daftarnya, gak ngubah data apapun — kamu yang mutusin per orang.";
-    controlsEl.innerHTML = `
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <input type="text" id="suspicious-hr-month" placeholder="YYYY-MM (kosongin = bulan ini)" style="flex:1; min-width:140px; padding:8px; border-radius:8px; border:none;" />
-        <input type="text" id="suspicious-hr-threshold" placeholder="Selisih min. (default 20)" style="flex:1; min-width:140px; padding:8px; border-radius:8px; border:none;" />
-        <button class="primary" style="background:#fff; color:var(--coral);" onclick="doFindSuspiciousHrScores(this)">Cari</button>
-      </div>
-      <div id="suspicious-hr-result" style="margin-top:10px;"></div>`;
-  } else if (mode === "revert") {
-    descEl.textContent = "Buka kunci record yang UDAH di-Approve, biar bisa diedit/dihitung ulang. Skor & data lain gak diubah — cuma status Approval-nya doang yang dibuka. Wajib ada alasan, tercatat permanen.";
-    controlsEl.innerHTML = `
-      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-        <input type="text" id="revert-approval-staffid" placeholder="NIK" style="flex:1; min-width:100px; padding:8px; border-radius:8px; border:none;" />
-        <input type="text" id="revert-approval-month" placeholder="YYYY-MM" style="flex:1; min-width:100px; padding:8px; border-radius:8px; border:none;" />
-      </div>
-      <input type="text" id="revert-approval-reason" placeholder="Alasan (wajib diisi)" style="width:100%; padding:8px; border-radius:8px; border:none; margin-bottom:8px;" />
-      <button class="primary" style="background:#fff; color:var(--coral);" onclick="doRevertApproval(this)">Revert Approval</button>
-      <div id="revert-approval-result" style="margin-top:10px;"></div>`;
-  }
-}
 
 async function renderDevTools() {
   if (!state.user.isSuperAdmin) { goToRoleMenu(); return; }
@@ -5216,19 +5012,34 @@ async function renderDevTools() {
       <div class="hint" style="color:#EDE7DC; margin-bottom:10px;">Siapa nilai siapa, Tier, Job Title, dan tahap evaluasi — semua di 1 tempat.</div>
       <button class="primary" style="background:#fff; color:var(--teal);" onclick="navigateToScreen('orgStructure')">Buka Struktur & Rantai Appraisal</button>
     </div>
-    <div class="card" style="background:var(--coral); border:none;">
-      <h2 style="color:#fff;">🩺 Pusat Kesehatan Skor</h2>
-      <div class="hint" style="color:#fff; margin-bottom:10px;">Semua alat cari & benerin skor bermasalah, di 1 tempat — pilih yang mau dipakai:</div>
-      <select id="score-health-mode" onchange="updateScoreHealthMode()" style="width:100%; padding:8px; border-radius:8px; border:none; margin-bottom:12px; font-weight:600;">
-        <option value="autofix">1️⃣ Benerin Skor Kosong/Minus (Otomatis)</option>
-        <option value="bulkrecopy">2️⃣ Samakan Ulang HR (Korban Bug Lama)</option>
-        <option value="stalesync">3️⃣ Samakan Ulang HR yang Ketinggalan (Leader Berubah)</option>
-        <option value="detect">4️⃣ Cek Skor HR yang Aneh (Cuma Lihat Doang)</option>
-        <option value="revert">5️⃣ Revert Approval</option>
-      </select>
-      <div id="score-health-desc" class="hint" style="color:#fff; margin-bottom:10px;"></div>
-      <div id="score-health-controls"></div>
-      <div id="score-health-result" style="margin-top:10px;"></div>
+    <div class="card">
+      <h2>🛠️ Koreksi Penilaian</h2>
+      <div class="hint" style="margin-bottom:10px;">Satu alat untuk membetulkan penilaian yang salah. <b>Hapus isian</b>: isian satu slot dihapus (dicadangkan) lalu orangnya mengisi ulang. <b>Buka kirim ulang</b>: isian lama tetap ada, orangnya boleh mengirim lagi. <b>Batalkan approval</b>: nilai akhir kembali ke Pending (bulan apa pun sampai bulan ini). Pratinjau dulu: tidak mengubah apa pun.</div>
+      <label>Tindakan</label>
+      <select id="kc-action" onchange="kcSync()"><option value="wipe">Hapus isian lalu isi ulang</option><option value="reopen">Buka kirim ulang (isian lama tetap ada)</option><option value="revert">Batalkan approval (kembali ke Pending)</option></select>
+      <div id="kc-slot-wrap"><label style="margin-top:8px; display:block;">Slot</label>
+      <select id="kc-slot" onchange="kcSync()"><option value="self">Self Appraisal</option><option value="leader">Leader</option><option value="hr">HR</option></select></div>
+      <label style="margin-top:8px; display:block;">Siapa</label>
+      <select id="kc-pick" onchange="kcSync()"></select>
+      <div id="kc-unit-wrap"><label style="margin-top:8px; display:block;">Unit bisnis</label>
+      <select id="kc-unit" onchange="kcInvalidate()"><option value="fnb">F&amp;B</option><option value="gym">Gym</option><option value="backoffice">Back Office</option></select></div>
+      <div id="kc-niks-wrap" style="display:none;"><label style="margin-top:8px; display:block;">NIK (satu atau banyak — pisahkan dengan koma, spasi, atau baris baru)</label>
+      <textarea id="kc-niks" rows="3" oninput="kcInvalidate()" placeholder="Contoh: 1354, 1022" style="display:block; width:100%; box-sizing:border-box; padding:10px 12px; font:inherit; font-size:14px; border:1.5px solid var(--border); border-radius:12px; resize:vertical;"></textarea></div>
+      <div id="kc-month-wrap" style="display:none;"><label style="margin-top:8px; display:block;">Bulan yang approval-nya dibatalkan</label>
+      <input type="month" id="kc-month" onchange="kcInvalidate()" /></div>
+      <label style="margin-top:8px; display:block;">Alasan (wajib, tercatat di log audit)</label>
+      <input type="text" id="kc-reason" maxlength="300" placeholder="Contoh: Struktur KPI Waiter berubah setelah mereka mengisi." />
+      <div id="kc-notify-wrap">
+        <label style="margin-top:8px; display:block;">Tenggat isi ulang (untuk pesan ke staf, boleh kosong)</label>
+        <input type="text" id="kc-deadline" maxlength="60" placeholder="Contoh: Jumat 10 Okt" />
+        <label style="display:flex; align-items:center; gap:8px; margin:10px 0 0; font-weight:400;"><input type="checkbox" id="kc-notify" checked /> Kirim notifikasi ke orangnya</label>
+      </div>
+      <div class="row-flex" style="gap:8px; margin-top:10px; flex-wrap:wrap;">
+        <button class="secondary" id="kc-preview-btn" style="flex:1 1 auto; white-space:nowrap;" onclick="doKcPreview()">🔍 Pratinjau</button>
+        <button class="primary" id="kc-apply-btn" style="flex:1 1 auto; white-space:nowrap;" onclick="doKcApply()" disabled>🗑️ Hapus isian yang dipilih (0)</button>
+      </div>
+      <div id="kc-note" class="hint" style="margin-top:8px; overflow-wrap:anywhere;"></div>
+      <div id="kc-list" class="fbc-list" style="margin-top:6px;"></div>
     </div>
     <div class="card">
       <h2>🔀 Tahap Evaluasi per Job Title / Department</h2>
@@ -5250,7 +5061,6 @@ async function renderDevTools() {
       <div class="hint" style="margin-bottom:10px;">Katup darurat per-orang buat 2 jenis pembatas normal — pilih yang mau dibuka:</div>
       <select id="override-mode" onchange="updateOverrideMode()" style="width:100%; padding:8px; border-radius:8px; border:1.5px solid var(--border); margin-bottom:12px; font-weight:600;">
         <option value="window">🗓️ Buka Jendela Waktu (Access Override)</option>
-        <option value="quota">🔓 Reset Jatah Submit (1x Limit)</option>
         ${state.user.isSuperAdmin ? `<option value="feedback">💬 Izinkan Feedback Menyusul</option>` : ""}
       </select>
       <div id="override-mode-desc" class="hint" style="margin-bottom:10px;"></div>
@@ -5266,18 +5076,7 @@ async function renderDevTools() {
       <h2>${t("dt_maintenance_title")}</h2>
       <div class="hint" style="margin-bottom:10px;">${t("dt_maintenance_desc")}</div>
       <button class="secondary" id="maint-clearAllCaches-btn" onclick="doRunMaintenanceAction('clearAllCaches', this)">${t("dt_clear_caches_btn")}</button>
-      <button class="secondary" id="maint-cleanupOrphanedSuperiorOverrides-btn" style="margin-top:8px;" onclick="doRunMaintenanceAction('cleanupOrphanedSuperiorOverrides', this)">🧹 Bersihkan Superior Override Orphan</button>
-      <button class="secondary" id="maint-findStaleKpiStructures-btn" style="margin-top:8px;" onclick="doFindStaleKpiStructures(this)">🔍 Cari Submission dengan Struktur KPI Ketinggalan</button>
-      <div id="stale-kpi-results" style="margin-top:10px;"></div>
       <div id="maintenance-result-note" class="hint" style="margin-top:8px;"></div>
-    </div>
-    <div class="card">
-      <h2>🚑 Restore Struktur dari Audit Log</h2>
-      <div class="hint" style="margin-bottom:10px;">Kalau struktur KPI 1 Job Title tiba-tiba hilang dari Config_SectionCriteria (padahal audit log-nya nyatet berhasil disimpen) — masukin nama Job Title-nya persis, sistem otomatis restore dari entry TERAKHIR di audit log.</div>
-      <label>Nama Job Title (persis, case-insensitive)</label>
-      <input type="text" id="restore-audit-jobtitle" placeholder="Contoh: Finance Controller" />
-      <button class="primary" id="restore-audit-btn" style="margin-top:8px;" onclick="doRestoreStructureFromAuditLog()">Restore Sekarang</button>
-      <div id="restore-audit-result" class="hint" style="margin-top:8px;"></div>
     </div>
     <div class="card">
       <h2>📥 Import KPI dari Google Sheet</h2>
@@ -5303,33 +5102,22 @@ async function renderDevTools() {
       <div id="kpi-sync-result" class="hint" style="margin-top:8px; overflow-wrap:anywhere;"></div>
     </div>
     <div class="card">
+      <h2>📅 Jadwal penilaian per unit</h2>
+      <div class="hint" style="margin-bottom:10px;">Bulan apa saja tiap unit dinilai. Unit tanpa jadwal dinilai <b>setiap bulan</b>. Di bulan di luar jadwal, orang di unit itu tidak bisa mengisi atau dinilai, dan hilang dari daftar tugas, pengingat, Review, Approve, dan laporan. <b>Data yang sudah ada tetap tersimpan</b>, dan bulan sebelum jadwal berlaku tidak berubah.</div>
+      <button class="secondary btn-auto" id="us-load-btn" onclick="usLoad()">📅 Muat jadwal unit</button>
+      <div id="us-box" style="margin-top:12px;"></div>
+    </div>
+    <div class="card">
       <h2>⏱️ Kecepatan sistem</h2>
       <div class="hint" style="margin-bottom:10px;">Lama server memproses tiap aksi, dari 200 permintaan terakhir (disimpan 6 jam). <b>p95</b> = 95% permintaan lebih cepat dari angka itu. Untuk penyimpanan: <b>tunggu kunci</b> tinggi = antrean (banyak orang menyimpan bersamaan), <b>pegang kunci</b> tinggi = proses simpannya sendiri yang lama.</div>
       <button class="secondary btn-auto" id="perf-load-btn" onclick="doLoadPerf()">🔄 Muat ringkasan</button>
       <div id="perf-result" class="hint" style="margin-top:10px; overflow-wrap:anywhere;"></div>
     </div>
     <div class="card">
-      <h2>♻️ Reset Self Appraisal Massal</h2>
-      <div class="hint" style="margin-bottom:10px;">Untuk saat struktur KPI sebuah jabatan berubah <b>sesudah</b> staf mengisi Self Appraisal. Menghapus isian self <b>bulan ini</b> dari tiga tempat sekaligus (isian, status "Sudah Diisi", dan jatah kirim) supaya mereka bisa mengisi ulang. Slot Leader/HR dan feedback tidak disentuh. Pratinjau dulu: tidak mengubah apa pun. Semua baris yang dihapus dicadangkan di sheet <b>Reset_Backup</b>.</div>
-      <label>Unit bisnis</label>
-      <select id="reset-unit" onchange="rsInvalidate()"><option value="fnb">F&amp;B</option><option value="gym">Gym</option><option value="backoffice">Back Office</option></select>
-      <label style="margin-top:8px; display:block;">Siapa yang direset</label>
-      <select id="reset-scope" onchange="rsInvalidate()"><option value="mismatched">Hanya yang isiannya TIDAK cocok dengan struktur KPI sekarang (disarankan)</option><option value="all">Semua yang sudah mengisi bulan ini</option></select>
-      <label style="margin-top:8px; display:block;">Tenggat isi ulang (untuk pesan ke staf, boleh kosong)</label>
-      <input type="text" id="reset-deadline" maxlength="60" placeholder="Contoh: Jumat 10 Okt" />
-      <label style="display:flex; align-items:center; gap:8px; margin:10px 0 0; font-weight:400;"><input type="checkbox" id="reset-notify" checked /> Kirim notifikasi ke staf yang direset</label>
-      <div class="row-flex" style="gap:8px; margin-top:10px;">
-        <button class="secondary" id="reset-preview-btn" onclick="doRsPreview()">🔍 Pratinjau</button>
-        <button class="primary" id="reset-apply-btn" onclick="doRsApply()" disabled>♻️ Reset yang dipilih (0)</button>
-      </div>
-      <div id="reset-note" class="hint" style="margin-top:8px; overflow-wrap:anywhere;"></div>
-      <div id="reset-list" class="fbc-list" style="margin-top:6px;"></div>
-    </div>
-    <div class="card">
       <div class="hint">${t("dt_backend_version_label")} ${state.user._debugVersion || "-"}</div>
     </div>`;
   loadStageDatalists();
-  updateScoreHealthMode();
+  kcSync();
   updateOverrideMode();
 }
 
@@ -5376,6 +5164,7 @@ function accessOverrideReasonLabel(reason) {
     already_submitted: "dt_reason_already_submitted",
     business_unit_not_yet_active: "dt_reason_business_unit_not_yet_active",
     department_excluded: "dt_reason_department_excluded",
+    unit_off_cycle: "dt_reason_unit_off_cycle",
   };
   return map[reason] ? t(map[reason]) : reason;
 }
@@ -5461,33 +5250,6 @@ async function doRunHealthCheck() {
   }
 }
 
-async function doFindStaleKpiStructures(btnEl) {
-  const resultsEl = document.getElementById("stale-kpi-results");
-  const originalLabel = btnEl.textContent;
-  btnEl.disabled = true;
-  btnEl.innerHTML = `<span class="btn-spinner dark"></span>${t("dt_processing")}`;
-  resultsEl.innerHTML = "";
-  try {
-    const res = await apiPost("runMaintenanceAction", { requesterId: state.user.staffId, action: "findStaleKpiStructures" });
-    if (res.error || res.success === false) {
-      resultsEl.innerHTML = `<div class="hint" style="color:var(--red);">Gagal: ${friendlyError(res.error)}</div>`;
-    } else if (!res.mismatchCount) {
-      resultsEl.innerHTML = `<div class="hint" style="color:var(--green);">✅ Semua submission bulan ini (${res.monthKey}) udah cocok sama struktur yang lagi aktif — gak ada yang ketinggalan.</div>`;
-    } else {
-      resultsEl.innerHTML = `<div class="hint" style="margin-bottom:8px;">⚠️ ${res.mismatchCount} submission bulan ${res.monthKey} pakai jumlah kriteria yang beda dari struktur yang SEKARANG aktif untuk Job Title-nya — kemungkinan diisi sebelum struktur diubah:</div>` +
-        res.mismatches.map(m => `
-          <div class="staff-card" style="margin-bottom:6px;">
-            <div class="name">${m.staffName} (NIK ${m.staffId}) — ${m.jobTitle}</div>
-            <div class="dept">Slot: ${m.slot} · Submitted: ${m.actualCount} kriteria · Seharusnya sekarang: ${m.expectedCount} kriteria</div>
-          </div>`).join("");
-    }
-  } catch (e) {
-    resultsEl.innerHTML = `<div class="hint" style="color:var(--red);">Gagal konek ke server. Coba lagi.</div>`;
-  } finally {
-    btnEl.disabled = false;
-    btnEl.textContent = originalLabel;
-  }
-}
 
 async function doRunMaintenanceAction(action, btnEl) {
   const noteEl = document.getElementById("maintenance-result-note");
@@ -5508,66 +5270,12 @@ async function doRunMaintenanceAction(action, btnEl) {
   }
 }
 
-async function doResetSubmissionCount() {
-  const nikInput = document.getElementById("reset-submission-nik");
-  const slotSelect = document.getElementById("reset-submission-slot");
-  const btn = document.getElementById("reset-submission-btn");
-  const noteEl = document.getElementById("reset-submission-result");
-  const staffId = nikInput.value.trim();
-  const slot = slotSelect.value;
-  if (!staffId) { noteEl.textContent = "Masukin NIK-nya dulu."; return; }
 
-  btn.disabled = true;
-  const originalLabel = btn.textContent;
-  btn.innerHTML = `<span class="btn-spinner"></span>Mereset...`;
-  noteEl.textContent = "";
-  try {
-    const res = await apiPost("resetSubmissionCountUI", { requesterId: state.user.staffId, staffId, slot });
-    if (res.success) {
-      noteEl.innerHTML = `✅ Jatah submit "${slot}" buat ${res.staffName} (NIK ${res.staffId}) udah direset, DAN jendela waktunya udah otomatis dibuka juga — dia (atau evaluatornya) bisa langsung isi ulang sekarang, gak perlu buka Access Override manual lagi. Data LAMA baru ketimpa begitu dia beneran submit ulang.`;
-      nikInput.value = "";
-    } else if (res.error === 'not_found') {
-      noteEl.textContent = `${res.staffName || 'Orang ini'} belum pernah submit slot "${slot}" bulan ini — gak ada yang perlu direset.`;
-    } else {
-      noteEl.textContent = `Gagal: ${friendlyError(res.error)}`;
-    }
-  } catch (e) {
-    noteEl.textContent = "Gagal konek ke server. Coba lagi.";
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-  }
-}
-
-async function doRestoreStructureFromAuditLog() {
-  const input = document.getElementById("restore-audit-jobtitle");
-  const btn = document.getElementById("restore-audit-btn");
-  const noteEl = document.getElementById("restore-audit-result");
-  const jobTitle = input.value.trim();
-  if (!jobTitle) { noteEl.textContent = "Masukin nama Job Title-nya dulu."; return; }
-
-  btn.disabled = true;
-  const originalLabel = btn.textContent;
-  btn.innerHTML = `<span class="btn-spinner"></span>Merestore...`;
-  noteEl.textContent = "";
-  try {
-    const res = await apiPost("restoreStructureFromAuditLog", { requesterId: state.user.staffId, jobTitle });
-    if (res.success) {
-      noteEl.innerHTML = `✅ "${res.jobTitle}" berhasil di-restore (${res.rowCount} baris kriteria) dari entry ${new Date(res.restoredFromTimestamp).toLocaleString("id-ID")}.`;
-    } else {
-      noteEl.textContent = `Gagal: ${res.detail || friendlyError(res.error)}`;
-    }
-  } catch (e) {
-    noteEl.textContent = "Gagal konek ke server. Coba lagi.";
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-  }
-}
 
 /* ---- Sinkronkan tab KPI dari HR sheet (Superadmin, Dev Tools) --------------------------------------------------------------
  * Preview first (changes nothing), then apply: creates the tabs the HR sheet's Job Titles are missing, fixes cut-off tab names and keeps
  * INDEX in step. Apply only works on the link that was previewed. */
+const BUSINESS_UNIT_NAMES = { fnb: "F&B", gym: "Gym", backoffice: "Back Office" };
 let _kpiSync = { sheet: "", plan: null, busy: false };
 function kpiSyncSetButtons() {
   const pv = document.getElementById("kpi-sync-preview-btn"), ap = document.getElementById("kpi-sync-apply-btn");
@@ -5639,101 +5347,164 @@ async function doKpiSyncApply() {
   }
 }
 
-/* ---- Reset Self Appraisal massal (Superadmin, Dev Tools) --------------------------------------------------------------------
- * Preview first (changes nothing): who would be reset, and why. Then apply to the people ticked. The server decides who is eligible; what is
+/* ---- Koreksi Penilaian (Superadmin, Dev Tools) --------------------------------------------------------------------------------
+ * ONE tool to correct an appraisal: delete the answers of a slot / reopen it for another try / take an approval back to Pending.
+ * Preview first (changes nothing): who would be touched, and why. Then apply to the people ticked. The server decides who is eligible; what is
  * ticked here can only NARROW that. Apply works only for the settings that were previewed. */
-let _rs = { plan: null, params: null, sel: new Set(), busy: false };
-function rsParams() { return { unit: (document.getElementById("reset-unit") || {}).value || "fnb", scope: (document.getElementById("reset-scope") || {}).value || "mismatched" }; }
-function rsNote(html) { const el = document.getElementById("reset-note"); if (el) el.innerHTML = html; }
-function rsSetButtons() {
-  const pv = document.getElementById("reset-preview-btn"), ap = document.getElementById("reset-apply-btn"), n = _rs.sel.size;
-  if (pv) pv.disabled = _rs.busy;
-  if (ap) { ap.disabled = _rs.busy || !_rs.plan || n === 0; ap.textContent = `♻️ Reset yang dipilih (${n})`; }
+let _kc = { plan: null, params: null, sel: new Set(), busy: false };
+const KC_SLOTS = { self: "Self Appraisal", leader: "Leader", hr: "HR" };
+const KC_VERB = { wipe: "🗑️ Hapus isian", reopen: "🔓 Buka kirim ulang", revert: "↩️ Batalkan approval" };
+const kcEl = (id) => document.getElementById(id);
+function kcParseNiks(text) { return Array.from(new Set(String(text || "").split(/[\s,;]+/).map(x => x.trim()).filter(Boolean))); }
+function kcMonthNow() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+function kcParams() {
+  const action = (kcEl("kc-action") || {}).value || "wipe", pick = (kcEl("kc-pick") || {}).value || "mismatched";
+  return {
+    action, pick,
+    slot: action === "revert" ? "" : ((kcEl("kc-slot") || {}).value || "self"),
+    unit: pick === "nik" ? "all" : ((kcEl("kc-unit") || {}).value || "fnb"),
+    scope: pick === "mismatched" ? "mismatched" : "all",
+    niks: pick === "nik" ? kcParseNiks((kcEl("kc-niks") || {}).value) : null,
+    month: action === "revert" ? ((kcEl("kc-month") || {}).value || "") : "",
+  };
+}
+function kcRequest(params, apply, extra) {
+  const body = { requesterId: state.user.staffId, action: params.action, businessUnit: params.unit, scope: params.scope, apply };
+  if (params.slot) body.slot = params.slot;
+  if (params.niks) body.staffIds = params.niks;
+  if (params.month) body.month = params.month;
+  return apiPost("correctAppraisal", Object.assign(body, extra || {}));
+}
+function kcNote(html) { const el = kcEl("kc-note"); if (el) el.innerHTML = html; }
+function kcSetButtons() {
+  const pv = kcEl("kc-preview-btn"), ap = kcEl("kc-apply-btn"), n = _kc.sel.size, action = (kcEl("kc-action") || {}).value || "wipe";
+  if (pv) pv.disabled = _kc.busy;
+  if (ap) { ap.disabled = _kc.busy || !_kc.plan || n === 0; ap.textContent = `${KC_VERB[action] || KC_VERB.wipe} yang dipilih (${n})`; }
 }
 /** A setting changed after the preview: what was previewed no longer applies. */
-function rsInvalidate() {
-  const had = !!_rs.plan;
-  _rs.plan = null; _rs.params = null; _rs.sel = new Set();
-  const list = document.getElementById("reset-list"); if (list) list.innerHTML = "";
-  if (had) rsNote("Pengaturan berubah — tekan Pratinjau lagi.");
-  rsSetButtons();
+function kcInvalidate() {
+  const had = !!_kc.plan;
+  _kc.plan = null; _kc.params = null; _kc.sel = new Set();
+  const list = kcEl("kc-list"); if (list) list.innerHTML = "";
+  if (had) kcNote("Pengaturan berubah — tekan Pratinjau lagi.");
+  kcSetButtons();
 }
-function rsPersonHtml(p) {
-  const sel = _rs.sel.has(p.staffId);
-  const badge = p.structure === "legacy" ? "struktur lama" : (p.status === "match" ? "✓ cocok" : `⚠ tidak cocok: ${p.common} dari ${p.expected} kriteria sama · diisi ${p.submitted}`);
+/** Which fields make sense for the chosen action / way of picking people. */
+function kcSync() {
+  const pickEl = kcEl("kc-pick"); if (!pickEl) return;
+  const action = (kcEl("kc-action") || {}).value || "wipe", revert = action === "revert";
+  const want = revert
+    ? [["nik", "Per NIK (tempel satu atau banyak)"], ["all", "Unit: semua yang sudah di-approve pada bulan itu"]]
+    : [["nik", "Per NIK (tempel satu atau banyak)"], ["mismatched", "Unit: hanya yang isiannya TIDAK cocok dengan struktur KPI sekarang (disarankan)"], ["all", "Unit: semua yang sudah mengisi bulan ini"]];
+  const cur = pickEl.value;
+  pickEl.innerHTML = want.map(([v, l]) => `<option value="${v}">${escapeHtml(l)}</option>`).join("");
+  pickEl.value = want.some(([v]) => v === cur) ? cur : (revert ? "nik" : "mismatched");
+  const pick = pickEl.value, slot = (kcEl("kc-slot") || {}).value || "self";
+  const show = (id, on) => { const el = kcEl(id); if (el) el.style.display = on ? "" : "none"; };
+  show("kc-slot-wrap", !revert); show("kc-unit-wrap", pick !== "nik"); show("kc-niks-wrap", pick === "nik"); show("kc-month-wrap", revert); show("kc-notify-wrap", !revert && slot === "self");
+  const mo = kcEl("kc-month"); if (mo) { mo.max = kcMonthNow(); if (!mo.value) mo.value = kcMonthNow(); }
+  kcInvalidate();
+}
+function kcPersonHtml(p) {
+  const sel = _kc.sel.has(p.staffId);
+  const badge = p.status === "approved" ? `Approved oleh ${p.approvedBy || "-"}` : (p.structure === "legacy" ? "struktur lama" : (p.status === "match" ? "✓ cocok" : `⚠ tidak cocok: ${p.common} dari ${p.expected} kriteria sama · diisi ${p.submitted}`));
   const others = (p.otherSlots || []).length ? ` · <span style="color:var(--amber);">sudah ada slot: ${escapeHtml(p.otherSlots.join(", "))}</span>` : "";
-  return `<div class="dx-card${sel ? " sel" : ""}"><label class="dx-row"><input type="checkbox" ${sel ? "checked" : ""} data-staff="${escapeHtml(p.staffId)}" onchange="rsToggle(this)">
-    <div class="dx-main"><div class="dx-name">${escapeHtml(p.name)}</div>
+  return `<div class="dx-card${sel ? " sel" : ""}"><label class="dx-row"><input type="checkbox" ${sel ? "checked" : ""} data-staff="${escapeHtml(p.staffId)}" onchange="kcToggle(this)">
+    <div class="dx-main"><div class="dx-name">${escapeHtml(p.name)} <span style="font-weight:400; font-size:12px; color:var(--text-muted);">· NIK ${escapeHtml(p.staffId)}</span></div>
     <div class="dx-meta">${escapeHtml(p.jobTitle || "-")}${p.department && p.department !== "-" ? ` · ${escapeHtml(p.department)}` : ""} · ${escapeHtml(p.tier)}</div>
     <div class="dx-status">${escapeHtml(badge)}${others}</div></div></label></div>`;
 }
-/** Why somebody who filled in their Self Appraisal is NOT being reset. */
-function rsSkipReason(p) {
+/** Why somebody who filled in the slot is NOT being touched. */
+function kcSkipReason(p) {
   if (p.structure === "legacy") return `jabatan ini belum punya struktur KPI baru di sistem, jadi isiannya dianggap benar`;
   return `isiannya SUDAH cocok dengan struktur KPI sekarang (${p.common} dari ${p.expected} kriteria sama)`;
 }
-function rsRenderPlan(plan) {
-  const sel = plan.selected || [], skipped = plan.skippedFinal || [], rm = plan.removed || {};
-  const parts = [`<div><b>${escapeHtml(unitDisplayLabel(plan.unit))}</b> · bulan ${escapeHtml(monthLabelID(plan.month))}: <b>${sel.length} orang</b> akan direset${plan.alreadyMatching ? `, ${plan.alreadyMatching} sudah cocok / tanpa struktur baru (dilewati)` : ""}.</div>`];
-  if (sel.length) parts.push(`<div style="margin-top:6px; color:var(--text-muted); font-size:12px;">Baris yang dihapus: Submissions ${rm.submissions || 0}, Evaluator_Totals ${rm.totals || 0}, Submission_Counts ${rm.counts || 0}, Bonus ${rm.bonus || 0}.</div>`);
-  else parts.push(`<div style="margin-top:6px; color:var(--teal);">✅ Tidak ada yang perlu direset.</div>`);
+function kcRenderPlan(plan) {
+  const sel = plan.selected || [], blocked = plan.skippedFinal || [], rm = plan.removed || {}, action = plan.action;
+  const scopeLabel = plan.unit === "all" ? "NIK yang diketik" : unitDisplayLabel(plan.unit);
+  const what = action === "revert" ? "dibatalkan approval-nya" : (action === "reopen" ? "dibuka kirim ulangnya" : "dihapus isiannya");
+  const slotLabel = action === "revert" ? "" : ` · ${escapeHtml(KC_SLOTS[plan.slot] || plan.slot)}`;
+  const parts = [`<div><b>${escapeHtml(scopeLabel)}</b>${slotLabel} · bulan ${escapeHtml(monthLabelID(plan.month))}: <b>${sel.length} orang</b> akan ${what}${plan.alreadyMatching ? `, ${plan.alreadyMatching} sudah cocok / tanpa struktur baru (dilewati)` : ""}.</div>`];
+  if (sel.length && action === "wipe") parts.push(`<div style="margin-top:6px; color:var(--text-muted); font-size:12px;">Baris yang dihapus: Submissions ${rm.submissions || 0}, Evaluator_Totals ${rm.totals || 0}, Submission_Counts ${rm.counts || 0}, Bonus ${rm.bonus || 0}, nilai akhir sementara ${rm.finals || 0}.</div>`);
+  else if (sel.length && action === "reopen") parts.push(`<div style="margin-top:6px; color:var(--text-muted); font-size:12px;">Isian TETAP ada. Yang dihapus hanya penanda "sudah mengirim" (${rm.counts || 0} baris), lalu jendela waktu dibuka untuk mereka.</div>`);
+  else if (!sel.length) parts.push(`<div style="margin-top:6px; color:var(--teal);">✅ Tidak ada yang perlu diproses.</div>`);
+  if ((plan.unknownIds || []).length) parts.push(`<div style="margin-top:8px; color:var(--amber); font-size:12px;">⚠️ NIK ini tidak cocok dengan siapa pun yang bisa diproses (salah ketik, atau belum mengisi/belum di-approve): ${escapeHtml(plan.unknownIds.join(", "))}</div>`);
   const skippedPeople = plan.skippedPeople || [];
-  if (skippedPeople.length) parts.push(`<details style="margin-top:8px; font-size:12px;"><summary style="cursor:pointer; color:var(--teal); font-weight:600;">Dilewati: ${skippedPeople.length} orang — kenapa?</summary><ul style="margin:6px 0 0; padding-left:20px; color:var(--text-muted); overflow-wrap:anywhere;">${skippedPeople.map(p => `<li><b style="color:var(--text);">${escapeHtml(p.name)}</b> (${escapeHtml(p.jobTitle || "-")}) — ${escapeHtml(rsSkipReason(p))}</li>`).join("")}</ul></details>`);
-  if (skipped.length) parts.push(`<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">ℹ️ Tidak disentuh karena sudah punya nilai akhir bulan ini: ${escapeHtml(skipped.map(p => p.name).join(", "))}</div>`);
-  rsNote(parts.join(""));
-  const list = document.getElementById("reset-list");
-  if (list) list.innerHTML = sel.length ? `<label class="fbc-all" style="display:flex; align-items:center; gap:8px; margin:8px 0; font-weight:600;"><input type="checkbox" id="reset-all" checked onchange="rsSelectAll(this.checked)"> Pilih semua (${sel.length})</label>` + sel.map(rsPersonHtml).join("") : "";
+  if (skippedPeople.length) parts.push(`<details style="margin-top:8px; font-size:12px;"><summary style="cursor:pointer; color:var(--teal); font-weight:600;">Dilewati: ${skippedPeople.length} orang — kenapa?</summary><ul style="margin:6px 0 0; padding-left:20px; color:var(--text-muted); overflow-wrap:anywhere;">${skippedPeople.map(p => `<li><b>${escapeHtml(p.name)}</b> (${escapeHtml(p.jobTitle || "-")}): ${escapeHtml(kcSkipReason(p))}</li>`).join("")}</ul></details>`);
+  if (blocked.length) parts.push(`<div style="margin-top:8px; color:var(--text-muted); font-size:12px;">ℹ️ Tidak disentuh karena nilai akhirnya sudah <b>Approved</b> (pilih tindakan "Batalkan approval" dulu): ${escapeHtml(blocked.map(p => p.name).join(", "))}</div>`);
+  kcNote(parts.join(""));
+  const list = kcEl("kc-list");
+  if (list) list.innerHTML = sel.length ? `<label class="fbc-all" style="display:flex; align-items:center; gap:8px; margin:8px 0; font-weight:600;"><input type="checkbox" id="kc-all" checked onchange="kcSelectAll(this.checked)"> Pilih semua (${sel.length})</label>` + sel.map(kcPersonHtml).join("") : "";
 }
-function rsToggle(el) {
-  if (el.checked) _rs.sel.add(el.dataset.staff); else _rs.sel.delete(el.dataset.staff);
+function kcToggle(el) {
+  if (el.checked) _kc.sel.add(el.dataset.staff); else _kc.sel.delete(el.dataset.staff);
   const card = el.closest(".dx-card"); if (card) card.classList.toggle("sel", el.checked);
-  const all = document.getElementById("reset-all"), total = ((_rs.plan && _rs.plan.selected) || []).length;
-  if (all) { all.checked = _rs.sel.size === total; all.indeterminate = _rs.sel.size > 0 && _rs.sel.size < total; }
-  rsSetButtons();
+  const all = kcEl("kc-all"), total = ((_kc.plan && _kc.plan.selected) || []).length;
+  if (all) { all.checked = _kc.sel.size === total; all.indeterminate = _kc.sel.size > 0 && _kc.sel.size < total; }
+  kcSetButtons();
 }
-function rsSelectAll(checked) {
-  const people = (_rs.plan && _rs.plan.selected) || [];
-  _rs.sel = new Set(checked ? people.map(p => p.staffId) : []);
-  const list = document.getElementById("reset-list");
+function kcSelectAll(checked) {
+  const people = (_kc.plan && _kc.plan.selected) || [];
+  _kc.sel = new Set(checked ? people.map(p => p.staffId) : []);
+  const list = kcEl("kc-list");
   if (list) list.querySelectorAll("input[data-staff]").forEach(cb => { cb.checked = checked; const card = cb.closest(".dx-card"); if (card) card.classList.toggle("sel", checked); });
-  rsSetButtons();
+  kcSetButtons();
 }
-async function doRsPreview() {
-  if (_rs.busy) return;
-  const params = rsParams();
-  _rs.busy = true; _rs.plan = null; _rs.sel = new Set(); rsSetButtons(); rsNote("Memeriksa..."); const list = document.getElementById("reset-list"); if (list) list.innerHTML = "";
+async function doKcPreview() {
+  if (_kc.busy) return;
+  const params = kcParams();
+  if (params.pick === "nik" && !params.niks.length) { kcNote("Tempel dulu NIK-nya."); return; }
+  if (params.action === "revert" && !/^\d{4}-\d{2}$/.test(params.month)) { kcNote("Pilih bulannya dulu."); return; }
+  _kc.busy = true; _kc.plan = null; _kc.sel = new Set(); kcSetButtons(); kcNote("Memeriksa..."); const list = kcEl("kc-list"); if (list) list.innerHTML = "";
   try {
-    const res = await apiPost("resetSelfSubmissions", { requesterId: state.user.staffId, businessUnit: params.unit, scope: params.scope, apply: false });
-    if (!res || res.success === false || res.error) { rsNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
-    _rs.plan = res; _rs.params = params; _rs.sel = new Set((res.selected || []).map(p => p.staffId));
-    rsRenderPlan(res);
+    const res = await kcRequest(params, false);
+    if (!res || res.success === false || res.error) { kcNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    _kc.plan = res; _kc.params = params; _kc.sel = new Set((res.selected || []).map(p => p.staffId));
+    kcRenderPlan(res);
   } finally {
-    _rs.busy = false; rsSetButtons();
+    _kc.busy = false; kcSetButtons();
   }
 }
-async function doRsApply() {
-  if (_rs.busy) return;
-  const params = rsParams(), plan = _rs.plan;
-  if (!plan || !_rs.params || JSON.stringify(params) !== JSON.stringify(_rs.params)) { rsNote("Pratinjau dulu untuk pengaturan ini."); _rs.plan = null; rsSetButtons(); return; }
-  const ids = [..._rs.sel];
-  if (!ids.length) { rsNote("Centang dulu siapa yang direset."); return; }
-  const notify = !!(document.getElementById("reset-notify") || {}).checked;
-  const deadlineText = ((document.getElementById("reset-deadline") || {}).value || "").trim();
-  const question = `Reset Self Appraisal ${ids.length} orang di ${unitDisplayLabel(params.unit)}?\n\nIsian self mereka bulan ini DIHAPUS dan mereka HARUS mengisi ulang${notify ? " (mereka diberi notifikasi)" : ""}.\nSemua baris yang dihapus dicadangkan di sheet Reset_Backup.`;
+async function doKcApply() {
+  if (_kc.busy) return;
+  const params = kcParams(), plan = _kc.plan;
+  if (!plan || !_kc.params || JSON.stringify(params) !== JSON.stringify(_kc.params)) { kcNote("Pratinjau dulu untuk pengaturan ini."); _kc.plan = null; kcSetButtons(); return; }
+  const ids = [..._kc.sel];
+  if (!ids.length) { kcNote("Centang dulu siapa yang diproses."); return; }
+  const reason = ((kcEl("kc-reason") || {}).value || "").trim();
+  if ((reason.match(/[\p{L}\p{N}]/gu) || []).length < 3) { kcNote("Isi alasannya dulu (minimal 3 huruf) — ini tercatat untuk jejak audit."); const r = kcEl("kc-reason"); if (r) r.focus(); return; }
+  const slotOn = params.action !== "revert" && params.slot === "self";
+  const notify = slotOn && !!(kcEl("kc-notify") || {}).checked;
+  const deadlineText = slotOn ? (((kcEl("kc-deadline") || {}).value || "").trim()) : "";
+  const who = `${ids.length} orang`, slotLabel = KC_SLOTS[params.slot] || "";
+  const question = params.action === "wipe"
+    ? `Hapus isian ${slotLabel} ${who} bulan ini?\n\nIsian mereka DIHAPUS (beserta total dan nilai akhir sementaranya) dan mereka HARUS mengisi ulang${notify ? " (mereka diberi notifikasi)" : ""}.\nSemua baris yang dihapus dicadangkan di sheet Reset_Backup.`
+    : (params.action === "reopen"
+      ? `Buka kirim ulang ${slotLabel} ${who}?\n\nIsian lama TETAP ada sampai mereka mengirim lagi; kiriman baru menggantikannya. Mereka bisa mengirim walau jendela waktu sudah tutup${notify ? " (mereka diberi notifikasi)" : ""}.`
+      : `Batalkan approval ${who} untuk ${monthLabelID(plan.month)}?\n\nNilai akhir mereka kembali ke Pending dan harus di-approve ulang. Alasan dan siapa yang menyetujui sebelumnya dicatat.`);
   if (!confirm(question)) return;
-  _rs.busy = true; rsSetButtons(); rsNote("Mereset... (bisa memakan waktu sampai satu menit)");
+  _kc.busy = true; kcSetButtons(); kcNote("Memproses... (bisa memakan waktu sampai satu menit)");
   try {
-    const res = await apiPost("resetSelfSubmissions", { requesterId: state.user.staffId, businessUnit: params.unit, scope: params.scope, apply: true, staffIds: ids, notify, deadlineText });
-    if (!res || res.success === false || res.error) { rsNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    const res = await kcRequest(params, true, { staffIds: ids, reason, notify, deadlineText });
+    if (!res || res.success === false || res.error) { kcNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
     const done = (res.selected || []).length, rm = res.removed || {};
-    const lines = done
-      ? [`✅ <b>${done} orang</b> direset (ID ${escapeHtml(res.resetId)}).`, `Dihapus: Submissions ${rm.submissions || 0}, Evaluator_Totals ${rm.totals || 0}, Submission_Counts ${rm.counts || 0}, Bonus ${rm.bonus || 0}.`, `🔔 ${res.notified || 0} notifikasi terkirim.`, `Cadangan baris yang dihapus: sheet <b>Reset_Backup</b>. Mereka kini tampil sebagai “belum mengisi” di Review → Kepatuhan.`]
-      : ["Tidak ada yang direset."];
-    rsNote(lines.join("<br>"));
-    _rs.plan = null; _rs.params = null; _rs.sel = new Set(); // what was previewed has changed: a new preview is needed
-    const list = document.getElementById("reset-list"); if (list) list.innerHTML = "";
+    let lines;
+    if (!done) lines = ["Tidak ada yang diproses."];
+    else if (params.action === "revert") {
+      const ok = (res.reverted || []).length, failed = res.failed || [];
+      lines = [`✅ <b>${ok} approval</b> dibatalkan (ID ${escapeHtml(res.resetId)}) — kembali ke Pending.`];
+      if (failed.length) lines.push(`<span style="color:var(--red);">⚠️ Gagal: ${failed.map(f => `${escapeHtml(f.name)} (${escapeHtml(friendlyError(f.error))})`).join("; ")}</span>`);
+    } else {
+      lines = [`✅ <b>${done} orang</b> ${params.action === "wipe" ? "dihapus isiannya" : "dibuka kirim ulangnya"} (ID ${escapeHtml(res.resetId)}).`];
+      if (params.action === "wipe") lines.push(`Dihapus: Submissions ${rm.submissions || 0}, Evaluator_Totals ${rm.totals || 0}, Submission_Counts ${rm.counts || 0}, Bonus ${rm.bonus || 0}, nilai akhir sementara ${rm.finals || 0}.`);
+      if (notify) lines.push(`🔔 ${res.notified || 0} notifikasi terkirim.`);
+      lines.push(`Cadangan baris yang dihapus: sheet <b>Reset_Backup</b>. Catatan audit: sheet <b>Config_ResetAuditLog</b>.`);
+    }
+    kcNote(lines.join("<br>"));
+    _kc.plan = null; _kc.params = null; _kc.sel = new Set(); // what was previewed has changed: a new preview is needed
+    const list = kcEl("kc-list"); if (list) list.innerHTML = "";
   } finally {
-    _rs.busy = false; rsSetButtons();
+    _kc.busy = false; kcSetButtons();
   }
 }
 
@@ -5806,6 +5577,103 @@ async function doLoadPerf() {
   } finally {
     _perfBusy = false; if (btn) btn.disabled = false;
   }
+}
+
+/* ---- Jadwal penilaian per unit (Superadmin, Dev Tools) ------------------------------------------------------------------------
+ * Which months each business unit is appraised in. Pick one or more units, the months, the month it starts and a reason: ONE request, ONE reload. */
+const US_MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+const US_PRESETS = { all: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], qa: [1, 4, 7, 10], qb: [2, 5, 8, 11], qc: [3, 6, 9, 12] };
+let _us = { current: "", units: [], sel: new Set(), months: new Set(US_PRESETS.all), busy: false };
+const usPattern = (months) => (months && months.length ? months.map(n => US_MONTHS[n - 1]).join(" · ") : "Setiap bulan");
+function usMonthChip(u) { const [, m] = String(u.month).split("-"); return `<span class="us-chip ${u.active ? "on" : "off"}" title="${escapeHtml(monthLabelID(u.month))}">${US_MONTHS[Number(m) - 1]}</span>`; }
+function usUnitHtml(u) {
+  const sel = _us.sel.has(u.unit);
+  const sched = (u.scheduled || []).map(s => `<div style="margin-top:4px; color:var(--teal);">Terjadwal mulai <b>${escapeHtml(monthLabelID(s.from))}</b>: ${escapeHtml(usPattern(s.months))}${s.reason ? ` · ${escapeHtml(s.reason)}` : ""}</div>`).join("");
+  return `<div class="us-unit${sel ? " sel" : ""}"><label class="us-unit-row"><input type="checkbox" data-unit="${escapeHtml(u.unit)}" ${sel ? "checked" : ""} onchange="usToggleUnit(this)">
+    <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:700;">${escapeHtml(u.label)} <span style="font-weight:400; font-size:12px; color:var(--text-muted);">· ${u.headcount} orang</span></div>
+      <div style="margin-top:2px; font-size:12px;">Sekarang: <b>${escapeHtml(usPattern(u.months))}</b>${u.since ? ` (sejak ${escapeHtml(monthLabelID(u.since))})` : ""}${u.reason ? ` · ${escapeHtml(u.reason)}` : ""}</div>
+      <div style="margin-top:2px; font-size:12px; color:${u.activeNow ? "var(--green)" : "var(--amber)"};">${u.activeNow ? "Bulan ini DINILAI." : `Bulan ini libur. Berikutnya: <b>${u.nextActive ? escapeHtml(monthLabelID(u.nextActive)) : "-"}</b>.`}</div>
+      <div style="margin-top:6px;">${(u.upcoming || []).map(usMonthChip).join("")}</div>${sched}</div></label></div>`;
+}
+function usRefreshBar() {
+  const n = _us.sel.size, btn = document.getElementById("us-apply-btn");
+  if (btn) { btn.disabled = _us.busy || n === 0 || _us.months.size === 0; btn.textContent = `Terapkan ke yang dipilih (${n})`; }
+  document.querySelectorAll(".us-month").forEach(l => { const on = _us.months.has(Number(l.dataset.m)); l.classList.toggle("on", on); const cb = l.querySelector("input"); if (cb) cb.checked = on; });
+  const lbl = document.getElementById("us-pattern"); if (lbl) lbl.textContent = _us.months.size === 12 ? "Setiap bulan" : (_us.months.size ? usPattern(Array.from(_us.months).sort((a, b) => a - b)) : "Pilih minimal satu bulan");
+}
+function usRender() {
+  const box = document.getElementById("us-box"); if (!box) return;
+  box.innerHTML = `<div>${_us.units.map(usUnitHtml).join("")}</div>
+    <div style="margin-top:12px; font-weight:700;">Jadwal baru</div>
+    <div class="us-presets">
+      <button class="secondary btn-auto" onclick="usPreset('all')">Setiap bulan</button>
+      <button class="secondary btn-auto" onclick="usPreset('qa')">Triwulan: Jan · Apr · Jul · Okt</button>
+      <button class="secondary btn-auto" onclick="usPreset('qb')">Triwulan: Feb · Mei · Agu · Nov</button>
+      <button class="secondary btn-auto" onclick="usPreset('qc')">Triwulan: Mar · Jun · Sep · Des</button>
+    </div>
+    <div class="us-months">${US_MONTHS.map((nm, i) => `<label class="us-month" data-m="${i + 1}"><input type="checkbox" onchange="usToggleMonth(${i + 1})">${nm}</label>`).join("")}</div>
+    <div style="font-size:12px; margin-bottom:8px;">Dinilai pada: <b id="us-pattern"></b></div>
+    <label>Berlaku mulai bulan</label>
+    <input type="month" id="us-from" min="${escapeHtml(_us.current)}" value="${escapeHtml(_us.current)}" style="margin-bottom:10px;">
+    <label>Alasan (wajib, tercatat di log audit)</label>
+    <textarea id="us-reason" rows="2" placeholder="Contoh: Back Office dinilai per 3 bulan mulai Januari." style="display:block; width:100%; box-sizing:border-box; padding:10px 12px; font:inherit; font-size:14px; border:1.5px solid var(--border); border-radius:12px; margin-bottom:10px; resize:vertical;"></textarea>
+    <button class="primary btn-auto" id="us-apply-btn" onclick="doUsApply()" disabled>Terapkan ke yang dipilih (0)</button>
+    <div id="us-note" class="hint" style="margin-top:8px; overflow-wrap:anywhere;"></div>`;
+  usRefreshBar();
+}
+function usNote(html) { const el = document.getElementById("us-note"); if (el) el.innerHTML = html; }
+function usToggleUnit(el) {
+  const u = el.dataset.unit; if (el.checked) _us.sel.add(u); else _us.sel.delete(u);
+  const card = el.closest(".us-unit"); if (card) card.classList.toggle("sel", el.checked);
+  usRefreshBar();
+}
+function usToggleMonth(n) { if (_us.months.has(n)) _us.months.delete(n); else _us.months.add(n); usRefreshBar(); }
+function usPreset(name) { _us.months = new Set(US_PRESETS[name] || US_PRESETS.all); usRefreshBar(); }
+async function usLoad() {
+  if (_us.busy) return;
+  const btn = document.getElementById("us-load-btn"), box = document.getElementById("us-box");
+  _us.busy = true; if (btn) btn.disabled = true;
+  if (box && !_us.units.length) box.textContent = "Memuat...";
+  try {
+    const res = await apiGet("getUnitScheduleOverview", { requesterId: state.user.staffId });
+    if (!res || res.success === false || res.error) { if (box) box.innerHTML = `<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`; return; }
+    const keepNote = (document.getElementById("us-note") || {}).innerHTML || "";
+    const keepReason = (document.getElementById("us-reason") || {}).value || "";
+    _us.current = res.month; _us.units = res.units;
+    const known = new Set(res.units.map(u => u.unit)); Array.from(_us.sel).forEach(u => { if (!known.has(u)) _us.sel.delete(u); });
+    usRender(); usNote(keepNote); const r = document.getElementById("us-reason"); if (r) r.value = keepReason;
+  } finally {
+    _us.busy = false; if (btn) btn.disabled = false; usRefreshBar();
+  }
+}
+async function doUsApply() {
+  if (_us.busy) return;
+  const units = Array.from(_us.sel);
+  if (!units.length) { usNote("Centang dulu unitnya."); return; }
+  if (!_us.months.size) { usNote("Pilih minimal satu bulan penilaian."); return; }
+  const fromEl = document.getElementById("us-from"), reasonEl = document.getElementById("us-reason");
+  const from = fromEl ? fromEl.value : "", reason = reasonEl ? reasonEl.value.trim() : "";
+  if (!/^\d{4}-\d{2}$/.test(from)) { usNote("Pilih bulan mulainya dulu."); return; }
+  if (from < _us.current) { usNote("Bulan mulai tidak boleh di masa lalu — pilih bulan ini atau bulan depan."); return; }
+  if ((reason.match(/[\p{L}\p{N}]/gu) || []).length < 3) { usNote("Isi alasannya dulu (minimal 3 huruf) — ini tercatat untuk jejak audit."); if (reasonEl) reasonEl.focus(); return; }
+  const allMonths = _us.months.size === 12, monthsArr = Array.from(_us.months).sort((a, b) => a - b);
+  const people = units.reduce((a, c) => a + ((_us.units.find(u => u.unit === c) || {}).headcount || 0), 0);
+  const names = units.map(c => (_us.units.find(u => u.unit === c) || {}).label || c).join(", ");
+  if (!confirm(`Ubah jadwal ${names} (${people} orang) menjadi: ${allMonths ? "setiap bulan" : usPattern(monthsArr)}, mulai ${monthLabelID(from)}?\n\nDi bulan di luar jadwal, orang di unit ini tidak bisa mengisi atau dinilai, dan hilang dari daftar tugas, Review, Approve, dan laporan. Data yang sudah ada tetap tersimpan.`)) return;
+  _us.busy = true; usRefreshBar(); usNote("Menyimpan...");
+  try {
+    const res = await apiPost("setUnitSchedule", { requesterId: state.user.staffId, units, months: allMonths ? "all" : monthsArr, fromMonth: from, reason });
+    if (!res || res.success === false || res.error) { usNote(`<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`); return; }
+    const lines = (res.results || []).map(r => r.changed
+      ? `✅ ${escapeHtml(r.label)}: ${escapeHtml(r.months ? usPattern(r.months) : "setiap bulan")}, mulai ${escapeHtml(monthLabelID(res.fromMonth))} (${r.people} orang).`
+      : `ℹ️ ${escapeHtml(r.label)}: jadwalnya sudah seperti itu, tidak ada yang berubah.`);
+    usNote(lines.join("<br>") || "Tidak ada yang berubah.");
+    if ((res.results || []).some(r => r.changed) && reasonEl) reasonEl.value = "";
+    _us.sel.clear();
+  } finally {
+    _us.busy = false;
+  }
+  await usLoad();   // ONE reload for the whole change
 }
 
 async function doImportKpiFromWorkbook() {
@@ -6986,7 +6854,7 @@ const REPORT_TEXT = {
     deptLead: "Setiap titik = rata-rata skor satu department. Garis putus-putus = rata-rata perusahaan ({avg}); garis titik-titik merah muda = batas Underperform ({u}).",
     bestTitle: "Best Performer", bestLead: "Skor di atas {b} — terima kasih atas kerja kerasnya! 🎉", bestNone: "Belum ada yang berskor di atas {b} bulan ini.", bestMore: "+{n} Best Performer lainnya",
     trendTitle: "Perubahan vs Bulan Sebelumnya", trendRangeTitle: "Perubahan dalam Periode",
-    trendCompared: "Dibandingkan dengan {month} · {n} dari {total} {who}", trendComparedRange: "Awal vs akhir periode · {n} dari {total} {who}",
+    trendUnitBaseline: "{unit} dibandingkan dengan {month} (unit ini dinilai sesuai jadwalnya sendiri).", trendCompared: "Dibandingkan dengan {month} · {n} dari {total} {who}", trendComparedRange: "Awal vs akhir periode · {n} dari {total} {who}",
     trendUnapproved: "{m} {who} punya data {month} yang belum di-approve, jadi tidak ikut dibandingkan.",
     improved: "Paling Meningkat", declined: "Paling Menurun", nobodyUp: "Tidak ada yang naik.", nobodyDown: "Tidak ada yang turun.",
     noBaselineNone: "<b>Belum ada data {baseline} di sistem.</b> Tidak ada catatan {baseline} untuk orang-orang yang bisa kamu lihat, jadi belum ada yang bisa dibandingkan. Perbandingan muncul otomatis begitu data bulan sebelumnya ada.",
@@ -7006,7 +6874,7 @@ const REPORT_TEXT = {
     deptLead: "Each dot = one department's average score. Dashed line = company average ({avg}); pink dotted line = the Underperform cut-off ({u}).",
     bestTitle: "Best Performers", bestLead: "Score above {b} — thank you for the great work! 🎉", bestNone: "Nobody scored above {b} this month.", bestMore: "+{n} more Best Performers",
     trendTitle: "Change vs Previous Month", trendRangeTitle: "Change over the Period",
-    trendCompared: "Compared with {month} · {n} of {total} {who}", trendComparedRange: "Start vs end of period · {n} of {total} {who}",
+    trendUnitBaseline: "{unit} is compared with {month} (this unit is appraised on its own schedule).", trendCompared: "Compared with {month} · {n} of {total} {who}", trendComparedRange: "Start vs end of period · {n} of {total} {who}",
     trendUnapproved: "{m} {who} with {month} data not yet approved are left out of the comparison.",
     improved: "Most Improved", declined: "Most Declined", nobodyUp: "Nobody went up.", nobodyDown: "Nobody went down.",
     noBaselineNone: "<b>No {baseline} data in the system.</b> There are no {baseline} records for the people you can see, so there is nothing to compare yet. The comparison appears automatically once last month's data exists.",
@@ -7248,9 +7116,11 @@ function buildReportPane(res, lang, photos) {
   };
   const unapprovedNote = (!isRange && (trend.baselineNotApprovedCount || 0) > 0)
     ? ` ${fill(T.trendUnapproved, { m: trend.baselineNotApprovedCount, who: ppl(trend.baselineNotApprovedCount), month: reportMonthLabel(trend.baselineMonth, lang) })}` : "";
+  const unitBaselineNote = (!isRange && (trend.unitBaselines || []).length)
+    ? (trend.unitBaselines || []).map(u => ` ${fill(T.trendUnitBaseline, { unit: u.label, month: reportMonthLabel(u.month, lang) })}`).join("") : "";
   const trendHtml = trend.mode === "none"
     ? `<div class="info trend-note">${noBaselineText()}</div>`
-    : `<p class="lead trend-lead">${e((isRange ? fill(T.trendComparedRange, { n: trend.comparedCount, total, who: ppl(total) }) : fill(T.trendCompared, { month: reportMonthLabel(trend.baselineMonth, lang), n: trend.comparedCount, total, who: ppl(total) })) + unapprovedNote)}</p>
+    : `<p class="lead trend-lead">${e((isRange ? fill(T.trendComparedRange, { n: trend.comparedCount, total, who: ppl(total) }) : fill(T.trendCompared, { month: reportMonthLabel(trend.baselineMonth, lang), n: trend.comparedCount, total, who: ppl(total) })) + unapprovedNote + unitBaselineNote)}</p>
        <div class="cols">
          <div class="col"><h3>🌟 ${e(T.improved)}</h3>${res.mostImproved.length ? res.mostImproved.map(trendRow).join("") : `<div class="empty">${e(T.nobodyUp)}</div>`}</div>
          <div class="col"><h3>📉 ${e(T.declined)}</h3>${res.mostDeclined.length ? res.mostDeclined.map(trendRow).join("") : `<div class="empty">${e(T.nobodyDown)}</div>`}</div>
@@ -7771,6 +7641,8 @@ async function renderAppraisalForm({ evaluatorType, target }) {
       msg = t("form_deferred");
     } else if (access.reason === "new_hire_this_month") {
       msg = t("form_new_hire");
+    } else if (access.reason === "unit_off_cycle") {
+      msg = escapeHtml(t("form_unit_offcycle").replace("{unit}", BUSINESS_UNIT_NAMES[access.unit] || access.unit || "").replace("{month}", access.nextActive ? monthLabelID(access.nextActive) : "-"));
     } else if (access.reason === "department_excluded") {
       msg = escapeHtml(t("form_dept_excluded").replace("{dept}", access.department || "").replace("{month}", monthLabelID(access.since)));
     } else if (access.reason === "business_unit_not_yet_active") {
@@ -8261,6 +8133,7 @@ function submitDeniedMessage(res) {
     case "deferred_to_previous_cycle": return { text: "Gagal menyimpan: " + plain(t("form_deferred")), type: "error" };
     case "new_hire_this_month": return { text: "Gagal menyimpan: " + plain(t("form_new_hire")), type: "error" };
     case "business_unit_not_yet_active": return { text: "Gagal menyimpan: " + plain(t("form_unit_not_active")), type: "error" };
+    case "unit_off_cycle": return { text: "Gagal menyimpan: " + plain(t("form_unit_offcycle").replace("{unit}", BUSINESS_UNIT_NAMES[res.unit] || res.unit || "").replace("{month}", res.nextActive ? monthLabelID(res.nextActive) : "-")), type: "error" };
     case "department_excluded": return { text: "Gagal menyimpan: " + plain(t("form_dept_excluded").replace("{dept}", res.department || "").replace("{month}", monthLabelID(res.since))), type: "error" };
     default: return null;
   }

@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-08-321-trigger-manager — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-08-322-warm-status-in-trigger-card — LIVE</div>
 
 <script>
 // =================================================================
@@ -5520,14 +5520,26 @@ async function doKcApply() {
 /* ---- Trigger otomatis (Superadmin, Dev Tools) ---------------------------------------------------------------------------------
  * Every trigger the app needs, in one list: see which are installed, install or remove several in ONE request. Installing always replaces what
  * exists for that function, so a trigger can never run twice. The script's time zone is shown because the daily hours follow it. */
-let _tg = { managed: [], others: [], sel: new Set(), busy: false };
+let _tg = { managed: [], others: [], sel: new Set(), busy: false, warm: null };
+/** The last warm-up run and whether the roster FITS in the cache (Google refuses an entry over 100 KB, silently): only for the warm-up row. */
+function tgWarmLine(t) {
+  if (t.key !== "warmCaches") return "";
+  const w = _tg.warm;
+  if (!w) return t.installed ? `<div style="margin-top:4px; font-size:12px; color:var(--text-muted);">Belum pernah jalan.</div>` : "";
+  const kb = (Number(w.rosterBytes || 0) / 1024).toFixed(1);
+  const when = `Terakhir jalan ${escapeHtml(new Date(w.at).toLocaleTimeString("id-ID"))}, ${perfFmt(w.ms)}.`;
+  const roster = w.rosterCached
+    ? `Roster ${kb} KB, muat di cache.`
+    : `<span style="color:var(--red); font-weight:600;">⚠️ Roster ${kb} KB TIDAK muat di cache (batas 100 KB per entri): setiap permintaan membaca ulang dari HR sheet. Beri tahu pengembang.</span>`;
+  return `<div style="margin-top:4px; font-size:12px;">${when} ${roster}</div>`;
+}
 function tgRowHtml(t) {
   const sel = _tg.sel.has(t.key);
   const badge = t.count > 1 ? `<span style="color:var(--red); font-weight:700;">⚠️ Ganda (${t.count}×), pasang untuk merapikan</span>` : (t.installed ? `<span style="color:var(--green); font-weight:700;">✅ Aktif</span>` : `<span style="color:var(--amber); font-weight:700;">❌ Belum dipasang</span>`);
   return `<div class="us-unit${sel ? " sel" : ""}"><label class="us-unit-row"><input type="checkbox" data-trigger="${escapeHtml(t.key)}" ${sel ? "checked" : ""} onchange="tgToggle(this)">
     <div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:700;">${escapeHtml(t.label)}${t.critical ? ` <span style="font-size:11px; font-weight:700; color:var(--coral);">· penting</span>` : ""}</div>
       <div style="margin-top:2px; font-size:12px;">${badge} · ${escapeHtml(t.schedule)}</div>
-      <div style="margin-top:4px; font-size:12px; color:var(--text-muted);">${escapeHtml(t.desc)}</div>
+      <div style="margin-top:4px; font-size:12px; color:var(--text-muted);">${escapeHtml(t.desc)}</div>${tgWarmLine(t)}
       <div style="margin-top:2px; font-size:11px; color:var(--text-muted);">fungsi: ${escapeHtml(t.key)}</div></div></label></div>`;
 }
 function tgRefreshBar() {
@@ -5568,7 +5580,7 @@ async function tgLoad() {
     const res = await apiGet("getTriggerOverview", { requesterId: state.user.staffId });
     if (!res || res.success === false || res.error) { if (box) box.innerHTML = `<span style="color:var(--red);">Gagal: ${escapeHtml(friendlyError(res && res.error))}</span>`; return; }
     const keepNote = (document.getElementById("tg-note") || {}).innerHTML || "";
-    _tg.managed = res.managed || []; _tg.others = res.others || [];
+    _tg.managed = res.managed || []; _tg.others = res.others || []; _tg.warm = res.warm || null;
     const known = new Set(_tg.managed.map(t => t.key)); Array.from(_tg.sel).forEach(k => { if (!known.has(k)) _tg.sel.delete(k); });
     tgRender(res); tgNote(keepNote);
   } finally {
@@ -5609,23 +5621,8 @@ function perfFmt(ms) {
   return n < 1000 ? `${Math.round(n)} ms` : `${(n / 1000).toFixed(1)} dtk`;
 }
 function perfTone(ms) { return ms >= 8000 ? "var(--red)" : (ms >= 3000 ? "var(--amber)" : "inherit"); }
-/** The cache warm-up: whether it runs, when it last ran, and whether the roster even FITS in the cache (Google refuses an entry over 100 KB, silently). */
-function perfWarmHtml(w) {
-  if (!w) return "";
-  const last = w.last;
-  const kb = last ? (Number(last.rosterBytes || 0) / 1024).toFixed(1) : null;
-  const status = w.installed
-    ? `✅ Penghangat cache <b>aktif</b> (tiap 5 menit).${last ? ` Terakhir jalan ${escapeHtml(new Date(last.at).toLocaleTimeString("id-ID"))}, ${perfFmt(last.ms)}.` : " Belum pernah jalan."}`
-    : `❌ Penghangat cache <b>belum aktif</b>: orang pertama setelah jeda panjang menunggu sheet HR dibuka ulang (beberapa detik).`;
-  const roster = last ? (last.rosterCached
-    ? `Roster ${kb} KB, muat di cache.`
-    : `<span style="color:var(--red);">⚠️ Roster ${kb} KB TIDAK muat di cache (batas 100 KB per entri): setiap permintaan membaca ulang dari HR sheet. Beri tahu pengembang.</span>`) : "";
-  const btn = `<span style="font-size:12px; color:var(--text-muted);">Pasang atau lepas lewat kartu <b>⏰ Trigger otomatis</b>.</span>`;
-  return `<div style="margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border);"><div>${status}</div>${roster ? `<div style="margin-top:4px;">${roster}</div>` : ""}<div style="margin-top:8px;">${btn}</div></div>`;
-}
 function perfSummaryHtml(res) {
-  const warm = perfWarmHtml(res.warm);
-  if (!res.count) return warm + `<div>Belum ada catatan. Pakai aplikasinya sebentar (login, buka Review, simpan satu penilaian), lalu muat lagi.</div>`;
+  if (!res.count) return `<div>Belum ada catatan. Pakai aplikasinya sebentar (login, buka Review, simpan satu penilaian), lalu muat lagi.</div>`;
   const rows = (res.actions || []).map(a => `<tr>
       <td style="padding:5px 8px 5px 0; font-weight:600; min-width:150px; overflow-wrap:anywhere;">${escapeHtml(a.action)}<div style="font-weight:400; font-size:11px; color:var(--text-muted);">${escapeHtml(a.kind)}${a.errors ? ` · <span style="color:var(--red);">${a.errors} gagal</span>` : ""}</div></td>
       <td style="padding:5px 6px; text-align:right; white-space:nowrap;">${a.n}</td>
@@ -5635,7 +5632,7 @@ function perfSummaryHtml(res) {
       <td style="padding:5px 6px; text-align:right; white-space:nowrap; color:${perfTone(a.lockWaitAvg || 0)};">${perfFmt(a.lockWaitAvg)}</td>
       <td style="padding:5px 0 5px 6px; text-align:right; white-space:nowrap; color:${perfTone(a.lockHoldAvg || 0)};">${perfFmt(a.lockHoldAvg)}</td></tr>`).join("");
   const slow = (res.slowest || []).map(x => `<li>${escapeHtml(x.action)} — <b>${perfFmt(x.ms)}</b>${x.lockWaitMs !== null && x.lockWaitMs !== undefined ? ` (tunggu kunci ${perfFmt(x.lockWaitMs)}, pegang ${perfFmt(x.lockHoldMs)})` : ""}${x.ok ? "" : ` <span style="color:var(--red);">gagal</span>`} · ${escapeHtml(new Date(x.at).toLocaleTimeString("id-ID"))}</li>`).join("");
-  return warm + `<div style="margin-bottom:6px;">${res.count} permintaan, ${escapeHtml(new Date(res.from).toLocaleString("id-ID"))} – ${escapeHtml(new Date(res.to).toLocaleTimeString("id-ID"))}</div>
+  return `<div style="margin-bottom:6px;">${res.count} permintaan, ${escapeHtml(new Date(res.from).toLocaleString("id-ID"))} – ${escapeHtml(new Date(res.to).toLocaleTimeString("id-ID"))}</div>
     <div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:12px; min-width:560px;">
       <thead><tr style="text-align:right; color:var(--text-muted);"><th style="text-align:left; padding:4px 8px 4px 0; min-width:150px;">Aksi</th><th style="padding:4px 6px; white-space:nowrap;">Jml</th><th style="padding:4px 6px; white-space:nowrap;">Median</th><th style="padding:4px 6px; white-space:nowrap;">p95</th><th style="padding:4px 6px; white-space:nowrap;">Terlama</th><th style="padding:4px 6px; white-space:nowrap;">Tunggu kunci</th><th style="padding:4px 0 4px 6px; white-space:nowrap;">Pegang kunci</th></tr></thead>
       <tbody>${rows}</tbody></table></div>

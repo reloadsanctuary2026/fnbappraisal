@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-08-322-warm-status-in-trigger-card — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-08-323-hr-sees-compliance — LIVE</div>
 
 <script>
 // =================================================================
@@ -6551,7 +6551,7 @@ function renderSelfAppraisalComplianceCard(res, unit) {
 
 async function renderReview(skipFetch) {
   const title = state.user.isHR || state.user.isExecutive || state.user.isAdminOperational ? t("review_title_all") : t("review_title_team");
-  const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational || state.user.isManagement;
+  const canSeeCompliance = state.user.isExecutive || state.user.isAdminOperational || state.user.isManagement || state.user.isHR; // HR too: same reach as the rest of this screen
   const viewMode = state._reviewViewMode || "list";
   const rangeMode = !!(state._reviewEndMonth && state._reviewEndMonth !== state.month); // automatic — true whenever the two month pickers differ, no manual toggle to keep in sync
   const effectiveEndMonth = state._reviewEndMonth || state.month; // used further down in the body regardless of which branch below runs — must be declared here, not inside the fetch-only branch

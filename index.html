@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-08-323-hr-sees-compliance — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-11-324-self-reference-off — LIVE</div>
 
 <script>
 // =================================================================
@@ -7735,7 +7735,7 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   // Access was already checked above (checkAccess is NOT started together with the config: the config locks this person's position for the month, which must
   // never happen for someone who is not allowed to appraise). The reference scores are read-only, so they load WITH the config instead of after it.
   const cfgPromise = apiGet("getKpiConfigForTarget", { targetStaffId: target.staffId, monthKey: access.month || currentMonth() });
-  const selfRefPromise = evaluatorType !== "self" ? apiGet("getSelfScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId }) : null;
+  const selfRefPromise = evaluatorType !== "self" ? apiGet("getSelfScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId, evaluatorType }) : null;
   const leaderRefPromise = evaluatorType === "hr" ? apiGet("getLeaderScoresForTarget", { evaluatorId: state.user.staffId, staffId: target.staffId }) : null;
   const cfg = await cfgPromise;
   if (cfg.error) {
@@ -7752,15 +7752,17 @@ async function renderAppraisalForm({ evaluatorType, target }) {
   // scores as reference context, if they've already submitted it.
   state.selfReference = null;
   state.leaderReference = null;
+  state.selfReferenceHidden = false;   // the server may say "submitted, but the scores are not shown to you"
+  state.leaderReferenceHidden = false;
   if (selfRefPromise) {
     const selfRes = await selfRefPromise;
-    if (selfRes.found) state.selfReference = selfRes.scores;
+    if (selfRes.found) { state.selfReference = selfRes.scores || {}; state.selfReferenceHidden = !!selfRes.scoresHidden; }
   }
   // HR appraises LAST (day 18-27) — by then Self AND Leader/Mgmt should both already be
   // submitted, so HR gets both as reference instead of just Self.
   if (leaderRefPromise) {
     const leaderRes = await leaderRefPromise;
-    if (leaderRes.found) state.leaderReference = leaderRes.scores;
+    if (leaderRes.found) { state.leaderReference = leaderRes.scores || {}; state.leaderReferenceHidden = !!leaderRes.scoresHidden; }
   }
 
   renderFormBody(evaluatorType, target, cfg);
@@ -7822,7 +7824,7 @@ function renderCustomFormBody(evaluatorType, target, cfg) {
         ${t("form_score_legend")}
       </div>
       ${evaluatorType !== "self" ? (state.selfReference
-        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself — skornya ditampilkan sebagai referensi.</div>`
+        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself${state.selfReferenceHidden ? ". Skornya sengaja tidak ditampilkan supaya penilaianmu tetap independen." : " — skornya ditampilkan sebagai referensi."}</div>`
         : `<div class="hint" style="background:var(--amber-bg); color:var(--amber); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">⚠️ ${target.name} belum Appraise Yourself — kamu menilai tanpa referensi dari dia.</div>`
       ) : ""}
       <div class="hint" id="progress-counter" style="text-align:right; font-weight:700; color:var(--teal); margin-bottom:14px;"></div>
@@ -7937,7 +7939,7 @@ function renderFormBody(evaluatorType, target, cfg) {
         ${t("form_score_legend")}
       </div>
       ${evaluatorType !== "self" ? (state.selfReference
-        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself — skornya ditampilkan sebagai referensi di tiap kriteria (label "Self: X").${state.leaderReference ? ` Skor Leader/Mgmt juga ditampilkan (label "Leader/Mgmt: X").` : ""}</div>`
+        ? `<div class="hint" style="background:var(--green-bg); color:var(--green); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">✅ ${target.name} sudah Appraise Yourself${state.selfReferenceHidden ? ". Skornya sengaja tidak ditampilkan supaya penilaianmu tetap independen." : " — skornya ditampilkan sebagai referensi di tiap kriteria (label \"Self: X\")."}${state.leaderReference && !state.leaderReferenceHidden ? ` Skor Leader/Mgmt juga ditampilkan (label "Leader/Mgmt: X").` : ""}</div>`
         : `<div class="hint" style="background:var(--amber-bg); color:var(--amber); padding:9px 12px; border-radius:10px; margin-bottom:8px; font-weight:600;">⚠️ ${target.name} belum Appraise Yourself — kamu menilai tanpa referensi dari dia.</div>`
       ) : ""}
       <div class="hint" id="progress-counter" style="text-align:right; font-weight:700; color:var(--teal); margin-bottom:14px;"></div>

@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-332-single-bell — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-333-notif-page — LIVE</div>
 
 <script>
 // =================================================================
@@ -653,6 +653,15 @@ function showToast(message, type = "success", durationMs = 2400) {
 const translations = {
   id: {
     logout: "Keluar",
+    notif_btn_self: "Isi sekarang",
+    notif_btn_eval: "Buka penilaian",
+    notif_btn_gm: "Buka Approve",
+    notif_btn_history: "Lihat riwayat",
+    notif_btn_devtools: "Buka Dev Tools",
+    notif_btn_review: "Lihat",
+    notif_pager_prev: "← Sebelumnya",
+    notif_pager_next: "Berikutnya →",
+    notif_pager_info: "Halaman {page} dari {total}",
     decision_mentoring_coaching: "Mentoring/Coaching Needed",
     decision_extend_contract: "Extend Contract/Probation",
     decision_demote_mutate: "Recommend to Demote/Mutate",
@@ -1204,6 +1213,15 @@ const translations = {
   },
   en: {
     logout: "Log Out",
+    notif_btn_self: "Fill in now",
+    notif_btn_eval: "Open evaluations",
+    notif_btn_gm: "Open approvals",
+    notif_btn_history: "View history",
+    notif_btn_devtools: "Open Dev Tools",
+    notif_btn_review: "View",
+    notif_pager_prev: "← Previous",
+    notif_pager_next: "Next →",
+    notif_pager_info: "Page {page} of {total}",
     decision_mentoring_coaching: "Mentoring/Coaching Needed",
     decision_extend_contract: "Extend Contract/Probation",
     decision_demote_mutate: "Recommend to Demote/Mutate",
@@ -2119,6 +2137,123 @@ function openNotifications() {
 }
 
 let _isLoadingNotifications = false;
+const NOTIF_PAGE_SIZE = 20;
+const NOTIF_ACTION_BUTTON_KEYS = { self: "notif_btn_self", myEvaluations: "notif_btn_eval", gm: "notif_btn_gm", history: "notif_btn_history", devTools: "notif_btn_devtools", review: "notif_btn_review" };
+
+/** Where tapping a notification should go. Newer notifications carry it; older ones are recognised from their wording. */
+function notificationActionScreen(n) {
+  if (n.actionScreen) return n.actionScreen;
+  const m = n.message || "";
+  if (/sudah isi Self Appraisal/.test(m)) return "myEvaluations";
+  if (/sudah menilai kamu/.test(m)) return "history";
+  if (/Appraise Yourself belum diisi|direset oleh admin|kirim ulang Self Appraisal|Karena kontrak kamu/.test(m)) return "self";
+  if (/siap di-approve/.test(m)) return "gm";
+  if (/Reminder|belum dinilai/.test(m)) return "myEvaluations";
+  if (/Hasil appraisal/.test(m)) return "history";
+  if (/Cek Otomatis Struktur/.test(m)) return "devTools";
+  return "";
+}
+
+/** A destination is only offered when this person can actually open it; otherwise the button would lead to a refusal. */
+function notificationCanOpen(screen) {
+  return !!screen && availableScreens(state.user).some(s => s.key === screen);
+}
+
+function notificationIsSpecial(n) {
+  return n.message.indexOf("minta reset PIN") !== -1 || n.message.indexOf("sudah isi Self Appraisal") !== -1;
+}
+
+function notificationNeedsAction(n) {
+  if (n.read) return false;
+  if (n.message.indexOf("minta reset PIN") !== -1) return true;
+  return notificationCanOpen(notificationActionScreen(n));
+}
+
+function notificationCardHtml(n) {
+  const isPinResetRequest = n.message.indexOf("minta reset PIN") !== -1;
+  const isSelfDoneNotification = n.message.indexOf("sudah isi Self Appraisal") !== -1;
+  const screen = notificationActionScreen(n);
+  const canOpen = notificationCanOpen(screen);
+  const shownText = noticeText(n);
+  const displayMessage = isPinResetRequest ? shownText.split(" — ")[0] : shownText;
+  const needsAction = notificationNeedsAction(n);
+
+  let tapAttr = "";
+  if (!isPinResetRequest && !isSelfDoneNotification) {
+    if (!n.read) tapAttr = `onclick="markRead('${n.id}', '${canOpen ? screen : ""}')"`;
+    else if (canOpen) tapAttr = `onclick="navigateToScreen('${screen}')"`;
+  }
+
+  let actionHtml = "";
+  if (isPinResetRequest && !n.read) {
+    actionHtml = `
+      <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doResetStaffPin('${n.aboutStaffId}', '${n.id}', this)">${t("notif_reset_pin_btn")}</button>
+      <div id="pin-reset-result-${n.id}" style="font-size:13px;"></div>`;
+  } else if (isPinResetRequest) {
+    actionHtml = `<div class="hint" style="color:var(--green); font-weight:600;">${t("notif_reset_done")}</div>`;
+  } else if (isSelfDoneNotification && !n.read) {
+    actionHtml = `<button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doGoEvaluateFromNotification('${n.aboutStaffId}', '${n.id}', this)">${t("notif_evaluate_now_btn")}</button>`;
+  } else if (!n.read && canOpen) {
+    actionHtml = `<button class="secondary" style="width:100%;" onclick="event.stopPropagation(); markRead('${n.id}', '${screen}')">${t(NOTIF_ACTION_BUTTON_KEYS[screen])}</button>`;
+  }
+
+  return `
+    <div class="staff-row" style="cursor:${tapAttr ? "pointer" : "default"}; ${n.read ? "" : "border-color:var(--coral);"} ${actionHtml ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${tapAttr}>
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+        <div>
+          <div class="name" style="font-weight:${n.read ? "500" : "700"};">${displayMessage}${canOpen && n.read ? ` <span style="color:var(--teal); font-size:11px;">${t("notif_open_link")}</span>` : ""}</div>
+          <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
+        </div>
+        ${n.read ? "" : `<span class="badge pending">${t("notif_badge_new")}</span>`}
+      </div>
+      ${actionHtml}
+    </div>`;
+}
+
+/** Applies the search, the tab and the page to the whole list (not just the page on screen). */
+function notificationsFiltered(list) {
+  const f = state._notifFilters;
+  const q = (f.search || "").trim().toLowerCase();
+  return list.filter(n => {
+    if (q && !(noticeText(n) + " " + n.message).toLowerCase().includes(q)) return false;
+    if (f.tab === "unread" && n.read) return false;
+    if (f.tab === "action" && !notificationNeedsAction(n)) return false;
+    return true;
+  });
+}
+
+function renderNotificationList() {
+  const f = state._notifFilters;
+  const list = state._notifList || [];
+  const filtered = notificationsFiltered(list);
+  const pages = Math.max(1, Math.ceil(filtered.length / NOTIF_PAGE_SIZE));
+  f.page = Math.min(Math.max(1, f.page || 1), pages);
+  const pageItems = filtered.slice((f.page - 1) * NOTIF_PAGE_SIZE, f.page * NOTIF_PAGE_SIZE);
+
+  const container = document.getElementById("notif-list-container");
+  if (container) container.innerHTML = pageItems.map(notificationCardHtml).join("");
+  const countEl = document.getElementById("notif-count-hint");
+  if (countEl) countEl.textContent = `${filtered.length} ${t("notif_count_suffix")}`;
+  const emptyEl = document.getElementById("notif-empty-note");
+  if (emptyEl) {
+    emptyEl.style.display = filtered.length ? "none" : "";
+    emptyEl.textContent = list.length ? t("notif_empty_filtered") : t("notif_empty_all");
+  }
+  ["all", "unread", "action"].forEach(key => {
+    const btn = document.getElementById(`notif-filter-${key}`);
+    if (btn) btn.className = key === f.tab ? "primary" : "secondary";
+  });
+  const pagerEl = document.getElementById("notif-pager");
+  if (pagerEl) {
+    pagerEl.innerHTML = pages > 1 ? `
+      <div class="row-flex" style="align-items:center; margin-top:12px;">
+        <button class="secondary" style="flex:0 0 auto;" ${f.page <= 1 ? "disabled" : ""} onclick="changeNotificationPage(-1)">${t("notif_pager_prev")}</button>
+        <div class="hint" style="flex:1; text-align:center; margin:0;">${t("notif_pager_info").replace("{page}", f.page).replace("{total}", pages)}</div>
+        <button class="secondary" style="flex:0 0 auto;" ${f.page >= pages ? "disabled" : ""} onclick="changeNotificationPage(1)">${t("notif_pager_next")}</button>
+      </div>` : "";
+  }
+}
+
 async function renderNotifications() {
   if (_isLoadingNotifications) return; // ignore rapid repeat clicks while a fetch is already in flight
   _isLoadingNotifications = true;
@@ -2130,99 +2265,44 @@ async function renderNotifications() {
       return;
     }
     const list = res.notifications || [];
+    state._notifList = list;
     state.unreadCount = list.filter(n => !n.read).length;
+    state._notifFilters = { search: "", tab: "all", page: 1 };
 
-  app.innerHTML = topbar(t("notif_title")) + `
-    <button class="ghost" onclick="goBackFromNotifications()">&larr; ${t("form_back")}</button>
-    <input type="text" placeholder="${t("notif_search_placeholder")}" oninput="updateNotificationFilter('search', this.value)" style="margin:10px 0;" />
-    <div class="row-flex" style="margin-bottom:10px;">
-      <button class="primary" id="notif-filter-all" style="flex:1;" onclick="setNotificationFilterTab('all')">${t("notif_tab_all")}</button>
-      <button class="secondary" id="notif-filter-unread" style="flex:1;" onclick="setNotificationFilterTab('unread')">${t("notif_tab_unread")}</button>
-      <button class="secondary" id="notif-filter-action" style="flex:1;" onclick="setNotificationFilterTab('action')">${t("notif_tab_action")}</button>
-    </div>
-    <div class="hint" id="notif-count-hint">${list.length} ${t("notif_count_suffix")}</div>
-    <div id="notif-list-container">
-    ${list.map(n => {
-      // "Lupa PIN?" requests used to mean: HR opens the HR Sheet, clears the cell by hand,
-      // switches to the Apps Script editor, runs generateRandomPins() for the WHOLE
-      // roster, goes back to the Sheet to find the row again, copies the new PIN out to
-      // message the person. This button collapses all of that into one click, right here.
-      const isPinResetRequest = n.message.indexOf("minta reset PIN") !== -1;
-      // "X sudah isi Self Appraisal" is sent to whoever is next in line to evaluate that
-      // person — previously just informational text with nowhere to go from here, leaving
-      // the recipient to navigate to Team Appraisal and find that person manually.
-      const isSelfDoneNotification = n.message.indexOf("sudah isi Self Appraisal") !== -1;
-      // Older notifications (created before this button existed) have the OLD manual
-      // instructions baked right into the stored text ("...— hapus cell PIN mereka di HR
-      // Sheet lalu jalankan generateRandomPins()."). Showing that verbatim next to a
-      // "✅ Sudah direset." status is actively confusing — looks like there's still a
-      // manual step outstanding. Cut the display off at the em dash for ANY pin-reset
-      // notification (old or new wording alike) — the button/status below already says
-      // everything that's actually needed, the instructional tail never needs to be seen.
-      const shownText = noticeText(n);
-      const displayMessage = isPinResetRequest ? shownText.split(" — ")[0] : shownText;
-      const needsAction = isPinResetRequest && !n.read;
-      const stackedLayout = isPinResetRequest || isSelfDoneNotification;
-      return `
-      <div class="staff-row" data-search="${escapeAttr(n.message.toLowerCase())}" data-read="${n.read}" data-action-needed="${needsAction}" style="cursor:${n.read && !n.actionScreen ? "default" : "pointer"}; ${n.read ? "" : "border-color:var(--coral);"} ${stackedLayout ? "flex-direction:column; align-items:stretch; gap:8px;" : ""}" ${!isPinResetRequest && !isSelfDoneNotification && !n.read ? `onclick="markRead('${n.id}', '${n.actionScreen || ""}')"` : (!isPinResetRequest && !isSelfDoneNotification && n.actionScreen ? `onclick="navigateToScreen('${n.actionScreen}')"` : "")}>
-        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-          <div>
-            <div class="name" style="font-weight:${n.read ? "500" : "700"};">${displayMessage}${n.actionScreen ? ` <span style="color:var(--teal); font-size:11px;">${t("notif_open_link")}</span>` : ""}</div>
-            <div class="dept">${fullDateLabelID(n.timestamp)} · ${monthLabelID(n.month)}</div>
-          </div>
-          ${n.read ? "" : `<span class="badge pending">${t("notif_badge_new")}</span>`}
-        </div>
-        ${isPinResetRequest && !n.read ? `
-          <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doResetStaffPin('${n.aboutStaffId}', '${n.id}', this)">${t("notif_reset_pin_btn")}</button>
-          <div id="pin-reset-result-${n.id}" style="font-size:13px;"></div>
-        ` : ""}
-        ${isPinResetRequest && n.read ? `<div class="hint" style="color:var(--green); font-weight:600;">${t("notif_reset_done")}</div>` : ""}
-        ${isSelfDoneNotification ? `
-          <button class="secondary" style="width:100%;" onclick="event.stopPropagation(); doGoEvaluateFromNotification('${n.aboutStaffId}', '${n.id}', this)">${t("notif_evaluate_now_btn")}</button>
-        ` : ""}
-      </div>`;
-    }).join("")}
-    </div>
-    <div class="hint" id="notif-empty-note" style="display:none; text-align:center; padding:16px 0;">${t("notif_empty_filtered")}</div>
-    ${!list.length ? `<div class="hint">${t("notif_empty_all")}</div>` : ""}
-  `;
-  state._notifFilters = { search: "", tab: "all" };
+    app.innerHTML = topbar(t("notif_title")) + `
+      <button class="ghost" onclick="goBackFromNotifications()">&larr; ${t("form_back")}</button>
+      <input type="text" placeholder="${t("notif_search_placeholder")}" oninput="updateNotificationFilter('search', this.value)" style="margin:10px 0;" />
+      <div class="row-flex" style="margin-bottom:10px;">
+        <button class="primary" id="notif-filter-all" style="flex:1;" onclick="setNotificationFilterTab('all')">${t("notif_tab_all")}</button>
+        <button class="secondary" id="notif-filter-unread" style="flex:1;" onclick="setNotificationFilterTab('unread')">${t("notif_tab_unread")}</button>
+        <button class="secondary" id="notif-filter-action" style="flex:1;" onclick="setNotificationFilterTab('action')">${t("notif_tab_action")}</button>
+      </div>
+      <div class="hint" id="notif-count-hint"></div>
+      <div id="notif-list-container" style="margin-top:8px;"></div>
+      <div class="hint" id="notif-empty-note" style="display:none; text-align:center; padding:16px 0;"></div>
+      <div id="notif-pager"></div>`;
+    renderNotificationList();
   } finally {
     _isLoadingNotifications = false;
   }
 }
 
 function setNotificationFilterTab(tab) {
-  state._notifFilters = state._notifFilters || {};
   state._notifFilters.tab = tab;
-  ["all", "unread", "action"].forEach(key => {
-    const btn = document.getElementById(`notif-filter-${key}`);
-    if (btn) btn.className = key === tab ? "primary" : "secondary";
-  });
-  applyNotificationFilters();
+  state._notifFilters.page = 1;
+  renderNotificationList();
 }
 
 function updateNotificationFilter(key, value) {
-  state._notifFilters = state._notifFilters || {};
   state._notifFilters[key] = value;
-  applyNotificationFilters();
+  state._notifFilters.page = 1;
+  renderNotificationList();
 }
 
-function applyNotificationFilters() {
-  const f = state._notifFilters || { search: "", tab: "all" };
-  let visibleCount = 0;
-  document.querySelectorAll("#notif-list-container [data-search]").forEach(el => {
-    let show = true;
-    if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
-    if (f.tab === "unread" && el.dataset.read !== "false") show = false;
-    if (f.tab === "action" && el.dataset.actionNeeded !== "true") show = false;
-    el.style.display = show ? "" : "none";
-    if (show) visibleCount++;
-  });
-  const emptyNote = document.getElementById("notif-empty-note");
-  if (emptyNote) emptyNote.style.display = visibleCount === 0 ? "" : "none";
-  const countHint = document.getElementById("notif-count-hint");
-  if (countHint) countHint.textContent = `${visibleCount} notifikasi`;
+function changeNotificationPage(delta) {
+  state._notifFilters.page = (state._notifFilters.page || 1) + delta;
+  renderNotificationList();
+  window.scrollTo(0, 0);
 }
 
 /** "Nilai Sekarang" on a "sudah isi Self Appraisal" notification — jumps straight into

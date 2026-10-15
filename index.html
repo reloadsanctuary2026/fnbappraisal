@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-11-325-calibration-fix — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-327-auto-refresh — LIVE</div>
 
 <script>
 // =================================================================
@@ -1699,6 +1699,32 @@ function topbar(title) {
     </div>`;
 }
 
+/** Redraws only the 🔔 badge in the top bar, so a count change shows up without re-rendering the whole screen. */
+function updateNotificationBadge() {
+  const btn = document.querySelector('.topbar button[onclick="openNotifications()"]');
+  if (!btn) return;
+  const unread = state.unreadCount || 0;
+  btn.style.position = "relative";
+  btn.innerHTML = `🔔${unread > 0 ? `<span style="position:absolute; top:-6px; right:-6px; background:var(--coral); color:#fff; border-radius:10px; font-size:10px; padding:1px 5px; font-weight:800;">${unread}</span>` : ""}`;
+}
+
+let _notificationPollTimer = null;
+/** Keeps the 🔔 count current while the app is open: every 2 minutes, and whenever the person comes back to the tab. Starts once. */
+function startNotificationPolling() {
+  if (_notificationPollTimer) return;
+  const refreshAndDraw = async () => {
+    if (!state.user) return;
+    const before = state.unreadCount || 0;
+    await refreshUnreadCount();
+    if ((state.unreadCount || 0) !== before) {
+      updateNotificationBadge();
+      if (state.screen === "dashboard") render(); // the "Perlu tindakanmu" card reads the same count
+    }
+  };
+  _notificationPollTimer = setInterval(() => { if (!document.hidden) refreshAndDraw(); }, 120000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshAndDraw(); });
+}
+
 async function refreshUnreadCount() {
   if (!state.user) return;
   const res = await apiGet("getNotifications", { staffId: state.user.staffId });
@@ -2461,6 +2487,7 @@ function availableScreens(user) {
 }
 
 function goToRoleMenu() {
+  startNotificationPolling();
   const options = availableScreens(state.user);
   if (options.length === 0) {
     app.innerHTML = topbar(t("menu_no_access_title")) + `
@@ -2498,6 +2525,25 @@ function renderRoleMenu() {
     <div class="card">
       <div class="hint">${state.user.name} punya lebih dari satu akses:</div>
       ${options.map(menuItemHtml).join("")}
+    </div>`;
+}
+
+/** "Perlu tindakanmu" — the things this person must do now, pulled from data the app already has. Returns '' when there is nothing
+ *  to do, so the dashboard stays exactly as before for people with nothing pending. */
+function buildActionNeedsCard({ selfPending, evaluationsPending, unreadCount }) {
+  const items = [];
+  if (selfPending) items.push({ label: "Isi Appraise Yourself bulan ini", btn: "Isi sekarang", action: "goToScreen('self')" });
+  if (evaluationsPending > 0) items.push({ label: `${evaluationsPending} penilaian belum diisi`, btn: "Buka", action: "goToScreen('myEvaluations')" });
+  if (unreadCount > 0) items.push({ label: `${unreadCount} notifikasi belum dibaca`, btn: "Lihat", action: "openNotifications()" });
+  if (!items.length) return "";
+  return `
+    <div class="card" style="border-left:4px solid var(--coral);">
+      <div style="font-weight:800; color:var(--coral); font-size:13px; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Perlu tindakanmu</div>
+      ${items.map(i => `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);">
+          <span style="font-size:14px; font-weight:600;">${i.label}</span>
+          <button class="secondary" style="width:auto; padding:6px 12px; flex-shrink:0;" onclick="${i.action}">${i.btn}</button>
+        </div>`).join("")}
     </div>`;
 }
 
@@ -2551,6 +2597,19 @@ async function renderDashboard() {
     }
   }
 
+  // Evaluator roles need their pending list; superadmin holds every flag for administration, not as an evaluator, so skip it.
+  const needsEvaluationList = !state.user.isSuperAdmin && (state.user.isLeader || state.user.isManagement || state.user.isExecutive || state.user.isHR);
+  const [evalRes] = await Promise.all([
+    needsEvaluationList ? apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId }) : Promise.resolve({ targets: [] }),
+    refreshUnreadCount(),
+  ]);
+  const evaluationsPending = (evalRes.targets || []).filter(x => x.status !== "Submitted").length;
+  const actionCardHtml = buildActionNeedsCard({
+    selfPending: hasSelfCapability && !selfDoneThisMonth,
+    evaluationsPending,
+    unreadCount: state.unreadCount || 0,
+  });
+
   const groupColors = {
     MyAppraisal: { accent: "var(--teal)", light: "#E4F0EF" },
     MyTeams: { accent: "var(--coral)", light: "#FFE9E3" },
@@ -2569,7 +2628,7 @@ async function renderDashboard() {
       <div class="hint" style="font-size:13px; color:var(--text); margin:0;">${escapeHtml(t("dash_paused_body").replace("{dept}", excludedInfo.department || "").replace("{month}", monthLabelID(excludedInfo.since)))}</div>
     </div>`) : "";
 
-  app.innerHTML = topbar("Dashboard Saya") + pausedBanner + chartBlock +
+  app.innerHTML = topbar("Dashboard Saya") + pausedBanner + actionCardHtml + chartBlock +
     groups.map((g, gi) => {
       const color = groupColors[g.name] || groupColors.MyAppraisal;
       const groupId = `group-${gi}`;
@@ -8287,6 +8346,10 @@ async function confirmAndSubmit(evaluatorType) {
         alert("⚠️ PERHATIAN: Skor akhir jadi 0 karena poin deduksi (Section D) lebih besar dari skor dasar yang didapat. Kalau ini gak disengaja, silakan submit ulang dengan deduksi yang lebih sesuai.");
       }
       showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
+      // The task is done, so the notifications that pointed at it are done too. Separate request: never slows the submit itself.
+      apiPost("markActionNotificationsDone", evaluatorType === "self"
+        ? { actionScreen: "self", aboutStaffId: state.user.staffId }
+        : { actionScreen: "myEvaluations", aboutStaffId: target.staffId }).catch(() => {});
       state.scores = {};
       state._pendingBonusEntries = null;
       if (evaluatorType === "self") {

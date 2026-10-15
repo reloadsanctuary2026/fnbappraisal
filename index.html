@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-328-faq-updated — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-331-i18n-phase2b — LIVE</div>
 
 <script>
 // =================================================================
@@ -426,13 +426,13 @@ async function apiGet(action, params = {}) {
     const res = await fetch(`${API_URL}?${qs}`);
     const json = await res.json();
     if (json.error === "session_expired") {
-      showToast("Sesi kamu udah habis, login ulang ya.", "error");
+      showToast(t("err_session_expired"), "error");
       setTimeout(() => { state.user = null; renderLogin(); }, 1500);
     }
     return json;
   } catch (err) {
     console.error("apiGet failed:", action, err);
-    return { error: "Gagal terhubung ke server — cek koneksi internetmu, lalu coba lagi." };
+    return { error: t("err_connection") };
   }
 }
 
@@ -474,7 +474,7 @@ async function apiPost(action, payload) {
       const res = await fetch(API_URL, { method: "POST", body: JSON.stringify({ action, payload: fullPayload }) });
       const json = await res.json();
       if (json.error === "session_expired") {
-        showToast("Sesi kamu udah habis, login ulang ya.", "error");
+        showToast(t("err_session_expired"), "error");
         setTimeout(() => { state.user = null; renderLogin(); }, 1500);
       }
       if (json.error === "busy_try_again" && retryable && attempt < BUSY_RETRY_MAX) {
@@ -485,7 +485,7 @@ async function apiPost(action, payload) {
       return json;
     } catch (err) {
       console.error("apiPost failed:", action, err);
-      return { error: "Gagal terhubung ke server — cek koneksi internetmu, lalu coba lagi." };
+      return { error: t("err_connection") };
     }
   }
 }
@@ -542,7 +542,29 @@ function findDecisionLabels(options, decisionValue) {
   return values.map(v => findLabel(options, v)).join(" + ");
 }
 
+// Staff-facing codes are shown in the reader's language. Admin-only codes below stay Indonesian for now.
+const STAFF_ERROR_KEYS = {
+  decision_required: "err_decision_required",
+  one_on_one_status_required: "err_one_on_one_status_required",
+  notes_required: "err_notes_required",
+  outside_approval_window: "err_outside_approval_window",
+  not_authorized: "err_not_authorized",
+  evaluator_or_target_not_found: "err_evaluator_or_target_not_found",
+  appraisal_not_found: "err_appraisal_not_found",
+  access_denied: "err_access_denied",
+  max_attempts_reached: "err_max_attempts_reached",
+  session_expired: "err_session_expired",
+  identity_mismatch: "err_identity_mismatch",
+  staff_outside_your_business_unit: "err_staff_outside_your_business_unit",
+  evaluator_outside_your_business_unit: "err_evaluator_outside_your_business_unit",
+  pin_not_set: "err_pin_not_set",
+  feedback_required: "err_feedback_required",
+  feedback_catchup_not_enabled: "err_feedback_catchup_not_enabled",
+  target_not_found: "err_target_not_found",
+  busy_try_again: "err_busy"
+};
 function friendlyError(code) {
+  if (code && STAFF_ERROR_KEYS[code]) return t(STAFF_ERROR_KEYS[code]);
   const map = {
     not_extended_must_be_alone: "\"Not Extended\" gak bisa digabung sama pilihan lain — pilih itu doang, atau batalin centangnya.",
     training_notes_required: "Isi dulu apa yang perlu di-training/coaching.",
@@ -598,8 +620,8 @@ function friendlyError(code) {
   };
   if (map[code]) return map[code];
   if (code && /^Unknown action/i.test(code)) return "Server belum diperbarui ke versi terbaru (backend belum di-deploy). Hubungi admin, lalu muat ulang halaman ini.";
-  if (code && /lock/i.test(code)) return "Server lagi sibuk (banyak orang submit bersamaan) — tunggu beberapa detik lalu coba lagi.";
-  return code || "Terjadi kendala tidak dikenal";
+  if (code && /lock/i.test(code)) return t("err_busy");
+  return code || t("err_unknown");
 }
 
 function showToast(message, type = "success", durationMs = 2400) {
@@ -631,6 +653,69 @@ function showToast(message, type = "success", durationMs = 2400) {
 const translations = {
   id: {
     logout: "Keluar",
+    decision_mentoring_coaching: "Mentoring/Coaching Needed",
+    decision_extend_contract: "Extend Contract/Probation",
+    decision_demote_mutate: "Recommend to Demote/Mutate",
+    decision_not_extended: "Not Extended",
+    notice_oneonone_done: "Sudah dilakukan sesi 1-on-1 (tatap muka)",
+    notice_oneonone_not_necessary: "Tidak perlu sesi 1-on-1",
+    notice_extra_mutation: " ({mutation})",
+    notice_extra_extension: " (perpanjangan: {duration}, jatuh tempo follow-up: {date})",
+    notice_notes: " — {notes}",
+    notice_decision_result: "Hasil appraisal {name} ({month}): {decision}{extra} · {oneonone}{notes}",
+    notice_decision_edited: "[DIEDIT] Hasil appraisal {name} ({month}) diperbarui: {decision}{extra} · {oneonone}{notes}",
+    notice_bulk_result: "Hasil appraisal {name} ({month}): {label} (oleh {approver}, bulk approve)",
+    notice_self_reset: "Self Appraisal bulan ini direset oleh admin. Mohon isi ulang sebelum {deadline}.",
+    notice_self_reset_asap: "Self Appraisal bulan ini direset oleh admin. Mohon isi ulang secepatnya.",
+    notice_self_resend: "Kamu bisa mengirim ulang Self Appraisal bulan ini sebelum {deadline}.",
+    notice_self_resend_asap: "Kamu bisa mengirim ulang Self Appraisal bulan ini secepatnya.",
+    notice_compressed_self: "Karena kontrak kamu berakhir bulan ini, siklus appraisal bulan ini dipadatkan — isi Self Appraisal kamu sebelum {date}.",
+    notice_compressed_team: "{name} ({job}) kontraknya berakhir bulan ini, jadi siklus appraisal-nya dipadatkan — selesaikan appraisal {role} untuk dia sebelum {deadline} (lebih cepat dari akhir bulan biasa, karena kontraknya berakhir duluan).",
+    notice_historical_updated: "Data appraisal {month} untuk {name} sudah diperbarui oleh {requester} (Admin Operational) — Final Score: {score}, Status: {status}.",
+    notice_self_reminder_2d: "Reminder: Appraise Yourself belum diisi, tenggat waktu 2 hari lagi ({date}).",
+    notice_self_reminder_last: "Reminder terakhir: Appraise Yourself belum diisi, tenggat BESOK ({date}).",
+    notice_eval_reminder_2d: "Reminder: {label} — masih ada {n} orang belum dinilai, tenggat waktu 2 hari lagi ({date}).",
+    notice_eval_reminder_last: "Reminder terakhir: {label} — masih {n} orang belum dinilai, tenggat BESOK ({date}).",
+    notice_self_done: "{name} sudah isi Self Appraisal.",
+    notice_evaluated_you: "{pos} sudah menilai kamu.",
+    notice_ready_approve: "{name} siap di-approve — Self, Leader/Management, HR sudah lengkap.",
+    notice_pin_reset_request: "{name} (NIK {nik}) minta reset PIN — klik tombol di bawah ini buat kasih PIN baru.",
+    card_needs_title: "Perlu tindakanmu",
+    card_self_label: "Isi Appraise Yourself bulan ini",
+    card_self_btn: "Isi sekarang",
+    card_eval_label: "{n} penilaian belum diisi",
+    card_eval_btn: "Buka",
+    card_unread_label: "{n} notifikasi belum dibaca",
+    card_unread_btn: "Lihat",
+    err_connection: "Gagal terhubung ke server — cek koneksi internetmu, lalu coba lagi.",
+    err_busy: "Server lagi sibuk (banyak orang submit bersamaan) — tunggu beberapa detik lalu coba lagi.",
+    err_unknown: "Terjadi kendala tidak dikenal.",
+    err_decision_required: "Decision belum dipilih.",
+    err_one_on_one_status_required: "1-on-1 Status belum dipilih.",
+    err_notes_required: "Catatan belum diisi.",
+    err_outside_approval_window: "Di luar jendela approval (biasanya tanggal 28 - 4 bulan depan).",
+    err_not_authorized: "Anda tidak punya akses untuk ini.",
+    err_evaluator_or_target_not_found: "Data tidak ditemukan, coba refresh halaman.",
+    err_appraisal_not_found: "Appraisal untuk staff ini belum lengkap.",
+    err_access_denied: "Akses ditolak.",
+    err_max_attempts_reached: "Sudah pernah diisi, tidak bisa diisi ulang.",
+    err_session_expired: "Sesi kamu udah habis, login ulang ya.",
+    err_identity_mismatch: "Permintaan gak valid — coba refresh halaman dan login ulang.",
+    err_staff_outside_your_business_unit: "Orang ini bukan bagian dari unit bisnis kamu.",
+    err_evaluator_outside_your_business_unit: "Salah satu yang kamu pilih bukan bagian dari unit bisnis kamu.",
+    err_pin_not_set: "PIN belum di-set. Hubungi HR.",
+    err_feedback_required: "Feedback ke management wajib diisi (minimal 5 huruf atau angka). Penilaianmu BELUM tersimpan. Kalau halaman ini sudah lama terbuka, refresh dulu lalu isi lagi.",
+    err_feedback_catchup_not_enabled: "Kesempatan menyusul feedback tidak sedang terbuka (belum dibuka, sudah terpakai, atau sudah ditutup admin).",
+    err_target_not_found: "Data kamu tidak ditemukan di roster. Hubungi admin.",
+    toast_internal_target: "Error internal: target appraisal tidak ditemukan. Coba kembali dan buka ulang form ini.",
+    toast_score_failed: "Gagal hitung skor: {detail} — silakan coba submit lagi (kuota submit belum kepakai).",
+    toast_saved_overwrite: "Tersimpan! (menimpa submission sebelumnya)",
+    toast_saved: "Appraisal tersimpan!",
+    toast_save_failed: "Gagal menyimpan: {detail}",
+    toast_saving: "Menyimpan...",
+    alert_floored_zero: "⚠️ PERHATIAN: Skor akhir jadi 0 karena poin deduksi (Section D) lebih besar dari skor dasar yang didapat. Kalau ini gak disengaja, silakan submit ulang dengan deduksi yang lebih sesuai.",
+    pin_mismatch: "PIN baru dan ulangannya gak sama.",
+    pin_change_failed: "Gagal ganti PIN: {detail}",
     login_title: "Masuk dengan NIK",
     unit_picker_title: "Pilih Unit Bisnis",
     unit_picker_subtitle: "Pilih unit tempat kamu bekerja untuk melanjutkan.",
@@ -1119,6 +1204,69 @@ const translations = {
   },
   en: {
     logout: "Log Out",
+    decision_mentoring_coaching: "Mentoring/Coaching Needed",
+    decision_extend_contract: "Extend Contract/Probation",
+    decision_demote_mutate: "Recommend to Demote/Mutate",
+    decision_not_extended: "Not Extended",
+    notice_oneonone_done: "1-on-1 session completed (in person)",
+    notice_oneonone_not_necessary: "No 1-on-1 session needed",
+    notice_extra_mutation: " ({mutation})",
+    notice_extra_extension: " (extension: {duration}, follow-up due: {date})",
+    notice_notes: " — {notes}",
+    notice_decision_result: "Appraisal result for {name} ({month}): {decision}{extra} · {oneonone}{notes}",
+    notice_decision_edited: "[EDITED] Appraisal result for {name} ({month}) updated: {decision}{extra} · {oneonone}{notes}",
+    notice_bulk_result: "Appraisal result for {name} ({month}): {label} (by {approver}, bulk approve)",
+    notice_self_reset: "This month's Self Appraisal was reset by admin. Please fill it in again before {deadline}.",
+    notice_self_reset_asap: "This month's Self Appraisal was reset by admin. Please fill it in again as soon as possible.",
+    notice_self_resend: "You can resubmit this month's Self Appraisal before {deadline}.",
+    notice_self_resend_asap: "You can resubmit this month's Self Appraisal as soon as possible.",
+    notice_compressed_self: "Because your contract ends this month, this month's appraisal cycle is compressed — fill in your Self Appraisal before {date}.",
+    notice_compressed_team: "{name} ({job}) has a contract ending this month, so their appraisal cycle is compressed — complete the {role} appraisal for them before {deadline} (earlier than the usual month end, because their contract ends early).",
+    notice_historical_updated: "Appraisal data for {month} for {name} was updated by {requester} (Admin Operational) — Final Score: {score}, Status: {status}.",
+    notice_self_reminder_2d: "Reminder: your Appraise Yourself isn't filled in yet — 2 days left ({date}).",
+    notice_self_reminder_last: "Last reminder: your Appraise Yourself isn't filled in yet — the deadline is TOMORROW ({date}).",
+    notice_eval_reminder_2d: "Reminder: {label} — {n} people still not evaluated, 2 days left ({date}).",
+    notice_eval_reminder_last: "Last reminder: {label} — {n} people still not evaluated, the deadline is TOMORROW ({date}).",
+    notice_self_done: "{name} has filled in their Self Appraisal.",
+    notice_evaluated_you: "{pos} has evaluated you.",
+    notice_ready_approve: "{name} is ready to approve — Self, Leader/Management and HR are all complete.",
+    notice_pin_reset_request: "{name} (NIK {nik}) asked for a PIN reset — tap the button below to give them a new PIN.",
+    card_needs_title: "Needs your action",
+    card_self_label: "Fill in your Appraise Yourself this month",
+    card_self_btn: "Fill in now",
+    card_eval_label: "{n} evaluations not filled in yet",
+    card_eval_btn: "Open",
+    card_unread_label: "{n} unread notifications",
+    card_unread_btn: "View",
+    err_connection: "Couldn't reach the server — check your internet connection, then try again.",
+    err_busy: "The server is busy right now (many people are submitting at once) — wait a few seconds and try again.",
+    err_unknown: "An unknown error occurred.",
+    err_decision_required: "A Decision hasn't been selected yet.",
+    err_one_on_one_status_required: "1-on-1 Status hasn't been selected yet.",
+    err_notes_required: "Notes are required.",
+    err_outside_approval_window: "Outside the approval window (usually the 28th to the 4th of next month).",
+    err_not_authorized: "You don't have access to this.",
+    err_evaluator_or_target_not_found: "Data not found, try refreshing the page.",
+    err_appraisal_not_found: "The appraisal for this staff member is incomplete.",
+    err_access_denied: "Access denied.",
+    err_max_attempts_reached: "Already submitted, it can't be submitted again.",
+    err_session_expired: "Your session has expired, please sign in again.",
+    err_identity_mismatch: "Invalid request — try refreshing the page and signing in again.",
+    err_staff_outside_your_business_unit: "This person is not part of your business unit.",
+    err_evaluator_outside_your_business_unit: "One of the people you selected is not part of your business unit.",
+    err_pin_not_set: "PIN not set yet. Contact HR.",
+    err_feedback_required: "Feedback to management is required (at least 5 letters or numbers). Your evaluation has NOT been saved. If this page has been open for a while, refresh it first and fill it in again.",
+    err_feedback_catchup_not_enabled: "The chance to add feedback late isn't open right now (not opened yet, already used, or closed by admin).",
+    err_target_not_found: "Your data wasn't found in the roster. Contact admin.",
+    toast_internal_target: "Internal error: the appraisal target wasn't found. Go back and reopen this form.",
+    toast_score_failed: "Score calculation failed: {detail} — please try submitting again (your submission quota has not been used).",
+    toast_saved_overwrite: "Saved! (replaced your previous submission)",
+    toast_saved: "Appraisal saved!",
+    toast_save_failed: "Failed to save: {detail}",
+    toast_saving: "Saving...",
+    alert_floored_zero: "⚠️ NOTICE: The final score is 0 because the deductions (Section D) are larger than the base score earned. If this wasn't intended, please resubmit with more accurate deductions.",
+    pin_mismatch: "The new PIN and its confirmation don't match.",
+    pin_change_failed: "Failed to change PIN: {detail}",
     login_title: "Sign in with Employee ID",
     unit_picker_title: "Select Business Unit",
     unit_picker_subtitle: "Choose the unit you work for to continue.",
@@ -1699,6 +1847,56 @@ function topbar(title) {
     </div>`;
 }
 
+/** The text to show for a notification: in the reader's language when the notification carries a translation key, otherwise the
+ *  Indonesian text it was stored with (older notifications, and any kind not yet translated). Dates, months, decisions and the
+ *  one-on-one status are formatted here, from the stored values, so the same notification reads correctly in either language. */
+const DECISION_VALUE_KEYS = { mentoring_coaching: "decision_mentoring_coaching", extend_contract: "decision_extend_contract", demote_mutate: "decision_demote_mutate", not_extended: "decision_not_extended" };
+const ONE_ON_ONE_NOTICE_KEYS = { done: "notice_oneonone_done", not_necessary: "notice_oneonone_not_necessary" };
+
+function englishDateLabel(iso) {
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function noticeDateText(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value))) return String(value); // already a readable date from an older notification
+  return state.lang === "en" ? englishDateLabel(value) : fullDateLabelID(value);
+}
+
+function noticeMonthText(value) {
+  if (!/^\d{4}-\d{2}$/.test(String(value))) return String(value);
+  if (state.lang === "en") return new Date(value + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  return monthLabelID(value);
+}
+
+function noticeText(n) {
+  if (!n.noticeKey) return n.message;
+  const dict = translations[state.lang] || translations.id;
+  if (dict[n.noticeKey] === undefined) return n.message;
+  const p = n.noticeParams || {};
+  const values = {};
+  Object.keys(p).forEach(k => {
+    let v = p[k];
+    if (k === "date" || k === "deadline" || k === "expiry") v = noticeDateText(v);
+    else if (k === "month") v = noticeMonthText(v);
+    else if (k === "decisions") v = (Array.isArray(v) ? v : [v]).map(x => dict[DECISION_VALUE_KEYS[x]] || x).join(" + ");
+    else if (k === "oneOnOne") v = dict[ONE_ON_ONE_NOTICE_KEYS[v]] || v;
+    values[k] = v;
+  });
+  // Pieces the decision notices are built from.
+  values.decision = values.decisions || "";
+  values.oneonone = values.oneOnOne || "";
+  let extra = "";
+  if (p.mutation) extra += dict.notice_extra_mutation.replace("{mutation}", p.mutation);
+  if (p.extension) extra += dict.notice_extra_extension.replace("{duration}", p.extension).replace("{date}", noticeDateText(p.expiry || ""));
+  values.extra = extra;
+  values.notes = p.notes ? dict.notice_notes.replace("{notes}", p.notes) : "";
+  let text = dict[n.noticeKey];
+  Object.keys(values).forEach(k => { text = text.split("{" + k + "}").join(String(values[k])); });
+  return text;
+}
+
 /** Redraws only the 🔔 badge in the top bar, so a count change shows up without re-rendering the whole screen. */
 function updateNotificationBadge() {
   const btn = document.querySelector('.topbar button[onclick="openNotifications()"]');
@@ -1961,7 +2159,8 @@ async function renderNotifications() {
       // manual step outstanding. Cut the display off at the em dash for ANY pin-reset
       // notification (old or new wording alike) — the button/status below already says
       // everything that's actually needed, the instructional tail never needs to be seen.
-      const displayMessage = isPinResetRequest ? n.message.split(" — ")[0] : n.message;
+      const shownText = noticeText(n);
+      const displayMessage = isPinResetRequest ? shownText.split(" — ")[0] : shownText;
       const needsAction = isPinResetRequest && !n.read;
       const stackedLayout = isPinResetRequest || isSelfDoneNotification;
       return `
@@ -2538,13 +2737,13 @@ function renderRoleMenu() {
  *  to do, so the dashboard stays exactly as before for people with nothing pending. */
 function buildActionNeedsCard({ selfPending, evaluationsPending, unreadCount }) {
   const items = [];
-  if (selfPending) items.push({ label: "Isi Appraise Yourself bulan ini", btn: "Isi sekarang", action: "goToScreen('self')" });
-  if (evaluationsPending > 0) items.push({ label: `${evaluationsPending} penilaian belum diisi`, btn: "Buka", action: "goToScreen('myEvaluations')" });
-  if (unreadCount > 0) items.push({ label: `${unreadCount} notifikasi belum dibaca`, btn: "Lihat", action: "openNotifications()" });
+  if (selfPending) items.push({ label: t("card_self_label"), btn: t("card_self_btn"), action: "goToScreen('self')" });
+  if (evaluationsPending > 0) items.push({ label: t("card_eval_label").replace("{n}", evaluationsPending), btn: t("card_eval_btn"), action: "goToScreen('myEvaluations')" });
+  if (unreadCount > 0) items.push({ label: t("card_unread_label").replace("{n}", unreadCount), btn: t("card_unread_btn"), action: "openNotifications()" });
   if (!items.length) return "";
   return `
     <div class="card" style="border-left:4px solid var(--coral);">
-      <div style="font-weight:800; color:var(--coral); font-size:13px; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Perlu tindakanmu</div>
+      <div style="font-weight:800; color:var(--coral); font-size:13px; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">${t("card_needs_title")}</div>
       ${items.map(i => `
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);">
           <span style="font-size:14px; font-weight:600;">${i.label}</span>
@@ -6135,7 +6334,7 @@ let _myFeedbackSaving = false;
  *  anything else — a raw server message, "unknown", a string out of a stack trace — is NEVER shown as it is: one calm sentence
  *  instead, with the detail left in the console. The "can't reach the server" sentence is already written for people, so it passes. */
 function myFeedbackError(code, context) {
-  if (typeof code === "string" && /^Gagal terhubung ke server/.test(code)) return code;
+  if (typeof code === "string" && (code === t("err_connection") || /^Gagal terhubung ke server/.test(code))) return code;
   const own = { feedback_required: t("myfb_err_required").replace("{n}", FEEDBACK_MIN_CHARS), feedback_catchup_not_enabled: t("myfb_err_closed"), target_not_found: t("myfb_err_not_found") };
   if (own[code]) return own[code];
   const msg = friendlyError(code);
@@ -8312,7 +8511,7 @@ async function confirmAndSubmit(evaluatorType) {
     const kpiCriteria = (cfg.isCustomStructure || cfg.placeholder) ? [] : cfg.kpi.map(c => c.name);
     const target = state.targetStaff;
     if (!target || !target.staffId) {
-      showToast("Error internal: target appraisal tidak ditemukan. Coba kembali dan buka ulang form ini.", "error");
+      showToast(t("toast_internal_target"), "error");
       return;
     }
     const activeQualitativeSection = evaluatorType === "self" ? cfg.qualitativeSectionSelf : cfg.qualitativeSectionOther;
@@ -8349,9 +8548,9 @@ async function confirmAndSubmit(evaluatorType) {
     }
     if (res.success) {
       if (res.wasFlooredFromNegative) {
-        alert("⚠️ PERHATIAN: Skor akhir jadi 0 karena poin deduksi (Section D) lebih besar dari skor dasar yang didapat. Kalau ini gak disengaja, silakan submit ulang dengan deduksi yang lebih sesuai.");
+        alert(t("alert_floored_zero"));
       }
-      showToast(res.wasResubmission ? "Tersimpan! (menimpa submission sebelumnya)" : "Appraisal tersimpan!");
+      showToast(res.wasResubmission ? t("toast_saved_overwrite") : t("toast_saved"));
       // The task is done, so the notifications that pointed at it are done too. Separate request: never slows the submit itself.
       apiPost("markActionNotificationsDone", evaluatorType === "self"
         ? { actionScreen: "self", aboutStaffId: state.user.staffId }

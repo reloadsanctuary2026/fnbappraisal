@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-327-auto-refresh — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-328-faq-updated — LIVE</div>
 
 <script>
 // =================================================================
@@ -1850,6 +1850,9 @@ function renderFaq() {
       { q: "Kalau Leader/HR saya belum isi appraisal, gimana?", a: "Kalau sampai window waktunya tutup mereka belum isi, skor mereka dianggap 0 (bukan diskip) — ini konsekuensi bawaan sistem, bukan bug." },
       { q: "Skor saya turun karena apa?", a: "Cek Track Your Progress — ada breakdown per Section (Attitude/Discipline/KPI/Bonus) biar tau bagian mana yang lemah." },
       { q: "Siapa yang bisa lihat data appraisal saya?", a: "Leader/Management/Executive/HR yang berwenang di scope kamu. Orang di department lain gak bisa lihat data personal kamu." },
+      { q: "Di mana saya melihat apa yang harus saya kerjakan?", a: "Di Dashboard, bagian \"Perlu tindakanmu\" menampilkan Self yang belum diisi, penilaian tim yang belum selesai, dan notifikasi yang belum dibaca. Kalau bagian itu tidak muncul, berarti tidak ada yang perlu kamu kerjakan saat ini." },
+      { q: "Apa yang terjadi kalau saya ketuk notifikasi?", a: "Kamu langsung dibawa ke layar yang berkaitan dengan notifikasi itu. Notifikasi tugas yang sudah kamu selesaikan otomatis ditandai sudah dibaca, jadi jumlah 🔔 tetap akurat. Jumlah 🔔 juga diperbarui sendiri selama aplikasi terbuka." },
+      { q: "Kapan saya diingatkan untuk mengisi?", a: "Dua hari sebelum tenggat, dan sekali lagi di hari terakhir. Pengingat hanya dikirim kalau kamu belum mengisi, jadi kalau sudah selesai kamu tidak akan diingatkan lagi." },
     ],
     en: [
       { q: "Why can't I fill in my appraisal anymore?", a: "An appraisal can only be submitted once a month. Once submitted, the button automatically locks until next month. Contact HR if you need a correction." },
@@ -1857,6 +1860,9 @@ function renderFaq() {
       { q: "What if my Leader/HR hasn't filled in my appraisal?", a: "If the window closes before they fill it in, their score counts as 0 (not skipped) — this is a built-in system consequence, not a bug." },
       { q: "Why did my score go down?", a: "Check Track Your Progress — there's a breakdown per Section (Attitude/Discipline/KPI/Bonus) so you can see which part is weak." },
       { q: "Who can see my appraisal data?", a: "The Leader/Management/Executive/HR authorized within your scope. People in other departments can't see your personal data." },
+      { q: "Where do I see what I need to do?", a: "On the Dashboard, the \"Needs your action\" section shows your Self Appraisal if it's not filled in yet, evaluations for your team that aren't finished, and unread notifications. If that section doesn't appear, there's nothing you need to do right now." },
+      { q: "What happens when I tap a notification?", a: "You're taken straight to the screen that relates to it. Notifications for tasks you've already finished are marked as read automatically, so the 🔔 count stays accurate. The count also refreshes on its own while the app is open." },
+      { q: "When will I be reminded to fill it in?", a: "Two days before the deadline, and once more on the last day. Reminders are only sent if you haven't filled it in yet, so once you're done you won't be reminded again." },
     ],
   };
   const qa = qaByLang[state.lang] || qaByLang.id;

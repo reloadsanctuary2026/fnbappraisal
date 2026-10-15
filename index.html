@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-11-324-self-reference-off — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-11-325-calibration-fix — LIVE</div>
 
 <script>
 // =================================================================
@@ -902,15 +902,19 @@ const translations = {
     gm_calibration_insufficient: "Belum tersedia cukup data historis untuk memberikan saran kalibrasi pada evaluator bulan ini.",
     gm_calibration_suggestion_label: "SARAN KALIBRASI",
     gm_calibration_evaluator_label: "Evaluator:",
-    gm_calibration_evaluator_avg_label: "Rata-rata skor evaluator ini:",
-    gm_calibration_company_avg_label: "Rata-rata skor perusahaan:",
-    gm_calibration_sample_suffix: "data historis)",
-    gm_calibration_suggested_adj_label: "Saran penyesuaian:",
+    gm_calibration_evaluator_avg_label: "Rata-rata nilai yang biasa dia berikan:",
+    gm_calibration_company_avg_label: "Rata-rata nilai semua evaluator:",
+    gm_calibration_sample_suffix: "penilaian sebelumnya)",
+    gm_calibration_suggested_adj_label: "Saran koreksi:",
     gm_calibration_points_suffix: "poin",
-    gm_calibration_use_btn: "Gunakan Saran",
+    gm_calibration_use_btn: "Pakai saran ini",
     gm_calibration_applied_reason_prefix: "Penyesuaian berdasarkan pola historis evaluator",
     gm_calibration_applied_reason_avg: "rata-rata",
     gm_calibration_applied_reason_vs_company: "dibanding rata-rata perusahaan",
+  gm_calibration_applied_reason_plain: "Evaluator {name} biasanya memberi nilai {avg}, sedangkan rata-rata semua evaluator {company}. Skor akhir dikoreksi {adj} poin agar lebih adil.",
+  gm_calibration_target_label: "Skor akhir setelah dikoreksi",
+  gm_calibration_now_label: "sekarang",
+  gm_calibration_no_final: "Skor akhir orang ini belum dihitung, jadi saran belum bisa dipakai.",
     gm_decision_required: "Decision wajib dipilih dulu.",
     gm_oneonone_required: "1-on-1 Status wajib dipilih dulu.",
     gm_notes_required: "Catatan wajib diisi.",
@@ -918,7 +922,7 @@ const translations = {
     gm_mutation_position_required: "Posisi tujuan mutasi wajib dipilih.",
     gm_save_edit_failed_prefix: "Gagal simpan perubahan:",
     gm_edit_success_toast: "Decision berhasil diperbarui! Notifikasi [DIEDIT] terkirim ke pihak terkait.",
-    gm_calibration_reason_required: "Alasan Calibration Adjustment wajib diisi kalau ada penyesuaian.",
+    gm_calibration_reason_required: "Isi alasannya dulu kalau skor diubah.",
     gm_approve_failed_prefix: "Gagal approve:",
     gm_approve_success_toast: "Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.",
     gm_export_decision_generating: "Membuat sheet export...",
@@ -944,11 +948,11 @@ const translations = {
     gm_approve_all_nothing: "Tidak ada appraisal yang menunggu di-approve di {month}. Cek dulu bulan yang dipilih — atau semuanya memang sudah di-approve.",
     gm_approve_all_stale_server: "⚠️ Server (Apps Script) masih versi LAMA — perubahan terbaru belum aktif. Deploy ulang: Deploy → Manage deployments → pensil → Version \"New version\" → Deploy.",
     gm_calibration_title: "Kalibrasi Skor",
-    gm_calibration_desc: "Skor Self, Leader, dan HR tidak berubah. Penyesuaian ini hanya memengaruhi Final Score dan Status resmi, dan alasannya akan tercatat secara permanen.",
+    gm_calibration_desc: "Nilai Self, Leader, dan HR tidak diubah. Koreksi ini hanya mengubah skor akhir dan status resmi. Alasan yang kamu tulis akan tercatat permanen.",
     gm_calibration_adj_label: "Penyesuaian (poin)",
     gm_calibration_adj_placeholder: "Contoh: 8 atau -5",
-    gm_calibration_reason_label: "Alasan Penyesuaian (wajib jika ada penyesuaian)",
-    gm_calibration_reason_placeholder: "Contoh: Evaluator secara konsisten memberikan skor lebih rendah dibanding rata-rata",
+    gm_calibration_reason_label: "Alasan koreksi (wajib kalau skor diubah)",
+    gm_calibration_reason_placeholder: "Contoh: Evaluator ini biasanya memberi nilai lebih rendah dari rata-rata semua evaluator",
     gm_calibration_confirm_prefix: "Terapkan penyesuaian kalibrasi sebesar",
     gm_calibration_confirm_points: "poin?",
     gm_calibration_confirm_reason_label: "Alasan:",
@@ -1386,15 +1390,19 @@ const translations = {
     gm_calibration_insufficient: "Not enough historical data yet to give a calibration suggestion for this month's evaluator.",
     gm_calibration_suggestion_label: "CALIBRATION SUGGESTION",
     gm_calibration_evaluator_label: "Evaluator:",
-    gm_calibration_evaluator_avg_label: "This evaluator's average score:",
-    gm_calibration_company_avg_label: "Company average score:",
-    gm_calibration_sample_suffix: "historical records)",
-    gm_calibration_suggested_adj_label: "Suggested adjustment:",
+    gm_calibration_evaluator_avg_label: "The average score this evaluator usually gives:",
+    gm_calibration_company_avg_label: "Average score across all evaluators:",
+    gm_calibration_sample_suffix: "previous evaluations)",
+    gm_calibration_suggested_adj_label: "Suggested correction:",
     gm_calibration_points_suffix: "points",
-    gm_calibration_use_btn: "Use Suggestion",
+    gm_calibration_use_btn: "Use this suggestion",
     gm_calibration_applied_reason_prefix: "Adjustment based on the evaluator's historical pattern",
     gm_calibration_applied_reason_avg: "average",
     gm_calibration_applied_reason_vs_company: "versus the company average",
+  gm_calibration_applied_reason_plain: "Evaluator {name} usually gives an average of {avg}, while the average across all evaluators is {company}. The final score is corrected by {adj} points to make it fair.",
+  gm_calibration_target_label: "Final score after correction",
+  gm_calibration_now_label: "now",
+  gm_calibration_no_final: "This person's final score is not calculated yet, so the suggestion cannot be used.",
     gm_decision_required: "Decision must be selected first.",
     gm_oneonone_required: "1-on-1 Status must be selected first.",
     gm_notes_required: "Notes are required.",
@@ -1402,7 +1410,7 @@ const translations = {
     gm_mutation_position_required: "A mutation destination position must be selected.",
     gm_save_edit_failed_prefix: "Failed to save changes:",
     gm_edit_success_toast: "Decision updated successfully! An [EDITED] notification was sent to those involved.",
-    gm_calibration_reason_required: "A Calibration Adjustment reason is required if there's an adjustment.",
+    gm_calibration_reason_required: "Please write a reason first if the score changes.",
     gm_approve_failed_prefix: "Approval failed:",
     gm_approve_success_toast: "Approved! Notifications sent to the staff, leader, management, and HR involved.",
     gm_export_decision_generating: "Generating export sheet...",
@@ -1428,11 +1436,11 @@ const translations = {
     gm_approve_all_nothing: "Nothing is waiting to be approved in {month}. Check the selected month — or everything is already approved.",
     gm_approve_all_stale_server: "⚠️ The server (Apps Script) is still an OLD version — the latest changes are not active. Redeploy: Deploy → Manage deployments → pencil → Version \"New version\" → Deploy.",
     gm_calibration_title: "Calibration Score Adjustment",
-    gm_calibration_desc: "Self, Leader, and HR scores don't change. This adjustment only affects the Final Score and official Status, and the reason will be permanently recorded.",
+    gm_calibration_desc: "Self, Leader and HR scores are not changed. This correction only changes the final score and official status. The reason you write is recorded permanently.",
     gm_calibration_adj_label: "Adjustment (points)",
     gm_calibration_adj_placeholder: "Example: 8 or -5",
-    gm_calibration_reason_label: "Adjustment Reason (required if there's an adjustment)",
-    gm_calibration_reason_placeholder: "Example: The evaluator consistently gives lower scores than average",
+    gm_calibration_reason_label: "Reason for correction (required if the score changes)",
+    gm_calibration_reason_placeholder: "Example: This evaluator usually gives lower scores than the average of all evaluators",
     gm_calibration_confirm_prefix: "Apply a calibration adjustment of",
     gm_calibration_confirm_points: "points?",
     gm_calibration_confirm_reason_label: "Reason:",
@@ -8422,7 +8430,7 @@ async function renderGm() {
           <div style="font-weight:700; font-size:14px; color:var(--text); margin-bottom:4px;">${t("gm_calibration_title")}</div>
           <div class="hint" style="margin-bottom:10px;">${t("gm_calibration_desc")}</div>
           <div id="calibration-suggestion-${s.staffId}" style="margin-bottom:12px;"></div>
-          <label>Set Final Score jadi (skor sekarang: ${s.finalScore != null ? Number(s.finalScore).toFixed(1) : "-"})</label>
+          <label>${t("gm_calibration_target_label")} (${t("gm_calibration_now_label")}: ${s.finalScore != null ? Number(s.finalScore).toFixed(1) : "-"})</label>
           <input type="number" id="calibration-target-${s.staffId}" data-current-final="${s.finalScore != null ? Number(s.finalScore) : ""}" placeholder="Contoh: 80" />
           <label>${t("gm_calibration_reason_label")}</label>
           <input type="text" id="calibration-reason-${s.staffId}" placeholder="${t("gm_calibration_reason_placeholder")}" />
@@ -8725,7 +8733,7 @@ async function loadCalibrationSuggestion(staffId) {
   container.innerHTML = `
     <div style="background:var(--sand); border-radius:10px; padding:12px;">
       <div style="font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; margin-bottom:6px;">${t("gm_calibration_suggestion_label")}</div>
-      <div style="font-size:13px; margin-bottom:2px;">${t("gm_calibration_evaluator_label")} <strong>${res.evaluatorName}</strong></div>
+      <div style="font-size:13px; margin-bottom:2px;">${t("gm_calibration_evaluator_label")} <strong>${escapeHtml(res.evaluatorName)}</strong></div>
       <div style="font-size:13px; margin-bottom:2px;">${t("gm_calibration_evaluator_avg_label")} <strong>${res.evaluatorAverage}</strong></div>
       <div style="font-size:13px; margin-bottom:10px;">${t("gm_calibration_company_avg_label")} <strong>${res.companyAverage}</strong> (${res.sampleSize} ${t("gm_calibration_sample_suffix")}</div>
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
@@ -8736,10 +8744,19 @@ async function loadCalibrationSuggestion(staffId) {
 }
 
 function applyCalibrationSuggestion(staffId, adjustment, evaluatorName, evaluatorAverage, companyAverage) {
-  const adjEl = document.getElementById(`calibration-adj-${staffId}`);
+  // The field the person sees is "Skor akhir setelah dikoreksi" (a FINAL score), so the suggestion is added to the current final score.
+  const targetEl = document.getElementById(`calibration-target-${staffId}`);
   const reasonEl = document.getElementById(`calibration-reason-${staffId}`);
-  if (adjEl) adjEl.value = adjustment;
-  if (reasonEl) reasonEl.value = `${t("gm_calibration_applied_reason_prefix")} (${evaluatorName}): ${t("gm_calibration_applied_reason_avg")} ${evaluatorAverage}, ${t("gm_calibration_applied_reason_vs_company")} ${companyAverage}.`;
+  const currentRaw = targetEl ? targetEl.dataset.currentFinal : "";
+  if (targetEl && (currentRaw === "" || currentRaw == null)) { showToast(t("gm_calibration_no_final"), "error"); return; }
+  const current = Number(currentRaw) || 0;
+  const adj = Number(adjustment) || 0;
+  if (targetEl) targetEl.value = String(Math.round((current + adj) * 10) / 10);
+  if (reasonEl) reasonEl.value = t("gm_calibration_applied_reason_plain")
+    .replace("{name}", evaluatorName)
+    .replace("{avg}", evaluatorAverage)
+    .replace("{company}", companyAverage)
+    .replace("{adj}", (adj > 0 ? "+" : "") + adj);
 }
 
 function toggleDecisionCheckbox(staffId, changedValue) {
@@ -8802,7 +8819,7 @@ async function submitDecisionEdit(staffId) {
   if (calibrationAdjustment !== 0) {
     const calibrationReason = calibrationReasonEl ? calibrationReasonEl.value.trim() : "";
     if (!calibrationReason) { showToast(t("gm_calibration_reason_required"), "error"); return; }
-    if (!confirm(`Set Final Score jadi ${(Number(calibrationTargetEl.dataset.currentFinal) || 0) + calibrationAdjustment}?\n\nAlasan: ${calibrationReason}\n\n${t("gm_calibration_confirm_note")}`)) return;
+    if (!confirm(`Ubah skor akhir dari ${Number(calibrationTargetEl.dataset.currentFinal) || 0} menjadi ${(Number(calibrationTargetEl.dataset.currentFinal) || 0) + calibrationAdjustment}?\n\nAlasan: ${calibrationReason}\n\n${t("gm_calibration_confirm_note")}`)) return;
     payload.calibrationAdjustment = calibrationAdjustment;
     payload.calibrationReason = calibrationReason;
   }

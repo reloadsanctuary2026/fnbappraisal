@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-349-training-reason-progress — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-352-topbar-english — LIVE</div>
 
 <script>
 // =================================================================
@@ -1866,6 +1866,7 @@ function render() {
   if (state.screen === "evalWizard") return renderEvaluationWizard();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
   if (state.screen === "myTraining") return renderMyTraining();
+  if (state.screen === "trainingOverview") return renderTrainingOverview();
   if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
@@ -1873,15 +1874,36 @@ function render() {
   if (state.screen === "faq") return renderFaq();
 }
 
+/** Screen titles are written in Indonesian in the code. In English they come from this map. */
+const TOPBAR_TITLES_EN = {
+  "Dashboard Saya": "My Dashboard",
+  "Struktur & Rantai Appraisal": "Appraisal Structure & Chain",
+  "Status Appraisal Saya": "My Appraisal Status",
+  "Riwayat Appraisal Saya": "My Appraisal History",
+  "Read Staff Feedback": "Read Staff Feedback",
+  "Jeda Department": "Department Pause",
+  "Approve Final Decisions": "Approve Final Decisions",
+  "🧩 Struktur Evaluasi": "🧩 Evaluation Structure",
+  "Selesai": "Done",
+};
+
+/** "Oktober 2026" or "October 2026", following the screen's language. */
+function monthLabelFor(monthKey) {
+  if (state.lang !== "en") return monthLabelID(monthKey);
+  if (!/^\d{4}-\d{2}$/.test(String(monthKey || ""))) return String(monthKey || "");
+  return new Date(monthKey + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+
 function topbar(title) {
+  const shownTitle = state.lang === "en" && TOPBAR_TITLES_EN[title] ? TOPBAR_TITLES_EN[title] : title;
   const unread = state.unreadCount || 0;
   return `
     <div class="topbar">
       <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1; overflow:hidden;">
         <div class="logo-mark" style="flex-shrink:0;"></div>
         <div style="min-width:0; overflow:hidden;">
-          <h1>${title}</h1>
-          <div class="sub">${state.user ? state.user.name + (state.user.jobTitle ? " — " + state.user.jobTitle : "") + " · " + monthLabelID(state.month) : ""}</div>
+          <h1>${shownTitle}</h1>
+          <div class="sub">${state.user ? state.user.name + (state.user.jobTitle ? " — " + state.user.jobTitle : "") + " · " + monthLabelFor(state.month) : ""}</div>
         </div>
       </div>
       <div style="display:flex; align-items:center; gap:6px; flex-shrink:0; margin-left:8px;">
@@ -1895,6 +1917,7 @@ function topbar(title) {
 
 
 /* ===================== Training & Development ===================== */
+const BUSINESS_UNIT_LABELS_UI = { fnb: "F&B", gym: "Gym", backoffice: "Back Office" };
 const TRN = {
   id: {
     menu_mine: "Training Saya", menu_team: "Training & Development", title_mine: "Training Saya", title_team: "Training & Development",
@@ -1916,6 +1939,7 @@ const TRN = {
     empty_team: "Belum ada training untuk tim kamu.", done_hint: "Menunggu konfirmasi leader atau HR",
     ok_saved: "Tersimpan", failed: "Gagal: ", summary_title: "Ringkasan tim", change_status: "Ubah status",
     new_title: "Tambah training untuk karyawan", staff_pick: "Pilih karyawan",
+    menu_overview: "Overview Training", title_overview: "Overview Training", ov_total: "Total training", ov_overdue: "Terlambat", ov_active: "Berjalan", ov_proposed: "Usulan", ov_confirmed: "Terkonfirmasi", ov_progress: "Progres", ov_departments: "Per department", ov_people_in: "Orang di department", ov_none: "Belum ada training di cakupanmu.", card_org_btn: "Buka overview training", card_top_depts: "Department yang paling butuh perhatian", ov_back: "Kembali", ov_nearest: "Tenggat terdekat", ov_tap: "Ketuk department untuk melihat orangnya",
     reason_coaching: "Dari keputusan coaching {month}", reason_proposed: "Diusulkan oleh {name}", reason_assigned: "Ditugaskan oleh {name}",
     steps_label: "Langkah", progress_word: "progres", materials_label: "Materi belajar", materials_none: "Belum ada materi ditautkan.",
     materials_field: "Link materi (satu per baris, format: nama|link)", materials_ph: "SOP Latte Art|https://...",
@@ -1940,6 +1964,7 @@ const TRN = {
     empty_team: "No training for your team yet.", done_hint: "Waiting for a leader or HR to confirm",
     ok_saved: "Saved", failed: "Failed: ", summary_title: "Team summary", change_status: "Change status",
     new_title: "Add training for an employee", staff_pick: "Pick an employee",
+    menu_overview: "Training Overview", title_overview: "Training Overview", ov_total: "Total trainings", ov_overdue: "Overdue", ov_active: "In progress", ov_proposed: "Proposals", ov_confirmed: "Confirmed", ov_progress: "Progress", ov_departments: "By department", ov_people_in: "People in the department", ov_none: "No training in your scope yet.", card_org_btn: "Open training overview", card_top_depts: "Departments that need attention most", ov_back: "Back", ov_nearest: "Nearest due date", ov_tap: "Tap a department to see its people",
     reason_coaching: "From coaching decision {month}", reason_proposed: "Proposed by {name}", reason_assigned: "Assigned by {name}",
     steps_label: "Steps", progress_word: "progress", materials_label: "Learning materials", materials_none: "No materials linked yet.",
     materials_field: "Material links (one per line, format: name|link)", materials_ph: "Latte art SOP|https://...",
@@ -2234,6 +2259,93 @@ async function renderTrainingNeeds() {
     _isLoadingTrainingNeeds = false;
   }
 }
+
+/** Dashboard card for HR and Executives: the organisation in their reach, the departments that need attention, and their own training only if they have any. */
+function buildOrgTrainingCard(ov, mine) {
+  const t = (ov && ov.totals) || {};
+  const top = ((ov && ov.departments) || []).filter(d => d.overdue > 0 || d.proposed > 0).slice(0, 3);
+  const tile = (n, label, color) => `<div style="flex:1; min-width:100px;">
+      <div style="font-size:22px; font-weight:800; color:${color};">${n || 0}</div><div class="hint" style="font-size:12px;">${label}</div></div>`;
+  const myActive = mine.filter(i => trnUrgency(i) !== "done").length;
+  const mineBtn = mine.length ? `<button class="secondary" onclick="goToScreen('myTraining')">${trn("card_mine_btn")}</button>` : "";
+  return `<div class="card" style="background:#E3F3EC; border:1px solid #9ED3BF; border-left:6px solid #0E7C5A; padding:14px 16px;">
+    <div style="font-weight:800; color:#0E5C43; font-size:13px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">${trn("card_title")}</div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      ${tile(t.total, trn("ov_total"), "var(--ink)")}
+      ${tile(t.overdue, trn("ov_overdue"), (t.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)")}
+      ${tile(t.active, trn("ov_active"), "var(--ink)")}
+      ${tile(t.proposed, trn("ov_proposed"), "var(--teal)")}
+    </div>
+    ${top.length ? `<div style="margin-top:12px; padding-top:10px; border-top:1px dashed #9ED3BF;">
+      <div style="font-size:12px; font-weight:800; color:#0E5C43; margin-bottom:4px;">${trn("card_top_depts")}</div>
+      ${top.map(d => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:3px 0;">
+        <span>${escapeHtml(d.name)}</span><span style="color:${d.overdue ? "var(--bad)" : "var(--muted)"}; font-weight:700;">${d.overdue} ${trn("ov_overdue").toLowerCase()} · ${d.proposed} ${trn("ov_proposed").toLowerCase()}</span></div>`).join("")}
+    </div>` : `<div class="hint" style="margin-top:8px;">${trn("card_calm")}</div>`}
+    ${myActive || mine.length ? `<div class="hint" style="margin-top:8px;">${trn("card_mine_btn")}: ${myActive}</div>` : ""}
+    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+      <button class="primary" onclick="goToScreen('trainingOverview')">${trn("card_org_btn")}</button>
+      ${mineBtn}
+    </div>
+  </div>`;
+}
+
+/** Overview for HR and Executives: totals, departments, and the people in a department when one is opened. */
+async function renderTrainingOverview() {
+  app.innerHTML = topbar(trn("title_overview")) + `<div class="loading">${t("form_loading")}</div>`;
+  const res = await apiGet("getTrainingOverview", { requesterId: state.user.staffId });
+  if (!res.found) { app.innerHTML = topbar(trn("title_overview")) + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`; return; }
+  state._ov = res;
+  renderTrainingOverviewBody(state._ov, state._ovOpenDept || null);
+}
+
+function renderTrainingOverviewBody(ov, openKey) {
+  const t = ov.totals || {};
+  const depts = ov.departments || [];
+  const open = openKey ? depts.find(d => d.key === openKey) : null;
+  const people = open ? (ov.people || []).filter(p => p.businessUnit + "|" + p.department === open.key).sort((a, b) => (b.overdue - a.overdue) || a.name.localeCompare(b.name)) : [];
+  const bar = (v) => `<div style="height:6px; background:#EFE6D8; border-radius:3px; overflow:hidden; min-width:60px;"><div style="width:${v}%; height:100%; background:var(--teal);"></div></div>`;
+  app.innerHTML = topbar(trn("title_overview")) + `
+    <button class="ghost" onclick="goToRoleMenu()">&larr; ${t_back()}</button>
+    <div class="card" style="margin-top:8px;">
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <div><div style="font-size:22px; font-weight:800;">${t.total || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_total")}</div></div>
+        <div><div style="font-size:22px; font-weight:800; color:${(t.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)"};">${t.overdue || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_overdue")}</div></div>
+        <div><div style="font-size:22px; font-weight:800;">${t.active || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_active")}</div></div>
+        <div><div style="font-size:22px; font-weight:800; color:var(--teal);">${t.proposed || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_proposed")}</div></div>
+        <div><div style="font-size:22px; font-weight:800; color:var(--ok);">${t.confirmed || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_confirmed")}</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:8px; overflow-x:auto;">
+      <div style="font-weight:800; margin-bottom:6px;">${trn("ov_departments")} <span class="hint" style="font-weight:400;">· ${trn("ov_tap")}</span></div>
+      ${depts.length ? `<table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <tr style="text-align:left; color:var(--muted);"><th style="padding:6px;">Department</th><th style="text-align:right;">${trn("ov_people_in")}</th><th style="text-align:right;">${trn("ov_total")}</th><th style="text-align:right;">${trn("ov_overdue")}</th><th style="text-align:right;">${trn("ov_active")}</th><th style="text-align:right;">${trn("ov_proposed")}</th><th style="width:120px;">${trn("ov_progress")}</th></tr>
+        ${depts.map(d => `<tr onclick="trnOpenDept('${escapeHtml(d.key)}')" style="cursor:pointer; border-top:1px solid var(--line); ${open && open.key === d.key ? "background:#E3F3EC;" : ""}">
+          <td style="padding:8px 6px;"><b>${escapeHtml(d.name)}</b><div class="hint" style="font-size:11px;">${escapeHtml(BUSINESS_UNIT_LABELS_UI[d.businessUnit] || d.businessUnit)}</div></td>
+          <td style="text-align:right;">${d.people}</td><td style="text-align:right;">${d.total}</td>
+          <td style="text-align:right; color:${d.overdue ? "var(--bad)" : "inherit"}; font-weight:${d.overdue ? "800" : "400"};">${d.overdue}</td>
+          <td style="text-align:right;">${d.active}</td><td style="text-align:right;">${d.proposed}</td>
+          <td>${bar(d.progress)}<div class="hint" style="font-size:11px;">${d.progress}%</div></td></tr>`).join("")}
+      </table>` : `<div class="hint">${trn("ov_none")}</div>`}
+    </div>
+    ${open ? `<div class="card" style="margin-top:8px;">
+      <div style="font-weight:800; margin-bottom:6px;">${escapeHtml(open.name)} <span class="hint" style="font-weight:400;">· ${people.length} ${trn("ov_people_in").toLowerCase()}</span></div>
+      ${people.map(p => `<div style="display:grid; grid-template-columns:1.6fr 0.6fr 0.6fr 0.6fr 1.2fr 1.4fr; gap:8px; align-items:center; padding:8px 0; border-top:1px solid var(--line); font-size:13px;">
+        <div><b>${escapeHtml(p.name)}</b><div class="hint" style="font-size:11px;">${escapeHtml(p.jobTitle || "")}</div></div>
+        <div style="text-align:right;">${p.total}</div>
+        <div style="text-align:right; color:${p.overdue ? "var(--bad)" : "inherit"}; font-weight:${p.overdue ? "800" : "400"};">${p.overdue}</div>
+        <div style="text-align:right;">${p.active}</div>
+        <div>${bar(p.progress)}<div class="hint" style="font-size:11px;">${p.progress}%</div></div>
+        <div class="hint" style="font-size:12px;">${p.nextDue ? trn("ov_nearest") + ": " + escapeHtml(noticeDateText(p.nextDue)) : ""}</div>
+      </div>`).join("")}
+    </div>` : ""}`;
+}
+
+function trnOpenDept(key) {
+  state._ovOpenDept = key;
+  if (state._ov) renderTrainingOverviewBody(state._ov, key);
+}
+
+function t_back() { return t("form_back"); }
 
 /** Dashboard card: the most important training numbers, with the entry point. */
 function buildTrainingCard(mine, teamSummary, isReviewer) {
@@ -3193,6 +3305,7 @@ function availableScreensGrouped(user) {
     reportGroupItems.push(
       { key: "review", label: t("menu_review_all") },
       { key: "feedback", label: t("menu_read_feedback") },
+      { key: "trainingOverview", label: trn("menu_overview") },
       { key: "trainingNeeds", label: trn("menu_team") },
     );
     const groupName = user.isHR ? "MyHR" : user.isExecutive ? "MyReport" : "MyOperational";
@@ -3207,7 +3320,6 @@ function availableScreensGrouped(user) {
     ]});
   }
 
-  groups.unshift({ name: "MyTraining", items: [{ key: "myTraining", label: trn("menu_mine") }] });
   return groups;
 }
 
@@ -3286,7 +3398,7 @@ function buildActionNeedsCard({ selfPending, evaluationsPending, unreadCount }) 
 }
 
 async function renderDashboard() {
-  app.innerHTML = topbar("Dashboard Saya") + `<div class="loading">Memuat...</div>`;
+  app.innerHTML = topbar("Dashboard Saya") + `<div class="loading">${t("form_loading")}</div>`;
   // Superadmin never has real personal appraisal history (synthetic account, not a real
   // person being evaluated) — skip the chart fetch/render entirely rather than showing an
   // always-empty "no history yet" card that never resolves into anything useful.
@@ -3341,14 +3453,17 @@ async function renderDashboard() {
   // Without it, a closed window or a deferred contract would show a button that leads straight to a refusal.
   const selfNeedsWindowCheck = hasSelfCapability && !selfDoneThisMonth;
   const isTrainingReviewer = !!(state.user.isLeader || state.user.isManagement || state.user.isHR || state.user.isExecutive || state.user.isAdminOperational);
+  const isOrgTrainingReviewer = !!(state.user.isHR || state.user.isExecutive);
   const [evalRes, selfAccessRes, myTrainRes, teamTrainRes] = await Promise.all([
     needsEvaluationList ? apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId }) : Promise.resolve({ targets: [] }),
     selfNeedsWindowCheck ? apiGet("checkAccess", { staffId: state.user.staffId, evaluatorType: "self" }) : Promise.resolve({ allowed: false }),
     apiGet("getMyTrainingNeeds", { staffId: state.user.staffId }),
-    isTrainingReviewer ? apiGet("getTrainingNeeds", { requesterId: state.user.staffId }) : Promise.resolve({}),
+    isTrainingReviewer ? apiGet(isOrgTrainingReviewer ? "getTrainingOverview" : "getTrainingNeeds", { requesterId: state.user.staffId }) : Promise.resolve({}),
     refreshUnreadCount(),
   ]);
-  const trainingCardHtml = buildTrainingCard((myTrainRes && myTrainRes.items) || [], (teamTrainRes && teamTrainRes.summary) || null, isTrainingReviewer);
+  const trainingCardHtml = isOrgTrainingReviewer
+    ? buildOrgTrainingCard((teamTrainRes && teamTrainRes.found) ? teamTrainRes : null, (myTrainRes && myTrainRes.items) || [])
+    : buildTrainingCard((myTrainRes && myTrainRes.items) || [], (teamTrainRes && teamTrainRes.summary) || null, isTrainingReviewer);
   // Only tasks whose window is open today count as "to do"; the rest are listed but not asked for yet.
   const evaluationsPending = (evalRes.targets || []).filter(x => x.status !== "Submitted" && x.slotOpen !== false).length;
   const actionCardHtml = buildActionNeedsCard({

@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-348-training-ui — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-349-training-reason-progress — LIVE</div>
 
 <script>
 // =================================================================
@@ -1197,6 +1197,7 @@ const translations = {
     review_underperform_only_btn: "Underperform Saja",
     review_coaching_only_btn: "Coaching Saja",
     report_performance_btn: "Comprehensive Performance Report",
+    report_training_btn: "Training & Development Report",
     action_scope_label: "Business unit · Department",
     action_no_unit: "Belum ada unit — hanya HR yang bisa mengatur.",
     decision_scope_pick: "Pilih business unit (semua departmentnya ikut) atau department tertentu:",
@@ -1769,6 +1770,7 @@ const translations = {
     review_underperform_only_btn: "Underperform Only",
     review_coaching_only_btn: "Coaching Only",
     report_performance_btn: "Comprehensive Performance Report",
+    report_training_btn: "Training & Development Report",
     action_scope_label: "Business unit · Department",
     action_no_unit: "No unit yet — only HR can set it.",
     decision_scope_pick: "Pick a business unit (all its departments come with it) or specific departments:",
@@ -1914,6 +1916,9 @@ const TRN = {
     empty_team: "Belum ada training untuk tim kamu.", done_hint: "Menunggu konfirmasi leader atau HR",
     ok_saved: "Tersimpan", failed: "Gagal: ", summary_title: "Ringkasan tim", change_status: "Ubah status",
     new_title: "Tambah training untuk karyawan", staff_pick: "Pilih karyawan",
+    reason_coaching: "Dari keputusan coaching {month}", reason_proposed: "Diusulkan oleh {name}", reason_assigned: "Ditugaskan oleh {name}",
+    steps_label: "Langkah", progress_word: "progres", materials_label: "Materi belajar", materials_none: "Belum ada materi ditautkan.",
+    materials_field: "Link materi (satu per baris, format: nama|link)", materials_ph: "SOP Latte Art|https://...",
   },
   en: {
     menu_mine: "My Training", menu_team: "Training & Development", title_mine: "My Training", title_team: "Training & Development",
@@ -1935,6 +1940,9 @@ const TRN = {
     empty_team: "No training for your team yet.", done_hint: "Waiting for a leader or HR to confirm",
     ok_saved: "Saved", failed: "Failed: ", summary_title: "Team summary", change_status: "Change status",
     new_title: "Add training for an employee", staff_pick: "Pick an employee",
+    reason_coaching: "From coaching decision {month}", reason_proposed: "Proposed by {name}", reason_assigned: "Assigned by {name}",
+    steps_label: "Steps", progress_word: "progress", materials_label: "Learning materials", materials_none: "No materials linked yet.",
+    materials_field: "Material links (one per line, format: name|link)", materials_ph: "Latte art SOP|https://...",
   },
 };
 function trn(key, vars) {
@@ -2006,11 +2014,63 @@ function trnRenderSections(items, opts) {
     + sec("rejected", trn("sec_rejected"), by.rejected, "var(--muted)");
 }
 
+function trnReason(item) {
+  const src = String(item.source || "");
+  if (src.indexOf("decision:") === 0) return trn("reason_coaching", { month: noticeMonthText(src.slice(9)) });
+  if (item.proposedBy) return trn("reason_proposed", { name: item.proposedBy });
+  if (item.recordedBy) return trn("reason_assigned", { name: item.recordedBy });
+  return "";
+}
+
+/** Material links from "name|link" lines. Only http(s) links are shown as links. */
+function trnMaterialsHtml(raw) {
+  const lines = String(raw || "").split("\n").map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return `<div class="hint" style="font-size:12px; margin-top:6px;">${trn("materials_none")}</div>`;
+  return `<div style="margin-top:8px;"><div style="font-size:12px; font-weight:700; color:var(--muted);">${trn("materials_label")}</div>
+    ${lines.map(l => {
+      const [label, ...rest] = l.split("|");
+      const url = rest.join("|").trim();
+      const name = escapeHtml(label.trim() || url);
+      return /^https?:\/\//i.test(url)
+        ? `<div><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px;">${name} ↗</a></div>`
+        : `<div style="font-size:13px;">${name}</div>`;
+    }).join("")}</div>`;
+}
+
+/** Progress as a bar, a percentage, and the steps. Each person ticks only the steps they may tick. */
+function trnProgressHtml(item, opts) {
+  const id = escapeHtml(item.trainingId);
+  const steps = item.steps || [];
+  const done = steps.filter(s => s.done).length;
+  const bar = `<div style="height:8px; background:#EFE6D8; border-radius:4px; overflow:hidden; margin-top:8px;"><div style="width:${item.progress || 0}%; height:100%; background:var(--teal);"></div></div>
+    <div class="hint" style="font-size:12px; margin-top:3px;">${item.progress || 0}% ${trn("progress_word")}${steps.length ? ` · ${done}/${steps.length} ${trn("steps_label").toLowerCase()}` : ""}</div>`;
+  if (!steps.length) return bar;
+  const canTick = (s) => {
+    if (item.approvalStatus !== "") return false;
+    const signOff = /sign-?off/i.test(s.label);
+    if (signOff) return !!opts.review;
+    return !!(opts.mine || opts.review);
+  };
+  return bar + `<div style="margin-top:6px;">${steps.map((s, idx) => `
+    <label style="display:flex; gap:8px; align-items:center; font-size:13px; padding:2px 0;">
+      <input type="checkbox" ${s.done ? "checked" : ""} ${canTick(s) ? "" : "disabled"} onchange="trnToggleStep('${id}', ${idx}, this.checked)">
+      <span>${escapeHtml(s.label)}</span>
+    </label>`).join("")}</div>`;
+}
+
+async function trnToggleStep(id, idx, done) {
+  const res = await apiPost("setTrainingStep", { trainingId: id, stepIndex: idx, done: !!done });
+  if (res.error || res.success === false) { showToast(trn("failed") + friendlyError(res.error), "error"); }
+  render();
+}
+
 function trnCard(item, opts) {
   const u = trnUrgency(item);
   const edge = u === "overdue" ? "var(--bad)" : u === "soon" ? "#F2A65A" : u === "proposal" || u === "confirm" ? "var(--teal)" : u === "done" ? "var(--ok)" : "var(--line)";
   const id = escapeHtml(item.trainingId);
   const who = opts.mine ? "" : `<div class="hint" style="font-size:12px;">${escapeHtml(item.staffName)}</div>`;
+  const reason = trnReason(item);
+  const reasonHtml = reason ? `<div style="font-size:12px; color:var(--teal); font-weight:700; margin-top:4px;">${escapeHtml(reason)}</div>` : "";
   const note = item.progressNote ? `<div style="font-size:13px; margin-top:6px; white-space:pre-wrap;">${escapeHtml(item.progressNote)}</div>` : "";
   let actions = "";
   if (opts.mine && item.approvalStatus === "" && item.status === "Belum Dimulai") {
@@ -2046,12 +2106,14 @@ function trnCard(item, opts) {
     <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
       <div style="min-width:0;">
         <div style="font-weight:800; font-size:15px; overflow-wrap:anywhere;">${escapeHtml(item.topic)}</div>
-        ${who}
+        ${who}${reasonHtml}
       </div>
       <span class="badge">${trnPriorityText(item.priority)}</span>
     </div>
     <div style="margin-top:6px; font-size:13px;">${trnDueText(item)}</div>
-    <div style="font-size:13px; margin-top:4px;">${trn("owner_label")}: ${item.owner ? escapeHtml(item.owner) : `<span class="hint">${trn("owner_none")}</span>`} · ${trnStatusText(item.status)}${item.proposedBy && item.approvalStatus !== "" ? ` · ${trn("proposed_by")} ${escapeHtml(item.proposedBy)}` : ""}</div>
+    <div style="font-size:13px; margin-top:4px;">${trn("owner_label")}: ${item.owner ? escapeHtml(item.owner) : `<span class="hint">${trn("owner_none")}</span>`} · ${trnStatusText(item.status)}</div>
+    ${trnProgressHtml(item, opts)}
+    ${trnMaterialsHtml(item.materials)}
     ${note}
     ${actions}
   </div>`;
@@ -2119,6 +2181,7 @@ function trnOpenNew() {
     <select id="trn-prio"><option value="Rendah">${trn("prio_low")}</option><option value="Sedang" selected>${trn("prio_med")}</option><option value="Tinggi">${trn("prio_high")}</option></select>
     <label>${trn("field_due")}</label><input id="trn-due" type="date">
     <label>${trn("field_owner")}</label><input id="trn-owner" type="text">
+    <label>${trn("materials_field")}</label><textarea id="trn-materials" rows="3" placeholder="${trn("materials_ph")}"></textarea>
     <div style="display:flex; gap:8px; margin-top:8px;"><button class="primary" onclick="trnSubmitNew()">${trn("btn_save")}</button><button class="ghost" onclick="document.getElementById('trn-panel').innerHTML=''">${trn("btn_cancel")}</button></div></div>`;
 }
 async function trnSubmitNew() {
@@ -2129,6 +2192,7 @@ async function trnSubmitNew() {
     requesterId: state.user.staffId, staffId, topic: topic.trim(),
     priority: (document.getElementById("trn-prio") || {}).value, dueDate: (document.getElementById("trn-due") || {}).value || "",
     owner: (document.getElementById("trn-owner") || {}).value || "",
+    materials: (document.getElementById("trn-materials") || {}).value || "",
   });
 }
 
@@ -7425,6 +7489,7 @@ async function renderReview(skipFetch) {
           ${(state.user.isHR || state.user.isExecutive) ? `<div class="row-flex" style="gap:6px; flex-wrap:wrap; justify-content:flex-end;">
             <button class="primary" id="report-performance-btn" onclick="openReportScopePicker('performance', 'decision-scope-panel')">${t("report_performance_btn")}</button>
             <button class="primary" id="report-decision-btn" onclick="openReportScopePicker('decision', 'decision-scope-panel')">${t("report_decision_btn")}</button>
+            <button class="primary" id="report-training-btn" onclick="openReportScopePicker('training', 'decision-scope-panel')">${t("report_training_btn")}</button>
           </div>` : ""}
         </div>
         <div class="hint" id="review-report-note"></div>

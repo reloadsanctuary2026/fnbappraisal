@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-345-scope-all-reports — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-346-action-by-unit — LIVE</div>
 
 <script>
 // =================================================================
@@ -1197,6 +1197,8 @@ const translations = {
     review_underperform_only_btn: "Underperform Saja",
     review_coaching_only_btn: "Coaching Saja",
     report_performance_btn: "Comprehensive Performance Report",
+    action_scope_label: "Business unit · Department",
+    action_no_unit: "Belum ada unit — hanya HR yang bisa mengatur.",
     decision_scope_pick: "Pilih business unit (semua departmentnya ikut) atau department tertentu:",
     decision_scope_build: "Buat PDF",
     decision_scope_cancel: "Batal",
@@ -1767,6 +1769,8 @@ const translations = {
     review_underperform_only_btn: "Underperform Only",
     review_coaching_only_btn: "Coaching Only",
     report_performance_btn: "Comprehensive Performance Report",
+    action_scope_label: "Business unit · Department",
+    action_no_unit: "No unit yet — only HR can set it.",
     decision_scope_pick: "Pick a business unit (all its departments come with it) or specific departments:",
     decision_scope_build: "Build PDF",
     decision_scope_cancel: "Cancel",
@@ -6532,10 +6536,11 @@ async function renderStaffFeedback() {
   if (!state._feedbackMonth) state._feedbackMonth = state.month;
 
   const requestedUnit = state._feedbackUnit || "";
+  state._actionScope = canTagAnyFeedback() ? await apiPost("reportScopeOptions", {}) : { units: [] };
   let [feedbackRes, summaryRes, actionsRes, catRes] = await Promise.all([
     apiGet("getAllManagementFeedback", { requesterId: state.user.staffId }),
     apiGet("getIssueSummary", { requesterId: state.user.staffId, month: state._feedbackMonth, businessUnit: requestedUnit }),
-    apiGet("getActionItems", {}),
+    apiGet("getActionItems", { requesterId: state.user.staffId }),
     apiGet("getFeedbackCategories", {}),
   ]);
   if (!feedbackRes.found) {
@@ -6576,6 +6581,7 @@ async function renderStaffFeedback() {
   const summary = summaryRes.summary || [];
   state._feedbackSummary = summaryRes; // kept so the Feedback Report can warn about untagged feedback
   const actions = actionsRes.items || [];
+  state._actions = actions;
   const showMenuLink = availableScreens(state.user).length > 1;
   const catOptions = (extra) => `<option value="">— pilih —</option>` + state._feedbackCategories.map(c => `<option value="${escapeHtml(c.code)}" ${c.code === extra ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("");
 
@@ -6655,6 +6661,7 @@ async function renderStaffFeedback() {
         <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px;">
           <div style="display:flex; justify-content:space-between;">
             <div class="name">${escapeHtml(a.actionId)} — ${escapeHtml(a.issue)}</div>
+            <div class="hint" style="font-size:12px;">${a.businessUnit ? escapeHtml(actionScopeLabel(a.businessUnit, a.department)) : `<span style="color:var(--coral);">${t("action_no_unit")}</span>`}</div>
             <span class="badge ${a.status === "Done" ? "done" : a.status === "In Progress" ? "pending" : "underperform"}">${escapeHtml(a.status)}</span>
           </div>
           <div style="font-size:13px; margin:6px 0;">${escapeHtml(a.action)}</div>
@@ -6770,12 +6777,27 @@ async function doSaveAllTags() {
   }
 }
 
+/** "F&B · Bar" style options from the scope list. The selected value is "unit|department". */
+function scopeOptionsHtml(selectedKey) {
+  const units = (state._actionScope && state._actionScope.units) || [];
+  return units.map(u => u.departments.map(d => `<option value="${escapeHtml(d.key)}" ${d.key === selectedKey ? "selected" : ""}>${escapeHtml(u.label)} · ${escapeHtml(d.label)}</option>`).join("")).join("");
+}
+
+/** Readable "F&B · Bar" for an item's stored unit and department. */
+function actionScopeLabel(businessUnit, department) {
+  const units = (state._actionScope && state._actionScope.units) || [];
+  const unit = units.find(u => u.key === businessUnit);
+  return ((unit && unit.label) || businessUnit) + " · " + department;
+}
+
 function actionFormHtml(a) {
   a = a || {};
   return `
     <div class="card" style="background:var(--sand);">
       <label>Issue</label>
       <select id="action-issue">${state._feedbackCategories.map(c => `<option value="${c.label}" ${c.label === a.issue ? "selected" : ""}>${c.label}</option>`).join("")}</select>
+      <label>${t("action_scope_label")}</label>
+      <select id="action-scope">${scopeOptionsHtml(a.businessUnit && a.department ? a.businessUnit + "|" + a.department : "")}</select>
       <label>Action</label>
       <textarea id="action-action" rows="2" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:10px; font-family:inherit; font-size:16px;">${a.action || ""}</textarea>
       <label>Owner</label>
@@ -6799,7 +6821,8 @@ function showNewActionForm() {
 }
 
 function showEditActionForm(actionId, issue, action, owner, target, status, actualCompletion, remarks) {
-  document.getElementById("new-action-form").innerHTML = actionFormHtml({ actionId, issue, action, owner, target, status, actualCompletion, remarks });
+  const it = (state._actions || []).find(x => x.actionId === actionId) || {};
+  document.getElementById("new-action-form").innerHTML = actionFormHtml({ actionId, issue, action, owner, target, status, actualCompletion, remarks, businessUnit: it.businessUnit, department: it.department });
 }
 
 async function doSaveActionItem(actionId) {
@@ -6814,6 +6837,10 @@ async function doSaveActionItem(actionId) {
     actualCompletion: document.getElementById("action-completion").value,
     remarks: document.getElementById("action-remarks").value,
   };
+  const scopeKey = (document.getElementById("action-scope") || {}).value || "";
+  const [unitKey, ...deptParts] = scopeKey.split("|");
+  payload.businessUnit = unitKey || "";
+  payload.department = deptParts.join("|");
   const res = await apiPost("saveActionItem", payload);
   if (res.error || res.success === false) { showToast("Gagal simpan: " + friendlyError(res.error), "error"); return; }
   showToast("Action item tersimpan!");
@@ -7232,12 +7259,12 @@ async function openReportScopePicker(kind, panelId) {
       <div class="hint" style="margin-bottom:8px;">${t("decision_scope_pick")}</div>
       ${units.map(u => `
         <label style="display:flex; align-items:center; gap:8px; font-weight:700; margin-top:8px;">
-          <input type="checkbox" class="scope-unit" data-unit="${escapeHtml(u.key)}" onchange="toggleScopeUnit(this)"> ${escapeHtml(u.label)}
+          <input type="checkbox" class="scope-unit" data-unit="${escapeHtml(u.key)}" onchange="toggleScopeUnit(this)"> <span style="flex:1;">${escapeHtml(u.label)}</span>
         </label>
         <div style="margin-left:22px;">
           ${u.departments.map(d => `
-            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
-              <input type="checkbox" class="scope-dept" data-unit="${escapeHtml(u.key)}" data-key="${escapeHtml(d.key)}" onchange="syncScopeUnit(this)"> ${escapeHtml(d.label)} <span class="hint">(${d.count})</span>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; padding:2px 0;">
+              <input type="checkbox" class="scope-dept" data-unit="${escapeHtml(u.key)}" data-key="${escapeHtml(d.key)}" onchange="syncScopeUnit(this)"> <span style="flex:1;">${escapeHtml(d.label)}</span> <span class="hint" style="font-size:13px; min-width:44px; text-align:right; white-space:nowrap;">(${d.count})</span>
             </label>`).join("")}
         </div>`).join("")}
       <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
@@ -7285,8 +7312,7 @@ async function submitReportScope(panelId) {
 
 /** One download path for the three reports. The PDF is built on the server and sent back; nothing is written to a spreadsheet. */
 async function doGenerateReport(kind, noteId, month, departments) {
-  const lang = await askExportLanguage();
-  if (!lang) return;
+  const lang = state.lang === "en" ? "en" : "id"; // the screen's own language, no separate question
   const noteEl = document.getElementById(noteId || "review-report-note");
   if (!noteEl) return;
   noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("gm_export_decision_generating");
@@ -7379,37 +7405,9 @@ const RELOAD_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAA
 // ============================================================
 /** Asks which language an export should be in. Resolves "id", "en", or null (cancelled). Remembers the
  *  last choice and highlights it, so the usual answer is one tap. */
+/** Every export now uses the language the screen is already in. No separate question. */
 function askExportLanguage() {
-  return new Promise((resolve) => {
-    let last = "id";
-    try { last = localStorage.getItem("reload360_export_lang") || "id"; } catch (e) { /* storage unavailable: fine */ }
-    const overlay = document.createElement("div");
-    overlay.id = "export-lang-overlay";
-    overlay.style.cssText = "position:fixed; inset:0; background:rgba(20,15,10,0.5); z-index:3000; display:flex; align-items:center; justify-content:center; padding:16px;";
-    const btn = (code, label) => `<button id="exp-lang-${code}" class="${last === code ? "primary" : "secondary"}" style="width:100%; padding:14px; font-size:16px; margin-top:10px;"><span style="opacity:0.7; font-weight:700; margin-right:8px;">${code.toUpperCase()}</span>${label}</button>`;
-    overlay.innerHTML = `
-      <div class="card" style="max-width:380px; width:100%; margin:0;" role="dialog" aria-modal="true">
-        <h2 style="margin-top:0;">Pilih bahasa · Choose language</h2>
-        <div class="hint">Bahasa isi laporan / file yang akan dibuat.<br>Language of the report / file about to be created.</div>
-        ${btn("id", "Bahasa Indonesia")}
-        ${btn("en", "English")}
-        <button id="exp-lang-cancel" class="ghost" style="width:100%; margin-top:10px;">Batal · Cancel</button>
-      </div>`;
-    const onKey = (e) => { if (e.key === "Escape") done(null); };
-    const done = (value) => {
-      document.removeEventListener("keydown", onKey);
-      overlay.remove();
-      if (value) { try { localStorage.setItem("reload360_export_lang", value); } catch (e) { /* ignore */ } }
-      resolve(value);
-    };
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) done(null); });
-    document.addEventListener("keydown", onKey);
-    document.body.appendChild(overlay);
-    overlay.querySelector("#exp-lang-id").addEventListener("click", () => done("id"));
-    overlay.querySelector("#exp-lang-en").addEventListener("click", () => done("en"));
-    overlay.querySelector("#exp-lang-cancel").addEventListener("click", () => done(null));
-    overlay.querySelector(`#exp-lang-${last === "en" ? "en" : "id"}`).focus();
-  });
+  return Promise.resolve(state.lang === "en" ? "en" : "id");
 }
 
 // ============================================================

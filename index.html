@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-336-hr-decision-export — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-339-three-pdf-reports — LIVE</div>
 
 <script>
 // =================================================================
@@ -1194,6 +1194,9 @@ const translations = {
     review_all_departments: "Semua Department",
     review_underperform_only_btn: "Underperform Saja",
     review_coaching_only_btn: "Coaching Saja",
+    report_performance_btn: "Comprehensive Performance Report",
+    report_decision_btn: "Decision Recommendation Report",
+    report_feedback_btn: "Feedback Report",
     review_record_count_suffix: "appraisal record — read only",
     review_empty_scope: "Belum ada data appraisal di scope kamu.",
     review_range_checkbox: "Ambil beberapa bulan sekaligus",
@@ -1755,6 +1758,9 @@ const translations = {
     review_all_departments: "All Departments",
     review_underperform_only_btn: "Underperform Only",
     review_coaching_only_btn: "Coaching Only",
+    report_performance_btn: "Comprehensive Performance Report",
+    report_decision_btn: "Decision Recommendation Report",
+    report_feedback_btn: "Feedback Report",
     review_record_count_suffix: "appraisal records — read only",
     review_empty_scope: "No appraisal data in your scope yet.",
     review_range_checkbox: "Pull multiple months at once",
@@ -7082,16 +7088,13 @@ async function renderReview(skipFetch) {
         ${rows.some(r => r.decision) ? `<button class="secondary" id="review-coaching-btn" onclick="toggleReviewFilterBtn('coachingOnly', 'review-coaching-btn')" style="margin-bottom:10px; margin-left:6px;">${t("review_coaching_only_btn")}</button>` : ""}
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div class="hint">${total} ${t("review_record_count_suffix")}</div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="secondary" id="review-export-excel-btn" onclick="doGenerateReviewExport('xlsx')">📊 Excel</button>
-            <button class="secondary" id="review-export-pdf-btn" onclick="doGenerateReviewExport('pdf')">📄 PDF</button>
-            ${state.user.isHR ? `<button class="secondary" id="review-export-decision-btn" onclick="doExportDecisionLog()">📌 Decision Log</button>` : ""}
-            <button class="primary" id="review-export-both-btn" onclick="doGenerateReviewExportBoth()">📄📊 Export Keduanya</button>
-            <button class="primary" style="background:var(--coral);" onclick="openExecutiveSummaryReport()">📈 Laporan Komprehensif</button>
-          </div>
+          ${(state.user.isHR || state.user.isExecutive) ? `<div class="row-flex" style="gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+            <button class="primary" id="report-performance-btn" onclick="doGenerateReport('performance')">${t("report_performance_btn")}</button>
+            <button class="primary" id="report-decision-btn" onclick="doGenerateReport('decision')">${t("report_decision_btn")}</button>
+            <button class="primary" id="report-feedback-btn" onclick="doGenerateReport('feedback')">${t("report_feedback_btn")}</button>
+          </div>` : ""}
         </div>
-        <div class="hint" id="review-export-note"></div>
-        <div class="hint" id="decision-log-export-note"></div>
+        <div class="hint" id="review-report-note"></div>
       </div>
       <div id="review-list-container">
         ${deptKeys.map((dept, di) => {
@@ -7191,7 +7194,32 @@ function updateReviewFilter(key, value) {
   });
 }
 
+/** Full report for HR: every person in scope, one tab per department, Management to Staff. Downloads straight to the device. */
+/** One download path for the three reports. The PDF is built on the server and sent back; nothing is written to a spreadsheet. */
+async function doGenerateReport(kind) {
+  const lang = await askExportLanguage();
+  if (!lang) return;
+  const noteEl = document.getElementById("review-report-note");
+  if (!noteEl) return;
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("gm_export_decision_generating");
+  const res = await apiPost("generateReportPdf", { kind, lang, month: state.month });
+  if (res.error || res.success === false) {
+    noteEl.textContent = t("gm_export_decision_failed_prefix") + " " + friendlyError(res.error);
+    return;
+  }
+  const bytes = atob(res.fileBase64);
+  const numbers = new Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) numbers[i] = bytes.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([new Uint8Array(numbers)], { type: res.mimeType }));
+  const a = document.createElement("a");
+  a.href = url; a.download = res.fileName;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  noteEl.textContent = `✅ ${res.fileName}`;
+}
+
 async function doExportDecisionLog() {
+  // Downloads the file straight to this device. Nothing is added to the spreadsheet.
   const lang = await askExportLanguage();
   if (!lang) return;
   const noteEl = document.getElementById("decision-log-export-note");
@@ -7202,7 +7230,15 @@ async function doExportDecisionLog() {
     noteEl.textContent = t("gm_export_decision_failed_prefix") + " " + friendlyError(res.error);
     return;
   }
-  noteEl.innerHTML = `${t("gm_export_decision_ready_prefix")} (${res.rowCount} ${t("gm_export_decision_ready_suffix")} <a href="${res.sheetUrl}" target="_blank" style="color:var(--teal); font-weight:700;">${t("gm_export_open_link")}</a> ${t("gm_export_next_step")}`;
+  const bytes = atob(res.fileBase64);
+  const numbers = new Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) numbers[i] = bytes.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([new Uint8Array(numbers)], { type: res.mimeType }));
+  const a = document.createElement("a");
+  a.href = url; a.download = res.fileName;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  noteEl.textContent = `✅ ${res.fileName} (${res.rowCount} ${t("gm_export_decision_ready_suffix")}`;
 }
 
 /** Downloads a single xlsx covering Section C and Section D for EVERY position at once —
@@ -8830,8 +8866,6 @@ async function renderGm() {
         <button class="secondary" onclick="approveAll()">${t("gm_approve_all_btn")}</button>
       </div>
       <div class="hint" style="margin-bottom:10px;">${t("gm_approve_all_hint")}</div>
-      <button class="secondary" onclick="doExportDecisionLog()" style="margin-bottom:10px;">${t("gm_export_decision_log_btn")}</button>
-      <div class="hint" id="decision-log-export-note" style="margin-bottom:10px;"></div>
       <input type="text" placeholder="${t("gm_search_placeholder")}" oninput="updateGmFilter('search', this.value)" style="margin-bottom:10px;" />
       <div class="row-flex" style="margin-bottom:10px;">
         <select onchange="sortGmList(this.value)">

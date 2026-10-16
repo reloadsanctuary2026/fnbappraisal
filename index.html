@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-352-topbar-english — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-353-one-training-card — LIVE</div>
 
 <script>
 // =================================================================
@@ -1939,7 +1939,7 @@ const TRN = {
     empty_team: "Belum ada training untuk tim kamu.", done_hint: "Menunggu konfirmasi leader atau HR",
     ok_saved: "Tersimpan", failed: "Gagal: ", summary_title: "Ringkasan tim", change_status: "Ubah status",
     new_title: "Tambah training untuk karyawan", staff_pick: "Pilih karyawan",
-    menu_overview: "Overview Training", title_overview: "Overview Training", ov_total: "Total training", ov_overdue: "Terlambat", ov_active: "Berjalan", ov_proposed: "Usulan", ov_confirmed: "Terkonfirmasi", ov_progress: "Progres", ov_departments: "Per department", ov_people_in: "Orang di department", ov_none: "Belum ada training di cakupanmu.", card_org_btn: "Buka overview training", card_top_depts: "Department yang paling butuh perhatian", ov_back: "Kembali", ov_nearest: "Tenggat terdekat", ov_tap: "Ketuk department untuk melihat orangnya",
+    menu_overview: "Overview Training", title_overview: "Training & Development", ov_total: "Total training", ov_overdue: "Terlambat", ov_active: "Berjalan", ov_proposed: "Usulan", ov_confirmed: "Terkonfirmasi", ov_progress: "Progres", ov_departments: "Per department", ov_people_in: "Orang di department", ov_none: "Belum ada training di cakupanmu.", card_org_btn: "Buka Training & Development", card_top_depts: "Department yang paling butuh perhatian", ov_back: "Kembali", ov_nearest: "Tenggat terdekat", ov_tap: "Ketuk department untuk melihat orangnya",
     reason_coaching: "Dari keputusan coaching {month}", reason_proposed: "Diusulkan oleh {name}", reason_assigned: "Ditugaskan oleh {name}",
     steps_label: "Langkah", progress_word: "progres", materials_label: "Materi belajar", materials_none: "Belum ada materi ditautkan.",
     materials_field: "Link materi (satu per baris, format: nama|link)", materials_ph: "SOP Latte Art|https://...",
@@ -1964,7 +1964,7 @@ const TRN = {
     empty_team: "No training for your team yet.", done_hint: "Waiting for a leader or HR to confirm",
     ok_saved: "Saved", failed: "Failed: ", summary_title: "Team summary", change_status: "Change status",
     new_title: "Add training for an employee", staff_pick: "Pick an employee",
-    menu_overview: "Training Overview", title_overview: "Training Overview", ov_total: "Total trainings", ov_overdue: "Overdue", ov_active: "In progress", ov_proposed: "Proposals", ov_confirmed: "Confirmed", ov_progress: "Progress", ov_departments: "By department", ov_people_in: "People in the department", ov_none: "No training in your scope yet.", card_org_btn: "Open training overview", card_top_depts: "Departments that need attention most", ov_back: "Back", ov_nearest: "Nearest due date", ov_tap: "Tap a department to see its people",
+    menu_overview: "Training Overview", title_overview: "Training & Development", ov_total: "Total trainings", ov_overdue: "Overdue", ov_active: "In progress", ov_proposed: "Proposals", ov_confirmed: "Confirmed", ov_progress: "Progress", ov_departments: "By department", ov_people_in: "People in the department", ov_none: "No training in your scope yet.", card_org_btn: "Open Training & Development", card_top_depts: "Departments that need attention most", ov_back: "Back", ov_nearest: "Nearest due date", ov_tap: "Tap a department to see its people",
     reason_coaching: "From coaching decision {month}", reason_proposed: "Proposed by {name}", reason_assigned: "Assigned by {name}",
     steps_label: "Steps", progress_word: "progress", materials_label: "Learning materials", materials_none: "No materials linked yet.",
     materials_field: "Material links (one per line, format: name|link)", materials_ph: "Latte art SOP|https://...",
@@ -2292,9 +2292,15 @@ function buildOrgTrainingCard(ov, mine) {
 /** Overview for HR and Executives: totals, departments, and the people in a department when one is opened. */
 async function renderTrainingOverview() {
   app.innerHTML = topbar(trn("title_overview")) + `<div class="loading">${t("form_loading")}</div>`;
-  const res = await apiGet("getTrainingOverview", { requesterId: state.user.staffId });
+  const [res, workRes, staffRes] = await Promise.all([
+    apiGet("getTrainingOverview", { requesterId: state.user.staffId }),
+    apiGet("getTrainingNeeds", { requesterId: state.user.staffId }),
+    apiGet("getReviewableEmployees", { requesterId: state.user.staffId }),
+  ]);
   if (!res.found) { app.innerHTML = topbar(trn("title_overview")) + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`; return; }
   state._ov = res;
+  state._ovItems = (workRes && workRes.items) || [];
+  state._trnStaff = (staffRes && staffRes.staff) || [];
   renderTrainingOverviewBody(state._ov, state._ovOpenDept || null);
 }
 
@@ -2337,7 +2343,12 @@ function renderTrainingOverviewBody(ov, openKey) {
         <div>${bar(p.progress)}<div class="hint" style="font-size:11px;">${p.progress}%</div></div>
         <div class="hint" style="font-size:12px;">${p.nextDue ? trn("ov_nearest") + ": " + escapeHtml(noticeDateText(p.nextDue)) : ""}</div>
       </div>`).join("")}
-    </div>` : ""}`;
+    </div>` : ""}
+    <div class="card" style="margin-top:12px;">
+      <button class="primary" onclick="trnOpenNew()">${trn("btn_add")}</button>
+      <div id="trn-panel"></div>
+    </div>
+    ${trnRenderSections(state._ovItems || [], { review: true })}`;
 }
 
 function trnOpenDept(key) {
@@ -3254,7 +3265,6 @@ function availableScreensGrouped(user) {
     add("myEvaluations", user.appraiseLabel || t("menu_appraise_all"));
     add("review", t("menu_review_all"));
     add("gm", t("menu_approve_final"));
-    add("trainingNeeds", trn("menu_team"));
     add("feedback", t("menu_read_feedback"));
     add("exclusions", t("menu_exclusions"));
     add("historical", t("menu_input_historical"));
@@ -3289,7 +3299,6 @@ function availableScreensGrouped(user) {
     teamItems.push({ key: "gm", label: t("menu_approve_final") });
   }
   if (user.isLeader || user.isManagement) {
-    teamItems.push({ key: "trainingNeeds", label: trn("menu_team") });
   }
   if (teamItems.length) groups.push({ name: "MyTeams", items: teamItems });
 
@@ -3305,8 +3314,6 @@ function availableScreensGrouped(user) {
     reportGroupItems.push(
       { key: "review", label: t("menu_review_all") },
       { key: "feedback", label: t("menu_read_feedback") },
-      { key: "trainingOverview", label: trn("menu_overview") },
-      { key: "trainingNeeds", label: trn("menu_team") },
     );
     const groupName = user.isHR ? "MyHR" : user.isExecutive ? "MyReport" : "MyOperational";
     groups.push({ name: groupName, items: reportGroupItems });

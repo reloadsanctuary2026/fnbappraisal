@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-353-one-training-card — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-354-overview-tabs — LIVE</div>
 
 <script>
 // =================================================================
@@ -1939,7 +1939,7 @@ const TRN = {
     empty_team: "Belum ada training untuk tim kamu.", done_hint: "Menunggu konfirmasi leader atau HR",
     ok_saved: "Tersimpan", failed: "Gagal: ", summary_title: "Ringkasan tim", change_status: "Ubah status",
     new_title: "Tambah training untuk karyawan", staff_pick: "Pilih karyawan",
-    menu_overview: "Overview Training", title_overview: "Training & Development", ov_total: "Total training", ov_overdue: "Terlambat", ov_active: "Berjalan", ov_proposed: "Usulan", ov_confirmed: "Terkonfirmasi", ov_progress: "Progres", ov_departments: "Per department", ov_people_in: "Orang di department", ov_none: "Belum ada training di cakupanmu.", card_org_btn: "Buka Training & Development", card_top_depts: "Department yang paling butuh perhatian", ov_back: "Kembali", ov_nearest: "Tenggat terdekat", ov_tap: "Ketuk department untuk melihat orangnya",
+    menu_overview: "Overview Training", title_overview: "Training & Development", ov_total: "Total training", ov_overdue: "Terlambat", ov_active: "Berjalan", ov_proposed: "Usulan", ov_confirmed: "Terkonfirmasi", ov_progress: "Progres", ov_departments: "Per department", ov_people_in: "Orang di department", ov_none: "Belum ada training di cakupanmu.", card_org_btn: "Buka Training & Development", card_top_depts: "Department yang paling butuh perhatian", ov_back: "Kembali", ov_nearest: "Tenggat terdekat", ov_tap: "Ketuk department untuk melihat orangnya", ov_all: "Semua", ov_c_dept: "Department", ov_c_people: "Orang", ov_c_total: "Total", ov_c_overdue: "Terlambat", ov_c_active: "Berjalan", ov_c_proposed: "Usulan", ov_c_progress: "Progres",
     reason_coaching: "Dari keputusan coaching {month}", reason_proposed: "Diusulkan oleh {name}", reason_assigned: "Ditugaskan oleh {name}",
     steps_label: "Langkah", progress_word: "progres", materials_label: "Materi belajar", materials_none: "Belum ada materi ditautkan.",
     materials_field: "Link materi (satu per baris, format: nama|link)", materials_ph: "SOP Latte Art|https://...",
@@ -1964,7 +1964,7 @@ const TRN = {
     empty_team: "No training for your team yet.", done_hint: "Waiting for a leader or HR to confirm",
     ok_saved: "Saved", failed: "Failed: ", summary_title: "Team summary", change_status: "Change status",
     new_title: "Add training for an employee", staff_pick: "Pick an employee",
-    menu_overview: "Training Overview", title_overview: "Training & Development", ov_total: "Total trainings", ov_overdue: "Overdue", ov_active: "In progress", ov_proposed: "Proposals", ov_confirmed: "Confirmed", ov_progress: "Progress", ov_departments: "By department", ov_people_in: "People in the department", ov_none: "No training in your scope yet.", card_org_btn: "Open Training & Development", card_top_depts: "Departments that need attention most", ov_back: "Back", ov_nearest: "Nearest due date", ov_tap: "Tap a department to see its people",
+    menu_overview: "Training Overview", title_overview: "Training & Development", ov_total: "Total trainings", ov_overdue: "Overdue", ov_active: "In progress", ov_proposed: "Proposals", ov_confirmed: "Confirmed", ov_progress: "Progress", ov_departments: "By department", ov_people_in: "People in the department", ov_none: "No training in your scope yet.", card_org_btn: "Open Training & Development", card_top_depts: "Departments that need attention most", ov_back: "Back", ov_nearest: "Nearest due date", ov_tap: "Tap a department to see its people", ov_all: "All", ov_c_dept: "Department", ov_c_people: "People", ov_c_total: "Total", ov_c_overdue: "Overdue", ov_c_active: "In progress", ov_c_proposed: "Proposals", ov_c_progress: "Progress",
     reason_coaching: "From coaching decision {month}", reason_proposed: "Proposed by {name}", reason_assigned: "Assigned by {name}",
     steps_label: "Steps", progress_word: "progress", materials_label: "Learning materials", materials_none: "No materials linked yet.",
     materials_field: "Material links (one per line, format: name|link)", materials_ph: "Latte art SOP|https://...",
@@ -2306,14 +2306,21 @@ async function renderTrainingOverview() {
 
 function renderTrainingOverviewBody(ov, openKey) {
   const t = ov.totals || {};
-  const depts = ov.departments || [];
+  const unitKeys = Array.from(new Set((ov.departments || []).map(d => d.businessUnit))).sort();
+  const unit = state._ovUnit && unitKeys.indexOf(state._ovUnit) !== -1 ? state._ovUnit : "all";
+  state._ovUnit = unit;
+  const depts = (ov.departments || []).filter(d => unit === "all" || d.businessUnit === unit);
   const open = openKey ? depts.find(d => d.key === openKey) : null;
   const people = open ? (ov.people || []).filter(p => p.businessUnit + "|" + p.department === open.key).sort((a, b) => (b.overdue - a.overdue) || a.name.localeCompare(b.name)) : [];
-  const bar = (v) => `<div style="height:6px; background:#EFE6D8; border-radius:3px; overflow:hidden; min-width:60px;"><div style="width:${v}%; height:100%; background:var(--teal);"></div></div>`;
+  const bar = (v) => `<div style="height:6px; background:#EFE6D8; border-radius:3px; overflow:hidden;"><div style="width:${v}%; height:100%; background:var(--teal);"></div></div>`;
+  const num = (v, bad) => `<td style="text-align:right; padding:8px 6px; font-variant-numeric:tabular-nums; ${bad ? "color:var(--bad); font-weight:800;" : ""}">${v}</td>`;
+  const tabs = [`<button class="${unit === "all" ? "primary" : "secondary"}" onclick="trnSetOvUnit('all')">${trn("ov_all")}</button>`]
+    .concat(unitKeys.map(u => `<button class="${unit === u ? "primary" : "secondary"}" onclick="trnSetOvUnit('${escapeHtml(u)}')">${escapeHtml(BUSINESS_UNIT_LABELS_UI[u] || u)}</button>`))
+    .join("");
   app.innerHTML = topbar(trn("title_overview")) + `
     <button class="ghost" onclick="goToRoleMenu()">&larr; ${t_back()}</button>
     <div class="card" style="margin-top:8px;">
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:12px;">
         <div><div style="font-size:22px; font-weight:800;">${t.total || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_total")}</div></div>
         <div><div style="font-size:22px; font-weight:800; color:${(t.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)"};">${t.overdue || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_overdue")}</div></div>
         <div><div style="font-size:22px; font-weight:800;">${t.active || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_active")}</div></div>
@@ -2321,20 +2328,29 @@ function renderTrainingOverviewBody(ov, openKey) {
         <div><div style="font-size:22px; font-weight:800; color:var(--ok);">${t.confirmed || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_confirmed")}</div></div>
       </div>
     </div>
-    <div class="card" style="margin-top:8px; overflow-x:auto;">
-      <div style="font-weight:800; margin-bottom:6px;">${trn("ov_departments")} <span class="hint" style="font-weight:400;">· ${trn("ov_tap")}</span></div>
-      ${depts.length ? `<table style="width:100%; border-collapse:collapse; font-size:13px;">
-        <tr style="text-align:left; color:var(--muted);"><th style="padding:6px;">Department</th><th style="text-align:right;">${trn("ov_people_in")}</th><th style="text-align:right;">${trn("ov_total")}</th><th style="text-align:right;">${trn("ov_overdue")}</th><th style="text-align:right;">${trn("ov_active")}</th><th style="text-align:right;">${trn("ov_proposed")}</th><th style="width:120px;">${trn("ov_progress")}</th></tr>
+    <div class="card" style="margin-top:8px;">
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">${tabs}</div>
+      <div style="font-weight:800; margin-bottom:4px;">${trn("ov_departments")} <span class="hint" style="font-weight:400;">· ${trn("ov_tap")}</span></div>
+      ${depts.length ? `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed;">
+        <colgroup><col style="width:34%"><col style="width:11%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:20%"></colgroup>
+        <tr style="color:var(--muted); font-size:12px;">
+          <th style="text-align:left; padding:6px;">${trn("ov_c_dept")}</th>
+          <th style="text-align:right; padding:6px;">${trn("ov_c_people")}</th>
+          <th style="text-align:right; padding:6px;">${trn("ov_c_total")}</th>
+          <th style="text-align:right; padding:6px;">${trn("ov_c_overdue")}</th>
+          <th style="text-align:right; padding:6px;">${trn("ov_c_active")}</th>
+          <th style="text-align:right; padding:6px;">${trn("ov_c_proposed")}</th>
+          <th style="text-align:left; padding:6px;">${trn("ov_c_progress")}</th>
+        </tr>
         ${depts.map(d => `<tr onclick="trnOpenDept('${escapeHtml(d.key)}')" style="cursor:pointer; border-top:1px solid var(--line); ${open && open.key === d.key ? "background:#E3F3EC;" : ""}">
           <td style="padding:8px 6px;"><b>${escapeHtml(d.name)}</b><div class="hint" style="font-size:11px;">${escapeHtml(BUSINESS_UNIT_LABELS_UI[d.businessUnit] || d.businessUnit)}</div></td>
-          <td style="text-align:right;">${d.people}</td><td style="text-align:right;">${d.total}</td>
-          <td style="text-align:right; color:${d.overdue ? "var(--bad)" : "inherit"}; font-weight:${d.overdue ? "800" : "400"};">${d.overdue}</td>
-          <td style="text-align:right;">${d.active}</td><td style="text-align:right;">${d.proposed}</td>
-          <td>${bar(d.progress)}<div class="hint" style="font-size:11px;">${d.progress}%</div></td></tr>`).join("")}
-      </table>` : `<div class="hint">${trn("ov_none")}</div>`}
+          ${num(d.people)}${num(d.total)}${num(d.overdue, d.overdue > 0)}${num(d.active)}${num(d.proposed)}
+          <td style="padding:8px 6px;">${bar(d.progress)}<div class="hint" style="font-size:11px; margin-top:2px;">${d.progress}%</div></td>
+        </tr>`).join("")}
+      </table></div>` : `<div class="hint">${trn("ov_none")}</div>`}
     </div>
     ${open ? `<div class="card" style="margin-top:8px;">
-      <div style="font-weight:800; margin-bottom:6px;">${escapeHtml(open.name)} <span class="hint" style="font-weight:400;">· ${people.length} ${trn("ov_people_in").toLowerCase()}</span></div>
+      <div style="font-weight:800; margin-bottom:6px;">${escapeHtml(open.name)} <span class="hint" style="font-weight:400;">· ${people.length} ${trn("ov_c_people").toLowerCase()}</span></div>
       ${people.map(p => `<div style="display:grid; grid-template-columns:1.6fr 0.6fr 0.6fr 0.6fr 1.2fr 1.4fr; gap:8px; align-items:center; padding:8px 0; border-top:1px solid var(--line); font-size:13px;">
         <div><b>${escapeHtml(p.name)}</b><div class="hint" style="font-size:11px;">${escapeHtml(p.jobTitle || "")}</div></div>
         <div style="text-align:right;">${p.total}</div>
@@ -2349,6 +2365,12 @@ function renderTrainingOverviewBody(ov, openKey) {
       <div id="trn-panel"></div>
     </div>
     ${trnRenderSections(state._ovItems || [], { review: true })}`;
+}
+
+function trnSetOvUnit(unit) {
+  state._ovUnit = unit;
+  state._ovOpenDept = null;
+  if (state._ov) renderTrainingOverviewBody(state._ov, null);
 }
 
 function trnOpenDept(key) {

@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-346-action-by-unit — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-348-training-ui — LIVE</div>
 
 <script>
 // =================================================================
@@ -1863,6 +1863,7 @@ function render() {
   if (state.screen === "orgStructure") return renderOrgStructure();
   if (state.screen === "evalWizard") return renderEvaluationWizard();
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
+  if (state.screen === "myTraining") return renderMyTraining();
   if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
@@ -1888,6 +1889,317 @@ function topbar(title) {
         ${state.user ? `<button onclick="logout()">${t("logout")}</button>` : ""}
       </div>
     </div>`;
+}
+
+
+/* ===================== Training & Development ===================== */
+const TRN = {
+  id: {
+    menu_mine: "Training Saya", menu_team: "Training & Development", title_mine: "Training Saya", title_team: "Training & Development",
+    card_title: "Training & Development", card_mine_btn: "Lihat training saya", card_team_btn: "Kelola training tim",
+    card_overdue: "Terlambat", card_soon: "Jatuh tempo ≤ 14 hari", card_active: "Sedang berjalan",
+    card_decide: "Usulan menunggu", card_confirm: "Menunggu konfirmasi", card_calm: "Tidak ada training yang mendesak.",
+    sec_overdue: "Terlambat", sec_soon: "Jatuh tempo dalam 14 hari", sec_proposal: "Usulan menunggu keputusan", sec_confirm: "Menunggu konfirmasi selesai",
+    sec_active: "Sedang berjalan", sec_todo: "Belum dimulai", sec_done: "Selesai & terkonfirmasi", sec_rejected: "Usulan ditolak",
+    sum_overdue: "Terlambat", sum_proposal: "Usulan", sum_confirm: "Konfirmasi", sum_active: "Berjalan", sum_done: "Terkonfirmasi",
+    due_label: "Tenggat", due_none: "Tanpa tenggat", days_late: "terlambat {n} hari", days_left: "{n} hari lagi", days_today: "hari ini",
+    owner_label: "Penanggung jawab", owner_none: "Belum ditentukan", progress_label: "Catatan kemajuan", progress_ph: "Apa yang sudah dijalani / hasilnya",
+    proposed_by: "Diusulkan oleh", btn_start: "Mulai", btn_finish: "Tandai selesai", btn_confirm: "Konfirmasi selesai", btn_approve: "Setujui", btn_reject: "Tolak",
+    btn_propose: "+ Usulkan training", btn_send: "Kirim usulan", btn_add: "+ Tambah training", btn_cancel: "Batal", btn_save: "Simpan",
+    propose_note: "Usulan akan ditinjau leader atau HR sebelum kamu mulai.",
+    field_topic: "Topik training", field_priority: "Prioritas", field_notes: "Alasan / catatan", field_due: "Tenggat", field_owner: "Penanggung jawab", field_staff: "Karyawan",
+    prio_low: "Rendah", prio_med: "Sedang", prio_high: "Tinggi",
+    status_todo: "Belum Dimulai", status_active: "Sedang Berjalan", status_done: "Selesai",
+    empty_mine: "Belum ada training untuk kamu. Kalau ada yang ingin kamu pelajari, usulkan sendiri.",
+    empty_team: "Belum ada training untuk tim kamu.", done_hint: "Menunggu konfirmasi leader atau HR",
+    ok_saved: "Tersimpan", failed: "Gagal: ", summary_title: "Ringkasan tim", change_status: "Ubah status",
+    new_title: "Tambah training untuk karyawan", staff_pick: "Pilih karyawan",
+  },
+  en: {
+    menu_mine: "My Training", menu_team: "Training & Development", title_mine: "My Training", title_team: "Training & Development",
+    card_title: "Training & Development", card_mine_btn: "See my training", card_team_btn: "Manage team training",
+    card_overdue: "Overdue", card_soon: "Due in 14 days or less", card_active: "In progress",
+    card_decide: "Proposals waiting", card_confirm: "Waiting to be confirmed", card_calm: "Nothing urgent in training right now.",
+    sec_overdue: "Overdue", sec_soon: "Due within 14 days", sec_proposal: "Proposals waiting for a decision", sec_confirm: "Waiting to be confirmed as done",
+    sec_active: "In progress", sec_todo: "Not started", sec_done: "Done & confirmed", sec_rejected: "Rejected proposals",
+    sum_overdue: "Overdue", sum_proposal: "Proposals", sum_confirm: "To confirm", sum_active: "In progress", sum_done: "Confirmed",
+    due_label: "Due", due_none: "No due date", days_late: "{n} days overdue", days_left: "{n} days left", days_today: "today",
+    owner_label: "Owner", owner_none: "Not set yet", progress_label: "Progress note", progress_ph: "What has been done / the result",
+    proposed_by: "Proposed by", btn_start: "Start", btn_finish: "Mark as done", btn_confirm: "Confirm done", btn_approve: "Approve", btn_reject: "Reject",
+    btn_propose: "+ Propose training", btn_send: "Send proposal", btn_add: "+ Add training", btn_cancel: "Cancel", btn_save: "Save",
+    propose_note: "A leader or HR will review it before you start.",
+    field_topic: "Training topic", field_priority: "Priority", field_notes: "Reason / notes", field_due: "Due date", field_owner: "Owner", field_staff: "Employee",
+    prio_low: "Low", prio_med: "Medium", prio_high: "High",
+    status_todo: "Not Started", status_active: "In Progress", status_done: "Done",
+    empty_mine: "No training for you yet. If there is something you want to learn, propose it yourself.",
+    empty_team: "No training for your team yet.", done_hint: "Waiting for a leader or HR to confirm",
+    ok_saved: "Saved", failed: "Failed: ", summary_title: "Team summary", change_status: "Change status",
+    new_title: "Add training for an employee", staff_pick: "Pick an employee",
+  },
+};
+function trn(key, vars) {
+  const dict = TRN[state.lang === "en" ? "en" : "id"];
+  let text = dict[key] !== undefined ? dict[key] : key;
+  Object.keys(vars || {}).forEach(k => { text = text.split("{" + k + "}").join(String(vars[k])); });
+  return text;
+}
+
+/** Whole days from today to an ISO date (negative = already past). */
+function trnDaysTo(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ""))) return null;
+  const d = new Date(iso + "T00:00:00");
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return Math.round((d - today) / 86400000);
+}
+
+/** One word for how urgent an item is, so every screen sorts and colours it the same way. */
+function trnUrgency(item) {
+  if (item.approvalStatus === "Diusulkan") return "proposal";
+  if (item.approvalStatus === "Ditolak") return "rejected";
+  if (item.status === "Selesai") return item.confirmedBy ? "done" : "confirm";
+  const days = trnDaysTo(item.dueDate);
+  if (days === null) return "active_or_todo";
+  if (days < 0) return "overdue";
+  if (days <= 14) return "soon";
+  return "active_or_todo";
+}
+
+function trnDueText(item) {
+  const days = trnDaysTo(item.dueDate);
+  if (days === null) return `<span class="hint">${trn("due_none")}</span>`;
+  const when = days < 0 ? trn("days_late", { n: -days }) : days === 0 ? trn("days_today") : trn("days_left", { n: days });
+  const color = days < 0 ? "var(--bad)" : days <= 14 ? "#8A5A00" : "var(--muted)";
+  return `<span style="color:${color}; font-weight:700;">${trn("due_label")} ${escapeHtml(noticeDateText(item.dueDate))} · ${when}</span>`;
+}
+
+function trnPriorityText(p) {
+  const map = { "Rendah": "prio_low", "Sedang": "prio_med", "Tinggi": "prio_high", "Medium": "prio_med", "Low": "prio_low", "High": "prio_high" };
+  return map[p] ? trn(map[p]) : escapeHtml(p || "");
+}
+
+function trnStatusText(s) {
+  const map = { "Belum Dimulai": "status_todo", "Sedang Berjalan": "status_active", "Selesai": "status_done" };
+  return map[s] ? trn(map[s]) : escapeHtml(s || "");
+}
+
+/** Sorted sections: what needs attention first. */
+function trnRenderSections(items, opts) {
+  if (!items.length) return `<div class="card"><div class="hint" style="font-size:14px;">${trn(opts.review ? "empty_team" : "empty_mine")}</div></div>`;
+  const by = { overdue: [], soon: [], proposal: [], confirm: [], active: [], todo: [], done: [], rejected: [] };
+  items.forEach(i => {
+    const u = trnUrgency(i);
+    if (u === "active_or_todo") (i.status === "Sedang Berjalan" ? by.active : by.todo).push(i);
+    else by[u].push(i);
+  });
+  const sec = (key, title, list, color) => list.length ? `
+    <div style="margin-top:14px;">
+      <div style="font-weight:800; font-size:13px; color:${color}; text-transform:uppercase; letter-spacing:.03em; margin-bottom:6px;">${title} <span class="hint" style="font-weight:600;">(${list.length})</span></div>
+      ${list.map(i => trnCard(i, opts)).join("")}
+    </div>` : "";
+  return sec("overdue", trn("sec_overdue"), by.overdue, "var(--bad)")
+    + sec("soon", trn("sec_soon"), by.soon, "#8A5A00")
+    + sec("proposal", trn("sec_proposal"), by.proposal, "var(--teal)")
+    + sec("confirm", trn("sec_confirm"), by.confirm, "var(--teal)")
+    + sec("active", trn("sec_active"), by.active, "var(--teal)")
+    + sec("todo", trn("sec_todo"), by.todo, "var(--muted)")
+    + sec("done", trn("sec_done"), by.done, "var(--ok)")
+    + sec("rejected", trn("sec_rejected"), by.rejected, "var(--muted)");
+}
+
+function trnCard(item, opts) {
+  const u = trnUrgency(item);
+  const edge = u === "overdue" ? "var(--bad)" : u === "soon" ? "#F2A65A" : u === "proposal" || u === "confirm" ? "var(--teal)" : u === "done" ? "var(--ok)" : "var(--line)";
+  const id = escapeHtml(item.trainingId);
+  const who = opts.mine ? "" : `<div class="hint" style="font-size:12px;">${escapeHtml(item.staffName)}</div>`;
+  const note = item.progressNote ? `<div style="font-size:13px; margin-top:6px; white-space:pre-wrap;">${escapeHtml(item.progressNote)}</div>` : "";
+  let actions = "";
+  if (opts.mine && item.approvalStatus === "" && item.status === "Belum Dimulai") {
+    actions = `<button class="secondary" style="margin-top:8px;" onclick="trnStart('${id}')">${trn("btn_start")}</button>`;
+  }
+  if (opts.mine && item.approvalStatus === "" && item.status === "Sedang Berjalan") {
+    actions = `<textarea id="trn-note-${id}" rows="2" placeholder="${trn("progress_ph")}" style="width:100%; margin-top:8px;"></textarea>
+      <button class="primary" style="margin-top:6px;" onclick="trnFinish('${id}')">${trn("btn_finish")}</button>`;
+  }
+  if (opts.mine && item.status === "Selesai" && !item.confirmedBy) {
+    actions = `<div class="hint" style="margin-top:6px;">${trn("done_hint")}</div>`;
+  }
+  if (opts.review && item.approvalStatus === "Diusulkan") {
+    actions = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+      <input id="trn-owner-${id}" type="text" placeholder="${trn("field_owner")}">
+      <input id="trn-due-${id}" type="date" title="${trn("field_due")}">
+      </div>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="primary" onclick="trnDecide('${id}', 'Disetujui')">${trn("btn_approve")}</button>
+        <button class="secondary" onclick="trnDecide('${id}', 'Ditolak')">${trn("btn_reject")}</button>
+      </div>`;
+  }
+  if (opts.review && item.approvalStatus === "" && item.status === "Selesai" && !item.confirmedBy) {
+    actions = `<button class="primary" style="margin-top:8px;" onclick="trnConfirm('${id}')">${trn("btn_confirm")}</button>`;
+  }
+  if (opts.review && item.approvalStatus === "" && item.status !== "Selesai") {
+    actions += `<div style="margin-top:8px; display:flex; gap:8px; align-items:center;"><span class="hint">${trn("change_status")}</span>
+      <select onchange="trnSetStatus('${id}', '${escapeHtml(item.staffId)}', this.value)">
+        ${["Belum Dimulai", "Sedang Berjalan", "Selesai"].map(s => `<option value="${s}" ${s === item.status ? "selected" : ""}>${trnStatusText(s)}</option>`).join("")}
+      </select></div>`;
+  }
+  return `<div class="card" style="border-left:6px solid ${edge}; margin-bottom:10px; padding:12px 14px;">
+    <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
+      <div style="min-width:0;">
+        <div style="font-weight:800; font-size:15px; overflow-wrap:anywhere;">${escapeHtml(item.topic)}</div>
+        ${who}
+      </div>
+      <span class="badge">${trnPriorityText(item.priority)}</span>
+    </div>
+    <div style="margin-top:6px; font-size:13px;">${trnDueText(item)}</div>
+    <div style="font-size:13px; margin-top:4px;">${trn("owner_label")}: ${item.owner ? escapeHtml(item.owner) : `<span class="hint">${trn("owner_none")}</span>`} · ${trnStatusText(item.status)}${item.proposedBy && item.approvalStatus !== "" ? ` · ${trn("proposed_by")} ${escapeHtml(item.proposedBy)}` : ""}</div>
+    ${note}
+    ${actions}
+  </div>`;
+}
+
+function trnSummaryTiles(s) {
+  const tile = (n, label, color) => `<div style="flex:1; min-width:110px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px;">
+      <div style="font-size:24px; font-weight:800; color:${color};">${n || 0}</div><div class="hint" style="font-size:12px;">${label}</div></div>`;
+  return `<div class="card" style="margin-bottom:6px;"><div style="font-weight:800; margin-bottom:8px;">${trn("summary_title")}</div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      ${tile(s.overdue, trn("sum_overdue"), (s.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)")}
+      ${tile(s.proposed, trn("sum_proposal"), "var(--teal)")}
+      ${tile(s.doneNotConfirmed, trn("sum_confirm"), "var(--teal)")}
+      ${tile(s.inProgress, trn("sum_active"), "var(--ink)")}
+      ${tile(s.confirmed, trn("sum_done"), "var(--ok)")}
+    </div></div>`;
+}
+
+async function trnPost(action, payload) {
+  const res = await apiPost(action, payload);
+  if (res.error || res.success === false) { showToast(trn("failed") + friendlyError(res.error), "error"); return false; }
+  showToast(trn("ok_saved"));
+  render();
+  return true;
+}
+
+async function trnStart(id) { await trnPost("updateMyTrainingProgress", { trainingId: id, status: "Sedang Berjalan" }); }
+async function trnFinish(id) {
+  const note = (document.getElementById("trn-note-" + id) || {}).value || "";
+  await trnPost("updateMyTrainingProgress", { trainingId: id, status: "Selesai", progressNote: note });
+}
+async function trnDecide(id, decision) {
+  const owner = (document.getElementById("trn-owner-" + id) || {}).value || "";
+  const due = (document.getElementById("trn-due-" + id) || {}).value || "";
+  await trnPost("decideTrainingProposal", { requesterId: state.user.staffId, trainingId: id, decision, owner, dueDate: due });
+}
+async function trnConfirm(id) { await trnPost("confirmTrainingCompletion", { requesterId: state.user.staffId, trainingId: id }); }
+async function trnSetStatus(id, staffId, status) {
+  await trnPost("saveTrainingNeed", { requesterId: state.user.staffId, trainingId: id, staffId, status });
+}
+
+function trnOpenProposal() {
+  document.getElementById("trn-panel").innerHTML = `<div style="margin-top:10px;">
+    <div class="hint">${trn("propose_note")}</div>
+    <label>${trn("field_topic")}</label><input id="trn-topic" type="text">
+    <label>${trn("field_priority")}</label>
+    <select id="trn-prio"><option value="Rendah">${trn("prio_low")}</option><option value="Sedang" selected>${trn("prio_med")}</option><option value="Tinggi">${trn("prio_high")}</option></select>
+    <label>${trn("field_notes")}</label><textarea id="trn-pnotes" rows="2"></textarea>
+    <div style="display:flex; gap:8px; margin-top:8px;"><button class="primary" onclick="trnSubmitProposal()">${trn("btn_send")}</button><button class="ghost" onclick="document.getElementById('trn-panel').innerHTML=''">${trn("btn_cancel")}</button></div></div>`;
+}
+async function trnSubmitProposal() {
+  const topic = (document.getElementById("trn-topic") || {}).value || "";
+  if (!topic.trim()) { showToast(trn("failed") + trn("field_topic"), "error"); return; }
+  await trnPost("proposeTrainingNeed", { topic: topic.trim(), priority: (document.getElementById("trn-prio") || {}).value, notes: (document.getElementById("trn-pnotes") || {}).value || "" });
+}
+
+function trnOpenNew() {
+  const staff = state._trnStaff || [];
+  document.getElementById("trn-panel").innerHTML = `<div style="margin-top:10px;">
+    <div style="font-weight:700; margin-bottom:4px;">${trn("new_title")}</div>
+    <label>${trn("field_staff")}</label>
+    <select id="trn-staff"><option value="">${trn("staff_pick")}</option>${staff.map(s => `<option value="${escapeHtml(s.staffId)}">${escapeHtml(s.name)}</option>`).join("")}</select>
+    <label>${trn("field_topic")}</label><input id="trn-topic" type="text">
+    <label>${trn("field_priority")}</label>
+    <select id="trn-prio"><option value="Rendah">${trn("prio_low")}</option><option value="Sedang" selected>${trn("prio_med")}</option><option value="Tinggi">${trn("prio_high")}</option></select>
+    <label>${trn("field_due")}</label><input id="trn-due" type="date">
+    <label>${trn("field_owner")}</label><input id="trn-owner" type="text">
+    <div style="display:flex; gap:8px; margin-top:8px;"><button class="primary" onclick="trnSubmitNew()">${trn("btn_save")}</button><button class="ghost" onclick="document.getElementById('trn-panel').innerHTML=''">${trn("btn_cancel")}</button></div></div>`;
+}
+async function trnSubmitNew() {
+  const staffId = (document.getElementById("trn-staff") || {}).value || "";
+  const topic = (document.getElementById("trn-topic") || {}).value || "";
+  if (!staffId || !topic.trim()) { showToast(trn("failed") + trn("field_topic"), "error"); return; }
+  await trnPost("saveTrainingNeed", {
+    requesterId: state.user.staffId, staffId, topic: topic.trim(),
+    priority: (document.getElementById("trn-prio") || {}).value, dueDate: (document.getElementById("trn-due") || {}).value || "",
+    owner: (document.getElementById("trn-owner") || {}).value || "",
+  });
+}
+
+/** Staff: my training. */
+async function renderMyTraining() {
+  app.innerHTML = topbar(trn("title_mine")) + `<div class="loading">${t("form_loading")}</div>`;
+  const res = await apiGet("getMyTrainingNeeds", { staffId: state.user.staffId });
+  if (res.error) { app.innerHTML = topbar(trn("title_mine")) + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`; return; }
+  app.innerHTML = topbar(trn("title_mine")) + `
+    <button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>
+    <div class="card" style="margin-top:8px;">
+      <button class="primary" onclick="trnOpenProposal()">${trn("btn_propose")}</button>
+      <div id="trn-panel"></div>
+    </div>
+    ${trnRenderSections(res.items || [], { mine: true })}`;
+}
+
+/** Leader and HR: team training, most urgent first. */
+async function renderTrainingNeeds() {
+  if (_isLoadingTrainingNeeds) return;
+  _isLoadingTrainingNeeds = true;
+  try {
+    app.innerHTML = topbar(trn("title_team")) + `<div class="loading">${t("form_loading")}</div>`;
+    const [res, staffRes] = await Promise.all([
+      apiGet("getTrainingNeeds", { requesterId: state.user.staffId }),
+      apiGet("getReviewableEmployees", { requesterId: state.user.staffId }),
+    ]);
+    if (!res.found) { app.innerHTML = topbar(trn("title_team")) + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`; return; }
+    state._trnStaff = staffRes.staff || [];
+    app.innerHTML = topbar(trn("title_team")) + `
+      <button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>
+      ${trnSummaryTiles(res.summary || {})}
+      <div class="card" style="margin-top:8px;">
+        <button class="primary" onclick="trnOpenNew()">${trn("btn_add")}</button>
+        <div id="trn-panel"></div>
+      </div>
+      ${trnRenderSections(res.items || [], { review: true })}`;
+  } finally {
+    _isLoadingTrainingNeeds = false;
+  }
+}
+
+/** Dashboard card: the most important training numbers, with the entry point. */
+function buildTrainingCard(mine, teamSummary, isReviewer) {
+  const cnt = (list, fn) => list.filter(fn).length;
+  const overdue = cnt(mine, i => trnUrgency(i) === "overdue");
+  const soon = cnt(mine, i => trnUrgency(i) === "soon");
+  const active = cnt(mine, i => i.approvalStatus === "" && i.status === "Sedang Berjalan");
+  const tile = (n, label, color) => `<div style="flex:1; min-width:100px;">
+      <div style="font-size:22px; font-weight:800; color:${color};">${n}</div><div class="hint" style="font-size:12px;">${label}</div></div>`;
+  const nothing = !overdue && !soon && !active && !(teamSummary && (teamSummary.overdue || teamSummary.proposed || teamSummary.doneNotConfirmed));
+  const team = isReviewer && teamSummary ? `
+      <div style="display:flex; gap:12px; margin-top:12px; padding-top:12px; border-top:1px dashed #9ED3BF;">
+        ${tile(teamSummary.overdue || 0, trn("card_overdue") + " (tim)", (teamSummary.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)")}
+        ${tile(teamSummary.proposed || 0, trn("card_decide"), "var(--teal)")}
+        ${tile(teamSummary.doneNotConfirmed || 0, trn("card_confirm"), "var(--teal)")}
+      </div>` : "";
+  return `<div class="card" style="background:#E3F3EC; border:1px solid #9ED3BF; border-left:6px solid #0E7C5A; padding:14px 16px;">
+    <div style="font-weight:800; color:#0E5C43; font-size:13px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">${trn("card_title")}</div>
+    <div style="display:flex; gap:12px;">
+      ${tile(overdue, trn("card_overdue"), overdue ? "var(--bad)" : "var(--ink)")}
+      ${tile(soon, trn("card_soon"), soon ? "#8A5A00" : "var(--ink)")}
+      ${tile(active, trn("card_active"), "var(--ink)")}
+    </div>
+    ${nothing && !team ? `<div class="hint" style="margin-top:8px;">${trn("card_calm")}</div>` : ""}
+    ${team}
+    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+      <button class="primary" onclick="goToScreen('myTraining')">${trn("card_mine_btn")}</button>
+      ${isReviewer ? `<button class="secondary" onclick="goToScreen('trainingNeeds')">${trn("card_team_btn")}</button>` : ""}
+    </div>
+  </div>`;
 }
 
 /** The text to show for a notification: in the reader's language when the notification carries a translation key, otherwise the
@@ -2473,6 +2785,36 @@ function applyBusinessUnitTheme() {
   root.setProperty("--gold", theme.gold);
   root.setProperty("--logo-a", theme.logoA);
   root.setProperty("--logo-b", theme.logoB);
+  root.setProperty("--coral-soft", mixHexWithWhite(theme.coral, 0.86)); // 86% white: a light tint of the unit colour
+  root.setProperty("--coral-deep", deepenForWhite(theme.coral));
+}
+
+/** Relative luminance of a hex colour (WCAG). */
+function relLuminance(hex) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+
+/** The accent, darkened just enough that white text on it reaches WCAG AA (4.5:1). Used for pills, buttons and titles. */
+function deepenForWhite(hex) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  let out = hex;
+  for (let k = 0; k <= 1; k += 0.02) {
+    const f = 1 - k;
+    const r = Math.round(((n >> 16) & 255) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
+    out = "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
+    if (1.05 / (relLuminance(out) + 0.05) >= 4.5) return out;
+  }
+  return out;
+}
+
+/** A hex colour blended toward white: amount 0 = the colour, 1 = white. Used for light tints of a unit's accent. */
+function mixHexWithWhite(hex, amount) {
+  const n = parseInt(hex.replace("#", ""), 16);
+  const mix = (c) => Math.round(c + (255 - c) * amount);
+  const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255);
+  return "#" + [r, g, b].map(v => v.toString(16).padStart(2, "0")).join("");
 }
 
 function chooseBusinessUnit(unitKey) {
@@ -2736,7 +3078,7 @@ function availableScreensGrouped(user) {
     add("myEvaluations", user.appraiseLabel || t("menu_appraise_all"));
     add("review", t("menu_review_all"));
     add("gm", t("menu_approve_final"));
-    add("trainingNeeds", t("menu_training_needs"));
+    add("trainingNeeds", trn("menu_team"));
     add("feedback", t("menu_read_feedback"));
     add("exclusions", t("menu_exclusions"));
     add("historical", t("menu_input_historical"));
@@ -2771,7 +3113,7 @@ function availableScreensGrouped(user) {
     teamItems.push({ key: "gm", label: t("menu_approve_final") });
   }
   if (user.isLeader || user.isManagement) {
-    teamItems.push({ key: "trainingNeeds", label: t("menu_training_needs") });
+    teamItems.push({ key: "trainingNeeds", label: trn("menu_team") });
   }
   if (teamItems.length) groups.push({ name: "MyTeams", items: teamItems });
 
@@ -2787,7 +3129,7 @@ function availableScreensGrouped(user) {
     reportGroupItems.push(
       { key: "review", label: t("menu_review_all") },
       { key: "feedback", label: t("menu_read_feedback") },
-      { key: "trainingNeeds", label: t("menu_training_needs") },
+      { key: "trainingNeeds", label: trn("menu_team") },
     );
     const groupName = user.isHR ? "MyHR" : user.isExecutive ? "MyReport" : "MyOperational";
     groups.push({ name: groupName, items: reportGroupItems });
@@ -2801,6 +3143,7 @@ function availableScreensGrouped(user) {
     ]});
   }
 
+  groups.unshift({ name: "MyTraining", items: [{ key: "myTraining", label: trn("menu_mine") }] });
   return groups;
 }
 
@@ -2860,16 +3203,20 @@ function renderRoleMenu() {
  *  to do, so the dashboard stays exactly as before for people with nothing pending. */
 function buildActionNeedsCard({ selfPending, evaluationsPending, unreadCount }) {
   const items = [];
-  if (selfPending) items.push({ label: t("card_self_label"), btn: t("card_self_btn"), action: "goToScreen('self')" });
-  if (evaluationsPending > 0) items.push({ label: t("card_eval_label").replace("{n}", evaluationsPending), btn: t("card_eval_btn"), action: "goToScreen('myEvaluations')" });
+  if (selfPending) items.push({ count: 1, label: t("card_self_label"), btn: t("card_self_btn"), action: "goToScreen('self')" });
+  if (evaluationsPending > 0) items.push({ count: evaluationsPending, label: t("card_eval_label").replace("{n}", evaluationsPending), btn: t("card_eval_btn"), action: "goToScreen('myEvaluations')" });
   if (!items.length) return "";
+  const total = items.reduce((sum, i) => sum + i.count, 0); // the number of tasks, not of rows
   return `
-    <div class="card" style="border-left:4px solid var(--coral);">
-      <div style="font-weight:800; color:var(--coral); font-size:13px; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">${t("card_needs_title")}</div>
+    <div class="card" style="background:var(--coral-soft); border:1px solid var(--coral-deep); border-left:6px solid var(--coral-deep); padding:14px 16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <div style="font-weight:800; color:var(--ink); font-size:13px; text-transform:uppercase; letter-spacing:0.04em;">${t("card_needs_title")}</div>
+        <span style="background:var(--coral-deep); color:#fff; font-weight:800; font-size:13px; min-width:26px; text-align:center; padding:2px 9px; border-radius:999px;">${total}</span>
+      </div>
       ${items.map(i => `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);">
-          <span style="font-size:14px; font-weight:600;">${i.label}</span>
-          <button class="secondary" style="width:auto; padding:6px 12px; flex-shrink:0;" onclick="${i.action}">${i.btn}</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--coral-deep);">
+          <span style="font-size:15px; font-weight:700; color:var(--ink);">${i.label}</span>
+          <button style="width:auto; padding:7px 14px; flex-shrink:0; background:var(--coral-deep); color:#fff; border:none; border-radius:999px; font-weight:700; cursor:pointer;" onclick="${i.action}">${i.btn}</button>
         </div>`).join("")}
     </div>`;
 }
@@ -2929,11 +3276,15 @@ async function renderDashboard() {
   // Self only counts as "to do" if the window is actually open for this person — the same check the form makes when opened.
   // Without it, a closed window or a deferred contract would show a button that leads straight to a refusal.
   const selfNeedsWindowCheck = hasSelfCapability && !selfDoneThisMonth;
-  const [evalRes, selfAccessRes] = await Promise.all([
+  const isTrainingReviewer = !!(state.user.isLeader || state.user.isManagement || state.user.isHR || state.user.isExecutive || state.user.isAdminOperational);
+  const [evalRes, selfAccessRes, myTrainRes, teamTrainRes] = await Promise.all([
     needsEvaluationList ? apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId }) : Promise.resolve({ targets: [] }),
     selfNeedsWindowCheck ? apiGet("checkAccess", { staffId: state.user.staffId, evaluatorType: "self" }) : Promise.resolve({ allowed: false }),
+    apiGet("getMyTrainingNeeds", { staffId: state.user.staffId }),
+    isTrainingReviewer ? apiGet("getTrainingNeeds", { requesterId: state.user.staffId }) : Promise.resolve({}),
     refreshUnreadCount(),
   ]);
+  const trainingCardHtml = buildTrainingCard((myTrainRes && myTrainRes.items) || [], (teamTrainRes && teamTrainRes.summary) || null, isTrainingReviewer);
   // Only tasks whose window is open today count as "to do"; the rest are listed but not asked for yet.
   const evaluationsPending = (evalRes.targets || []).filter(x => x.status !== "Submitted" && x.slotOpen !== false).length;
   const actionCardHtml = buildActionNeedsCard({
@@ -2947,6 +3298,7 @@ async function renderDashboard() {
     MyTeams: { accent: "var(--coral)", light: "#FFE9E3" },
     MyReport: { accent: "#B36B00", light: "#FBF0DE" },
     MyHR: { accent: "#6C4FB6", light: "#EEE8F7" },
+    MyTraining: { accent: "#0E7C5A", light: "#E3F3EC" },
   };
 
   const offCycle = !!(excludedInfo && excludedInfo.kind === "unit_schedule");
@@ -2960,7 +3312,7 @@ async function renderDashboard() {
       <div class="hint" style="font-size:13px; color:var(--text); margin:0;">${escapeHtml(t("dash_paused_body").replace("{dept}", excludedInfo.department || "").replace("{month}", monthLabelID(excludedInfo.since)))}</div>
     </div>`) : "";
 
-  app.innerHTML = topbar("Dashboard Saya") + pausedBanner + actionCardHtml + chartBlock +
+  app.innerHTML = topbar("Dashboard Saya") + pausedBanner + actionCardHtml + trainingCardHtml + chartBlock +
     groups.map((g, gi) => {
       const color = groupColors[g.name] || groupColors.MyAppraisal;
       const groupId = `group-${gi}`;
@@ -3470,72 +3822,6 @@ function trainingPriorityLabel(priority) {
   return map[priority] ? t(map[priority]) : priority;
 }
 
-async function renderTrainingNeeds() {
-  if (_isLoadingTrainingNeeds) return;
-  _isLoadingTrainingNeeds = true;
-  try {
-    app.innerHTML = topbar("Training Needs") + `<div class="loading">${t("form_loading")}</div>`;
-    const [res, staffRes] = await Promise.all([
-      apiGet("getTrainingNeeds", { requesterId: state.user.staffId }),
-      apiGet("getReviewableEmployees", { requesterId: state.user.staffId }),
-    ]);
-    const showMenuLink = availableScreens(state.user).length > 1;
-
-    if (!res.found) {
-      app.innerHTML = topbar("Training Needs") + `<div class="card"><div class="error">${friendlyError(res.error)}</div></div>`;
-      return;
-    }
-
-    const items = res.items || [];
-    const staffOptions = staffRes.staff || [];
-    const statusColor = { "Belum Dimulai": "underperform", "Sedang Berjalan": "pending", "Selesai": "performer" };
-
-    app.innerHTML = topbar("Training Needs") + `
-      ${showMenuLink ? `<button class="ghost" onclick="goToRoleMenu()">&larr; ${t("form_back")}</button>` : ""}
-      <div class="card">
-        <h2>${t("tn_add_title")}</h2>
-        <label>${t("tn_for_who_label")}</label>
-        <select id="training-staff-select">
-          <option value="">${t("tn_select_person_placeholder")}</option>
-          ${staffOptions.map(s => `<option value="${s.staffId}">${s.name} (${s.tier} — ${s.department})</option>`).join("")}
-        </select>
-        <label>${t("tn_topic_label")}</label>
-        <input type="text" id="training-topic-input" placeholder="${t("tn_topic_placeholder")}" />
-        <label>${t("tn_priority_label")}</label>
-        <select id="training-priority-select">
-          <option value="Rendah">${t("tn_priority_low")}</option>
-          <option value="Sedang" selected>${t("tn_priority_medium")}</option>
-          <option value="Tinggi">${t("tn_priority_high")}</option>
-        </select>
-        <label>${t("tn_notes_label")}</label>
-        <input type="text" id="training-notes-input" placeholder="${t("tn_notes_placeholder")}" />
-        <div class="hint" id="training-save-note" style="margin-top:8px;"></div>
-        <button class="primary" onclick="doSaveTrainingNeed()" style="margin-top:10px;">${t("tn_save_btn")}</button>
-      </div>
-      <div class="card">
-        <h2>${t("tn_list_title_prefix")} ${items.length} ${t("tn_list_title_suffix")}</h2>
-        ${items.map(t2 => `
-          <div style="border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:baseline;">
-              <div class="name">${t2.staffName}</div>
-              <span class="badge ${statusColor[t2.status] || "pending"}">${trainingStatusLabel(t2.status)}</span>
-            </div>
-            <div style="font-size:14px; margin:6px 0;">${t2.topic}</div>
-            <div class="hint">${t("tn_priority_prefix")} ${trainingPriorityLabel(t2.priority)} · ${t("tn_recorded_by_prefix")} ${t2.recordedBy} · ${fullDateLabelID(t2.recordedDate)}</div>
-            ${t2.notes ? `<div class="hint">${t("tn_notes_prefix")} ${t2.notes}</div>` : ""}
-            <select onchange="doUpdateTrainingStatus('${t2.trainingId}', '${t2.staffId}', this.value)" style="margin-top:6px; max-width:200px;">
-              <option value="Belum Dimulai" ${t2.status === "Belum Dimulai" ? "selected" : ""}>${t("tn_status_not_started")}</option>
-              <option value="Sedang Berjalan" ${t2.status === "Sedang Berjalan" ? "selected" : ""}>${t("tn_status_in_progress")}</option>
-              <option value="Selesai" ${t2.status === "Selesai" ? "selected" : ""}>${t("tn_status_done")}</option>
-            </select>
-          </div>`).join("")}
-        ${!items.length ? `<div class="hint">${t("tn_no_items")}</div>` : ""}
-      </div>
-    `;
-  } finally {
-    _isLoadingTrainingNeeds = false;
-  }
-}
 
 async function doSaveTrainingNeed() {
   const staffId = document.getElementById("training-staff-select").value;

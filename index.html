@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-339-three-pdf-reports — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-345-scope-all-reports — LIVE</div>
 
 <script>
 // =================================================================
@@ -561,7 +561,8 @@ const STAFF_ERROR_KEYS = {
   feedback_required: "err_feedback_required",
   feedback_catchup_not_enabled: "err_feedback_catchup_not_enabled",
   target_not_found: "err_target_not_found",
-  busy_try_again: "err_busy"
+  busy_try_again: "err_busy",
+  outside_business_unit: "err_outside_business_unit"
 };
 function friendlyError(code) {
   if (code && STAFF_ERROR_KEYS[code]) return t(STAFF_ERROR_KEYS[code]);
@@ -698,6 +699,7 @@ const translations = {
     card_unread_btn: "Lihat",
     err_connection: "Gagal terhubung ke server — cek koneksi internetmu, lalu coba lagi.",
     err_busy: "Server lagi sibuk (banyak orang submit bersamaan) — tunggu beberapa detik lalu coba lagi.",
+    err_outside_business_unit: "Orang ini bukan di business unit kamu, jadi tidak bisa kamu tandai.",
     err_unknown: "Terjadi kendala tidak dikenal.",
     err_decision_required: "Decision belum dipilih.",
     err_one_on_one_status_required: "1-on-1 Status belum dipilih.",
@@ -822,7 +824,7 @@ const translations = {
     sm_bulk_saving_prefix: "Menyimpan",
     sm_bulk_updated_toast: "orang diupdate.",
     sm_auto_label: "(Otomatis)",
-    sm_export_generating: "Membuat sheet export...",
+    sm_export_generating: "Membuat laporan...",
     sm_export_failed_prefix: "Gagal export:",
     sm_export_ready_prefix: "Sheet siap",
     sm_export_ready_suffix: "orang)!",
@@ -925,7 +927,7 @@ const translations = {
     sc_role_bonus_qty_suffix: "orang)",
     sc_role_bonus_save_btn: "Simpan Role-Based Bonus",
     sc_leave_blank_option: "— kosongkan —",
-    sc_export_generating: "Membuat sheet export...",
+    sc_export_generating: "Membuat laporan...",
     sc_export_failed_prefix: "Gagal export:",
     sc_export_ready: "Sheet siap!",
     sc_export_open_link: "Buka di Google Sheets",
@@ -1019,7 +1021,7 @@ const translations = {
     gm_calibration_reason_required: "Isi alasannya dulu kalau skor diubah.",
     gm_approve_failed_prefix: "Gagal approve:",
     gm_approve_success_toast: "Approved! Notifikasi terkirim ke staff, leader, management, dan HR terkait.",
-    gm_export_decision_generating: "Membuat sheet export...",
+    gm_export_decision_generating: "Membuat laporan...",
     gm_export_decision_failed_prefix: "Gagal export:",
     gm_export_decision_ready_prefix: "Sheet siap",
     gm_export_decision_ready_suffix: "record)!",
@@ -1195,6 +1197,11 @@ const translations = {
     review_underperform_only_btn: "Underperform Saja",
     review_coaching_only_btn: "Coaching Saja",
     report_performance_btn: "Comprehensive Performance Report",
+    decision_scope_pick: "Pilih business unit (semua departmentnya ikut) atau department tertentu:",
+    decision_scope_build: "Buat PDF",
+    decision_scope_cancel: "Batal",
+    decision_scope_none: "Pilih minimal satu department.",
+    feedback_untagged_confirm: "Ada {n} feedback yang belum di-tag kategorinya. Tetap lanjut buat export? (Tema di laporan hanya mencakup yang sudah di-tag.)",
     report_decision_btn: "Decision Recommendation Report",
     report_feedback_btn: "Feedback Report",
     review_record_count_suffix: "appraisal record — read only",
@@ -1262,6 +1269,7 @@ const translations = {
     card_unread_btn: "View",
     err_connection: "Couldn't reach the server — check your internet connection, then try again.",
     err_busy: "The server is busy right now (many people are submitting at once) — wait a few seconds and try again.",
+    err_outside_business_unit: "This person is not in your business unit, so you can't tag them.",
     err_unknown: "An unknown error occurred.",
     err_decision_required: "A Decision hasn't been selected yet.",
     err_one_on_one_status_required: "1-on-1 Status hasn't been selected yet.",
@@ -1386,7 +1394,7 @@ const translations = {
     sm_bulk_saving_prefix: "Saving",
     sm_bulk_updated_toast: "people updated.",
     sm_auto_label: "(Automatic)",
-    sm_export_generating: "Generating export sheet...",
+    sm_export_generating: "Building report...",
     sm_export_failed_prefix: "Export failed:",
     sm_export_ready_prefix: "Sheet ready",
     sm_export_ready_suffix: "people)!",
@@ -1489,7 +1497,7 @@ const translations = {
     sc_role_bonus_qty_suffix: "people)",
     sc_role_bonus_save_btn: "Save Role-Based Bonus",
     sc_leave_blank_option: "— leave blank —",
-    sc_export_generating: "Generating export sheet...",
+    sc_export_generating: "Building report...",
     sc_export_failed_prefix: "Export failed:",
     sc_export_ready: "Sheet ready!",
     sc_export_open_link: "Open in Google Sheets",
@@ -1583,7 +1591,7 @@ const translations = {
     gm_calibration_reason_required: "Please write a reason first if the score changes.",
     gm_approve_failed_prefix: "Approval failed:",
     gm_approve_success_toast: "Approved! Notifications sent to the staff, leader, management, and HR involved.",
-    gm_export_decision_generating: "Generating export sheet...",
+    gm_export_decision_generating: "Building report...",
     gm_export_decision_failed_prefix: "Export failed:",
     gm_export_decision_ready_prefix: "Sheet ready",
     gm_export_decision_ready_suffix: "records)!",
@@ -1759,6 +1767,11 @@ const translations = {
     review_underperform_only_btn: "Underperform Only",
     review_coaching_only_btn: "Coaching Only",
     report_performance_btn: "Comprehensive Performance Report",
+    decision_scope_pick: "Pick a business unit (all its departments come with it) or specific departments:",
+    decision_scope_build: "Build PDF",
+    decision_scope_cancel: "Cancel",
+    decision_scope_none: "Pick at least one department.",
+    feedback_untagged_confirm: "{n} feedback are not tagged yet. Continue exporting anyway? (The themes only cover what is tagged.)",
     report_decision_btn: "Decision Recommendation Report",
     report_feedback_btn: "Feedback Report",
     review_record_count_suffix: "appraisal records — read only",
@@ -2917,7 +2930,8 @@ async function renderDashboard() {
     selfNeedsWindowCheck ? apiGet("checkAccess", { staffId: state.user.staffId, evaluatorType: "self" }) : Promise.resolve({ allowed: false }),
     refreshUnreadCount(),
   ]);
-  const evaluationsPending = (evalRes.targets || []).filter(x => x.status !== "Submitted").length;
+  // Only tasks whose window is open today count as "to do"; the rest are listed but not asked for yet.
+  const evaluationsPending = (evalRes.targets || []).filter(x => x.status !== "Submitted" && x.slotOpen !== false).length;
   const actionCardHtml = buildActionNeedsCard({
     selfPending: selfNeedsWindowCheck && !!(selfAccessRes && selfAccessRes.allowed),
     evaluationsPending,
@@ -6508,6 +6522,11 @@ async function saveMyFeedback() {
   }
 }
 
+/** Only roles that can tag at all see the controls. Which cards show them is decided per item by the server (canTag). */
+function canTagAnyFeedback() {
+  return !!(state.user && (state.user.isAdminOperational || state.user.isExecutive || state.user.isHR));
+}
+
 async function renderStaffFeedback() {
   app.innerHTML = topbar("Read Staff Feedback") + `<div class="loading">Memuat...</div>`;
   if (!state._feedbackMonth) state._feedbackMonth = state.month;
@@ -6555,6 +6574,7 @@ async function renderStaffFeedback() {
       </div>
     </div>` : "";
   const summary = summaryRes.summary || [];
+  state._feedbackSummary = summaryRes; // kept so the Feedback Report can warn about untagged feedback
   const actions = actionsRes.items || [];
   const showMenuLink = availableScreens(state.user).length > 1;
   const catOptions = (extra) => `<option value="">— pilih —</option>` + state._feedbackCategories.map(c => `<option value="${escapeHtml(c.code)}" ${c.code === extra ? "selected" : ""}>${escapeHtml(c.label)}</option>`).join("");
@@ -6573,8 +6593,9 @@ async function renderStaffFeedback() {
     <div class="card">
       <h2>1. Issue Summary — ${monthLabelID(state._feedbackMonth)}${escapeHtml(unitTitle)}</h2>
       <div class="hint" style="margin-bottom:10px;">${summaryRes.taggedCount || 0} dari ${summaryRes.totalRespondents || 0} feedback udah di-tag kategorinya.</div>
-      <button class="secondary" onclick="doExportFeedbackReport()" style="margin-bottom:10px;">📊 Export Issue Summary + Action Tracker</button>
-      <div class="hint" id="feedback-export-note" style="margin-bottom:10px;"></div>
+      <button class="primary" id="feedback-report-btn" onclick="openReportScopePicker('feedback', 'feedback-scope-panel')">${t("report_feedback_btn")}</button>
+      <div class="hint" id="feedback-report-note" style="margin-bottom:10px;"></div>
+      <div id="feedback-scope-panel"></div>
       <table class="mini">
         <tr><th>Kategori</th><th>Jumlah Orang</th><th>%</th><th>Prioritas</th></tr>
         ${summary.map(s => `
@@ -6588,7 +6609,7 @@ async function renderStaffFeedback() {
 
     <div class="card">
       <h2>2. Comment Master${escapeHtml(unitTitle)} — ${feedback.length} feedback</h2>
-      ${state.user.isAdminOperational && feedback.length ? `
+      ${canTagAnyFeedback() && feedback.length ? `
         <div class="hint" style="margin-bottom:8px;">Isi tag di tiap kartu, atau centang beberapa kartu lalu <b>Terapkan</b> satu tag ke semuanya. Semua perubahan disimpan <b>sekaligus</b> dengan satu tombol.</div>
         <div class="tag-bar">
           <label class="fbc-all"><input type="checkbox" id="tag-all" onchange="fbTagSelectAll(this.checked)"> Pilih semua</label>
@@ -6604,9 +6625,9 @@ async function renderStaffFeedback() {
           <span class="hint" id="tag-save-note" style="margin:0;"></span>
         </div>` : ""}
       ${feedback.map(f => `
-        <div class="tag-card" ${state.user.isAdminOperational ? `data-staff="${escapeHtml(f.staffId)}" data-name="${escapeHtml(f.staffName)}"` : ""}>
+        <div class="tag-card" ${canTagAnyFeedback() && f.canTag ? `data-staff="${escapeHtml(f.staffId)}" data-name="${escapeHtml(f.staffName)}"` : ""}>
           <div class="tag-head">
-            ${state.user.isAdminOperational ? `<input type="checkbox" class="tag-sel" aria-label="Pilih" onchange="fbTagToggle(this)">` : ""}
+            ${canTagAnyFeedback() && f.canTag ? `<input type="checkbox" class="tag-sel" aria-label="Pilih" onchange="fbTagToggle(this)">` : ""}
             <div style="flex:1; min-width:0; display:flex; justify-content:space-between; align-items:baseline; gap:10px;">
               <div style="min-width:0;">
                 <div class="name" style="overflow-wrap:anywhere;">${escapeHtml(f.staffName)}</div>
@@ -6616,7 +6637,7 @@ async function renderStaffFeedback() {
             </div>
           </div>
           <div style="font-size:14px; color:var(--text); margin:8px 0; white-space:pre-wrap;">"${escapeHtml(f.feedback)}"</div>
-          ${state.user.isAdminOperational ? `
+          ${canTagAnyFeedback() && f.canTag ? `
             <div class="tag-grid">
               <select class="tag-primary" data-orig="${escapeHtml(f.primaryIssue || "")}" onchange="fbTagRefresh()">${catOptions(f.primaryIssue)}</select>
               <select class="tag-secondary" data-orig="${escapeHtml(f.secondaryIssue || "")}" onchange="fbTagRefresh()">${catOptions(f.secondaryIssue)}</select>
@@ -6643,7 +6664,7 @@ async function renderStaffFeedback() {
       ${!actions.length ? '<div class="hint">Belum ada action item.</div>' : ""}
     </div>
   `;
-  if (state.user.isAdminOperational) fbTagRestorePending();
+  if (canTagAnyFeedback()) fbTagRestorePending();
 }
 
 async function changeFeedbackUnit(unit) {
@@ -6660,7 +6681,7 @@ async function changeFeedbackMonth(month) {
 
 async function doExportFeedbackReport() {
   const noteEl = document.getElementById("feedback-export-note");
-  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + "Membuat sheet export...";
+  noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + "Membuat laporan...";
   const res = await apiPost("exportFeedbackReport", { requesterId: state.user.staffId, month: state._feedbackMonth, businessUnit: state._feedbackUnit || "" });
   if (res.error || res.success === false) {
     noteEl.textContent = "Gagal export: " + friendlyError(res.error);
@@ -7089,12 +7110,12 @@ async function renderReview(skipFetch) {
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div class="hint">${total} ${t("review_record_count_suffix")}</div>
           ${(state.user.isHR || state.user.isExecutive) ? `<div class="row-flex" style="gap:6px; flex-wrap:wrap; justify-content:flex-end;">
-            <button class="primary" id="report-performance-btn" onclick="doGenerateReport('performance')">${t("report_performance_btn")}</button>
-            <button class="primary" id="report-decision-btn" onclick="doGenerateReport('decision')">${t("report_decision_btn")}</button>
-            <button class="primary" id="report-feedback-btn" onclick="doGenerateReport('feedback')">${t("report_feedback_btn")}</button>
+            <button class="primary" id="report-performance-btn" onclick="openReportScopePicker('performance', 'decision-scope-panel')">${t("report_performance_btn")}</button>
+            <button class="primary" id="report-decision-btn" onclick="openReportScopePicker('decision', 'decision-scope-panel')">${t("report_decision_btn")}</button>
           </div>` : ""}
         </div>
         <div class="hint" id="review-report-note"></div>
+        <div id="decision-scope-panel"></div>
       </div>
       <div id="review-list-container">
         ${deptKeys.map((dept, di) => {
@@ -7195,14 +7216,83 @@ function updateReviewFilter(key, value) {
 }
 
 /** Full report for HR: every person in scope, one tab per department, Management to Staff. Downloads straight to the device. */
+/** One department picker for every report: tick a business unit (all its departments come with it) and/or single departments.
+ *  HR sees every unit; an Executive sees only departments they can review. The server enforces the same limit. Each picker
+ *  lives in its own panel and remembers which report it is building. */
+async function openReportScopePicker(kind, panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  panel.dataset.kind = kind;
+  panel.innerHTML = `<div class="hint">${t("gm_export_decision_generating")}</div>`;
+  const res = await apiPost("reportScopeOptions", {});
+  if (res.error || res.success === false) { panel.innerHTML = `<div class="hint">${friendlyError(res.error)}</div>`; return; }
+  const units = res.units || [];
+  panel.innerHTML = `
+    <div class="card" style="margin-top:10px;">
+      <div class="hint" style="margin-bottom:8px;">${t("decision_scope_pick")}</div>
+      ${units.map(u => `
+        <label style="display:flex; align-items:center; gap:8px; font-weight:700; margin-top:8px;">
+          <input type="checkbox" class="scope-unit" data-unit="${escapeHtml(u.key)}" onchange="toggleScopeUnit(this)"> ${escapeHtml(u.label)}
+        </label>
+        <div style="margin-left:22px;">
+          ${u.departments.map(d => `
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+              <input type="checkbox" class="scope-dept" data-unit="${escapeHtml(u.key)}" data-key="${escapeHtml(d.key)}" onchange="syncScopeUnit(this)"> ${escapeHtml(d.label)} <span class="hint">(${d.count})</span>
+            </label>`).join("")}
+        </div>`).join("")}
+      <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
+        <button class="primary" onclick="submitReportScope('${escapeHtml(panelId)}')">${t("decision_scope_build")}</button>
+        <button class="secondary" onclick="document.getElementById('${escapeHtml(panelId)}').innerHTML=''">${t("decision_scope_cancel")}</button>
+      </div>
+    </div>`;
+}
+
+function scopeDeptBoxesOf(panel, unitKey) {
+  return [...panel.querySelectorAll(".scope-dept")].filter(b => b.dataset.unit === unitKey);
+}
+
+function toggleScopeUnit(unitBox) {
+  const panel = unitBox.closest("[data-kind]") || unitBox.parentElement;
+  scopeDeptBoxesOf(panel, unitBox.dataset.unit).forEach(b => { b.checked = unitBox.checked; });
+}
+
+function syncScopeUnit(deptBox) {
+  const panel = deptBox.closest("[data-kind]") || deptBox.parentElement;
+  const unitKey = deptBox.dataset.unit;
+  const boxes = scopeDeptBoxesOf(panel, unitKey);
+  const unitBox = [...panel.querySelectorAll(".scope-unit")].find(b => b.dataset.unit === unitKey);
+  if (unitBox) unitBox.checked = boxes.length > 0 && boxes.every(b => b.checked);
+}
+
+async function submitReportScope(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const kind = panel.dataset.kind;
+  const keys = [...panel.querySelectorAll(".scope-dept:checked")].map(b => b.dataset.key);
+  const noteId = kind === "feedback" ? "feedback-report-note" : "review-report-note";
+  const noteEl = document.getElementById(noteId);
+  if (!keys.length) { if (noteEl) noteEl.textContent = t("decision_scope_none"); return; }
+  const month = kind === "feedback" ? (state._feedbackMonth || state.month) : state.month;
+  if (kind === "feedback") {
+    // Ask before building if some feedback in THESE departments is still untagged.
+    const st = await apiPost("reportFeedbackStatus", { month, departments: keys });
+    if (st.error || st.success === false) { if (noteEl) noteEl.textContent = friendlyError(st.error); return; }
+    if (st.untagged > 0 && !confirm(t("feedback_untagged_confirm").replace("{n}", st.untagged))) return;
+  }
+  panel.innerHTML = "";
+  await doGenerateReport(kind, noteId, month, keys);
+}
+
 /** One download path for the three reports. The PDF is built on the server and sent back; nothing is written to a spreadsheet. */
-async function doGenerateReport(kind) {
+async function doGenerateReport(kind, noteId, month, departments) {
   const lang = await askExportLanguage();
   if (!lang) return;
-  const noteEl = document.getElementById("review-report-note");
+  const noteEl = document.getElementById(noteId || "review-report-note");
   if (!noteEl) return;
   noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("gm_export_decision_generating");
-  const res = await apiPost("generateReportPdf", { kind, lang, month: state.month });
+  const payload = { kind, lang, month: month || state.month };
+  if (departments) payload.departments = departments;
+  const res = await apiPost("generateReportPdf", payload);
   if (res.error || res.success === false) {
     noteEl.textContent = t("gm_export_decision_failed_prefix") + " " + friendlyError(res.error);
     return;

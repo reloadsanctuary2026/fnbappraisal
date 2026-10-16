@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-333-notif-page — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-336-hr-decision-export — LIVE</div>
 
 <script>
 // =================================================================
@@ -1193,6 +1193,7 @@ const translations = {
     review_sort_score_asc: "Skor Terendah",
     review_all_departments: "Semua Department",
     review_underperform_only_btn: "Underperform Saja",
+    review_coaching_only_btn: "Coaching Saja",
     review_record_count_suffix: "appraisal record — read only",
     review_empty_scope: "Belum ada data appraisal di scope kamu.",
     review_range_checkbox: "Ambil beberapa bulan sekaligus",
@@ -1753,6 +1754,7 @@ const translations = {
     review_sort_score_asc: "Lowest Score",
     review_all_departments: "All Departments",
     review_underperform_only_btn: "Underperform Only",
+    review_coaching_only_btn: "Coaching Only",
     review_record_count_suffix: "appraisal records — read only",
     review_empty_scope: "No appraisal data in your scope yet.",
     review_range_checkbox: "Pull multiple months at once",
@@ -1886,6 +1888,24 @@ function noticeMonthText(value) {
   if (!/^\d{4}-\d{2}$/.test(String(value))) return String(value);
   if (state.lang === "en") return new Date(value + "-01T00:00:00").toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   return monthLabelID(value);
+}
+
+/** Decision labels for screens that do not load the option lists (Review). A decision is stored as a JSON list of values, so each
+ *  value is translated from the dictionary; anything unknown falls back to the option list, as before. */
+function decisionValuesOf(value) {
+  if (!value) return [];
+  let values = value;
+  if (typeof value === "string") { try { values = JSON.parse(value); } catch (e) { values = [value]; } }
+  return Array.isArray(values) ? values : [values];
+}
+function decisionDisplayLabel(value, tier) {
+  const values = decisionValuesOf(value);
+  if (!values.length) return "";
+  return values.map(v => DECISION_VALUE_KEYS[v] ? t(DECISION_VALUE_KEYS[v]) : findDecisionLabels((state.decisionOptionsByTier || {})[tier], v)).join(" + ");
+}
+function oneOnOneDisplayLabel(value) {
+  if (!value) return "";
+  return ONE_ON_ONE_NOTICE_KEYS[value] ? t(ONE_ON_ONE_NOTICE_KEYS[value]) : findLabel(state.oneOnOneOptions, value);
 }
 
 function noticeText(n) {
@@ -2883,13 +2903,17 @@ async function renderDashboard() {
 
   // Evaluator roles need their pending list; superadmin holds every flag for administration, not as an evaluator, so skip it.
   const needsEvaluationList = !state.user.isSuperAdmin && (state.user.isLeader || state.user.isManagement || state.user.isExecutive || state.user.isHR);
-  const [evalRes] = await Promise.all([
+  // Self only counts as "to do" if the window is actually open for this person — the same check the form makes when opened.
+  // Without it, a closed window or a deferred contract would show a button that leads straight to a refusal.
+  const selfNeedsWindowCheck = hasSelfCapability && !selfDoneThisMonth;
+  const [evalRes, selfAccessRes] = await Promise.all([
     needsEvaluationList ? apiGet("getEvaluationTargets", { evaluatorId: state.user.staffId }) : Promise.resolve({ targets: [] }),
+    selfNeedsWindowCheck ? apiGet("checkAccess", { staffId: state.user.staffId, evaluatorType: "self" }) : Promise.resolve({ allowed: false }),
     refreshUnreadCount(),
   ]);
   const evaluationsPending = (evalRes.targets || []).filter(x => x.status !== "Submitted").length;
   const actionCardHtml = buildActionNeedsCard({
-    selfPending: hasSelfCapability && !selfDoneThisMonth,
+    selfPending: selfNeedsWindowCheck && !!(selfAccessRes && selfAccessRes.allowed),
     evaluationsPending,
     unreadCount: state.unreadCount || 0,
   });
@@ -7055,16 +7079,19 @@ async function renderReview(skipFetch) {
           </select>` : ""}
         </div>
         <button class="secondary" id="review-underperform-btn" onclick="toggleReviewFilterBtn('underperformOnly', 'review-underperform-btn')" style="margin-bottom:10px;">${t("review_underperform_only_btn")}</button>
+        ${rows.some(r => r.decision) ? `<button class="secondary" id="review-coaching-btn" onclick="toggleReviewFilterBtn('coachingOnly', 'review-coaching-btn')" style="margin-bottom:10px; margin-left:6px;">${t("review_coaching_only_btn")}</button>` : ""}
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div class="hint">${total} ${t("review_record_count_suffix")}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="secondary" id="review-export-excel-btn" onclick="doGenerateReviewExport('xlsx')">📊 Excel</button>
             <button class="secondary" id="review-export-pdf-btn" onclick="doGenerateReviewExport('pdf')">📄 PDF</button>
+            ${state.user.isHR ? `<button class="secondary" id="review-export-decision-btn" onclick="doExportDecisionLog()">📌 Decision Log</button>` : ""}
             <button class="primary" id="review-export-both-btn" onclick="doGenerateReviewExportBoth()">📄📊 Export Keduanya</button>
             <button class="primary" style="background:var(--coral);" onclick="openExecutiveSummaryReport()">📈 Laporan Komprehensif</button>
           </div>
         </div>
         <div class="hint" id="review-export-note"></div>
+        <div class="hint" id="decision-log-export-note"></div>
       </div>
       <div id="review-list-container">
         ${deptKeys.map((dept, di) => {
@@ -7088,10 +7115,11 @@ async function renderReview(skipFetch) {
             </summary>
             <div class="review-dept-body" style="padding:10px 14px 14px;">
               ${deptRows.map(r => `
-                <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-status="${r.status}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:pointer; border: 1.5px solid ${r.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'};" onclick="showComparisonModal('${r.staffId}', '${escapeAttr(r.name)}')">
+                <div class="staff-row" data-search="${escapeAttr(r.name.toLowerCase())}" data-status="${r.status}" data-decision="${escapeHtml(r.decision || "")}" data-name="${escapeAttr(r.name)}" data-score="${r.finalScore || 0}" style="cursor:pointer; border: 1.5px solid ${r.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'};" onclick="showComparisonModal('${r.staffId}', '${escapeAttr(r.name)}')">
                   <div>
                     <div class="name">${r.name}</div>
                     <div class="dept">${r.finalScore === null ? "Belum final bulan ini — klik buat lihat histori" : `Final Score: ${Number(r.finalScore).toFixed(1)}${rangeMode ? ` · ${monthLabelID(r.month)}` : ""}`}</div>
+                    ${r.decision ? `<div class="dept" style="font-weight:700; color:var(--teal);">📌 ${decisionDisplayLabel(r.decision, r.tier)}${r.oneOnOneStatus ? ` · ${oneOnOneDisplayLabel(r.oneOnOneStatus)}` : ""}</div>` : ""}
                     ${r.calibrationAdjustment ? `<div class="dept" style="color:var(--gold); font-weight:700;">⚖️ Calibration ${r.calibrationAdjustment > 0 ? "+" : ""}${r.calibrationAdjustment}</div>` : ""}
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
@@ -7140,7 +7168,7 @@ function updateReviewFilter(key, value) {
   state._reviewFilters = state._reviewFilters || {};
   state._reviewFilters[key] = value;
   const f = state._reviewFilters;
-  const anyFilterActive = !!(f.search || f.department || f.underperformOnly);
+  const anyFilterActive = !!(f.search || f.department || f.underperformOnly || f.coachingOnly);
 
   document.querySelectorAll(".review-dept-group").forEach(group => {
     let groupHasVisibleRow = false;
@@ -7148,6 +7176,7 @@ function updateReviewFilter(key, value) {
       let show = true;
       if (f.search && !el.dataset.search.includes(f.search.toLowerCase())) show = false;
       if (f.underperformOnly && el.dataset.status !== "Underperform") show = false;
+      if (f.coachingOnly && (el.dataset.decision || "").indexOf("mentoring_coaching") === -1) show = false;
       el.style.display = show ? "" : "none";
       if (show) groupHasVisibleRow = true;
     });
@@ -7166,6 +7195,7 @@ async function doExportDecisionLog() {
   const lang = await askExportLanguage();
   if (!lang) return;
   const noteEl = document.getElementById("decision-log-export-note");
+  if (!noteEl) return;
   noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("gm_export_decision_generating");
   const res = await apiPost("exportDecisionLog", { lang });
   if (res.error || res.success === false) {
@@ -8985,10 +9015,10 @@ async function showComparisonModal(staffId, name) {
 
   const decisionBlock = (s.approvalStatus === 'Approved' && s.decision) ? `
     <div class="section-title" style="margin:16px -18px 8px;">${t("gm_decision_title")}</div>
-    <div style="font-size:14px; color:var(--text);"><strong>${findDecisionLabels((state.decisionOptionsByTier || {})[s.tier], s.decision)}</strong></div>
+    <div style="font-size:14px; color:var(--text);"><strong>${decisionDisplayLabel(s.decision, s.tier)}</strong></div>
     ${s.mutationToPosition ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_mutation_label")} ${s.mutationFromPosition} → ${s.mutationToPosition}</div>` : ""}
     ${s.extensionDuration ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_extension_label")} ${s.extensionDuration}</div>` : ""}
-    <div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_oneonone_inline_label")} <strong>${findLabel(state.oneOnOneOptions, s.oneOnOneStatus)}</strong></div>
+    <div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_oneonone_inline_label")} <strong>${oneOnOneDisplayLabel(s.oneOnOneStatus)}</strong></div>
     ${s.decisionNotes ? `<div style="font-size:13px; color:var(--text); margin-top:8px;">${t("gm_notes_inline_label")}<br/>"${s.decisionNotes}"</div>` : ""}
   ` : "";
 

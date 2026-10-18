@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-355-decision-split — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-356-approve-feedback — LIVE</div>
 
 <script>
 // =================================================================
@@ -1045,6 +1045,7 @@ const translations = {
     gm_approve_all_ask_admin: "Minta Superadmin membuka jendelanya, atau minta akses \"ApprovalWindow\" supaya kamu bisa membukanya sendiri.",
     gm_open_window_failed_prefix: "Gagal membuka jendela approval:",
     gm_approve_all_working: "⏳ Memproses Approve Semua… (jangan tutup halaman, jangan klik lagi)",
+    gm_decision_saving: "⏳ Menyimpan keputusan… (tunggu sebentar, jangan klik lagi)",
     gm_approve_all_busy: "Ada proses lain yang masih berjalan di server (biasanya Approve Semua sebelumnya). Tunggu 2–3 menit, JANGAN klik berulang, lalu muat ulang halaman dan coba lagi. Yang sudah ter-approve tidak diproses ulang.",
     gm_approve_all_already_running: "Approve Semua masih berjalan — tunggu sampai selesai, jangan klik lagi.",
     gm_approve_all_nothing: "Tidak ada appraisal yang menunggu di-approve di {month}. Cek dulu bulan yang dipilih — atau semuanya memang sudah di-approve.",
@@ -1624,6 +1625,7 @@ const translations = {
     gm_approve_all_ask_admin: "Ask a Superadmin to open the window, or ask for the \"ApprovalWindow\" access so you can open it yourself.",
     gm_open_window_failed_prefix: "Failed to open the approval window:",
     gm_approve_all_working: "⏳ Running Approve All… (keep the page open, don't click again)",
+    gm_decision_saving: "⏳ Saving decision… (please wait, don't click again)",
     gm_approve_all_busy: "Another action is still running on the server (usually an earlier Approve All). Wait 2–3 minutes, do NOT click repeatedly, then reload the page and try again. People already approved are not processed again.",
     gm_approve_all_already_running: "Approve All is still running — wait for it to finish, don't click again.",
     gm_approve_all_nothing: "Nothing is waiting to be approved in {month}. Check the selected month — or everything is already approved.",
@@ -9798,6 +9800,7 @@ function getCheckedDecisions(staffId) {
 }
 
 async function submitDecisionEdit(staffId) {
+  if (_decisionSaving[staffId]) return;
   const decisions = getCheckedDecisions(staffId);
   const oneOnOneStatus = oneOnOneForChoices(staffId);
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
@@ -9841,13 +9844,26 @@ async function submitDecisionEdit(staffId) {
     payload.calibrationReason = calibrationReason;
   }
 
-  const res = await apiPost("editDecision", payload);
+  decisionSaveBusy(staffId, true);
+  showToast(t("gm_decision_saving"), "success", 120000);
+  let res;
+  try { res = await apiPost("editDecision", payload); } finally { decisionSaveBusy(staffId, false); }
   if (res.error || res.success === false) { showToast(t("gm_save_edit_failed_prefix") + " " + friendlyError(res.error), "error"); return; }
   showToast(t("gm_edit_success_toast"));
   renderGm();
 }
 
+/** While a decision for one person is being saved, the button for that person is disabled, so a second press does nothing. */
+const _decisionSaving = {};
+function decisionSaveBusy(staffId, busy) {
+  if (busy) _decisionSaving[staffId] = true; else delete _decisionSaving[staffId];
+  [...document.querySelectorAll("button")]
+    .filter(b => /submitDecision(Edit)?\(/.test(b.getAttribute("onclick") || "") && (b.getAttribute("onclick") || "").indexOf("'" + staffId + "'") !== -1)
+    .forEach(b => { b.disabled = !!busy; b.style.opacity = busy ? "0.6" : ""; });
+}
+
 async function submitDecision(staffId) {
+  if (_decisionSaving[staffId]) return;
   const decisions = getCheckedDecisions(staffId);
   const oneOnOneStatus = oneOnOneForChoices(staffId);
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
@@ -9894,7 +9910,10 @@ async function submitDecision(staffId) {
     payload.calibrationReason = calibrationReason;
   }
 
-  const res = await apiPost("approveStaff", payload);
+  decisionSaveBusy(staffId, true);
+  showToast(t("gm_decision_saving"), "success", 120000);
+  let res;
+  try { res = await apiPost("approveStaff", payload); } finally { decisionSaveBusy(staffId, false); }
   if (res.error || res.success === false) {
     // windowInfo (when the failure is the approval window) carries the person's REAL dates
     // and whether it's too early or too late — long enough to need a longer-lived toast.

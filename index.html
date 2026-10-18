@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-354-overview-tabs — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-355-decision-split — LIVE</div>
 
 <script>
 // =================================================================
@@ -663,10 +663,16 @@ const translations = {
     notif_pager_prev: "← Sebelumnya",
     notif_pager_next: "Berikutnya →",
     notif_pager_info: "Halaman {page} dari {total}",
-    decision_mentoring_coaching: "Mentoring/Coaching Needed",
-    decision_extend_contract: "Extend Contract/Probation",
-    decision_demote_mutate: "Recommend to Demote/Mutate",
-    decision_not_extended: "Not Extended",
+    decision_continue_none: "Lanjut, tidak ada tindakan",
+    decision_mentoring_coaching: "Lanjut, dengan catatan coaching",
+    decision_extend_contract: "Perpanjang kontrak",
+    decision_extend_probation: "Perpanjang probation",
+    decision_transfer: "Mutasi",
+    decision_demotion: "Demosi",
+    decision_not_extended: "Tidak diperpanjang",
+    decision_demote_mutate: "Rekomendasi demosi/mutasi (data lama)",
+    gm_decision_rule: "Pilih satu atau lebih. \"Lanjut, tidak ada tindakan\" dan \"Tidak diperpanjang\" hanya bisa dipilih sendiri.",
+    gm_oneonone_auto: "Otomatis: pilihan ini wajib sesi 1-on-1.",
     notice_oneonone_done: "Sudah dilakukan sesi 1-on-1 (tatap muka)",
     notice_oneonone_not_necessary: "Tidak perlu sesi 1-on-1",
     notice_extra_mutation: " ({mutation})",
@@ -1236,10 +1242,16 @@ const translations = {
     notif_pager_prev: "← Previous",
     notif_pager_next: "Next →",
     notif_pager_info: "Page {page} of {total}",
-    decision_mentoring_coaching: "Mentoring/Coaching Needed",
-    decision_extend_contract: "Extend Contract/Probation",
-    decision_demote_mutate: "Recommend to Demote/Mutate",
-    decision_not_extended: "Not Extended",
+    decision_continue_none: "Continue, no action",
+    decision_mentoring_coaching: "Continue, with coaching note",
+    decision_extend_contract: "Extend contract",
+    decision_extend_probation: "Extend probation",
+    decision_transfer: "Transfer",
+    decision_demotion: "Demotion",
+    decision_not_extended: "Not extended",
+    decision_demote_mutate: "Recommend to Demote/Mutate (older record)",
+    gm_decision_rule: "Pick one or more. \"Continue, no action\" and \"Not extended\" can only be picked alone.",
+    gm_oneonone_auto: "Automatic: this choice requires a 1-on-1 session.",
     notice_oneonone_done: "1-on-1 session completed (in person)",
     notice_oneonone_not_necessary: "No 1-on-1 session needed",
     notice_extra_mutation: " ({mutation})",
@@ -2414,7 +2426,7 @@ function buildTrainingCard(mine, teamSummary, isReviewer) {
 /** The text to show for a notification: in the reader's language when the notification carries a translation key, otherwise the
  *  Indonesian text it was stored with (older notifications, and any kind not yet translated). Dates, months, decisions and the
  *  one-on-one status are formatted here, from the stored values, so the same notification reads correctly in either language. */
-const DECISION_VALUE_KEYS = { mentoring_coaching: "decision_mentoring_coaching", extend_contract: "decision_extend_contract", demote_mutate: "decision_demote_mutate", not_extended: "decision_not_extended" };
+const DECISION_VALUE_KEYS = { continue_none: "decision_continue_none", mentoring_coaching: "decision_mentoring_coaching", extend_contract: "decision_extend_contract", extend_probation: "decision_extend_probation", transfer: "decision_transfer", demotion: "decision_demotion", not_extended: "decision_not_extended", demote_mutate: "decision_demote_mutate" };
 const ONE_ON_ONE_NOTICE_KEYS = { done: "notice_oneonone_done", not_necessary: "notice_oneonone_not_necessary" };
 
 function englishDateLabel(iso) {
@@ -9366,12 +9378,13 @@ async function renderGm() {
     return `
       <div id="decision-form-${s.staffId}" style="display:none; padding:12px; margin-top:8px; background:var(--sand); border-radius:12px;">
         ${isEdit ? `<div class="hint" style="font-weight:700; color:var(--coral); margin-bottom:8px;">${t("gm_edit_mode_warning")}</div>` : ""}
-        <label>${t("gm_decision_label")} (bisa pilih lebih dari 1, kecuali "Not Extended")</label>
+        <label>${t("gm_decision_label")}</label>
+        <div class="hint" style="margin-top:-4px; margin-bottom:6px;">${t("gm_decision_rule")}</div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
           ${opts.map(o => `
             <label style="display:flex; align-items:center; gap:8px; font-weight:400; text-transform:none; letter-spacing:normal; font-size:15px; cursor:pointer;">
               <input type="checkbox" id="decision-check-${o.value}-${s.staffId}" value="${o.value}" ${isChecked(o.value) ? "checked" : ""} onchange="toggleDecisionCheckbox('${s.staffId}', '${o.value}')" style="width:18px; height:18px;" />
-              ${o.label}
+              ${decisionOptionLabel(o)}
             </label>`).join("")}
         </div>
 
@@ -9408,6 +9421,7 @@ async function renderGm() {
           <option value="">${t("gm_select_placeholder")}</option>
           ${state.oneOnOneOptions.map(o => `<option value="${o.value}" ${isEdit && o.value === s.oneOnOneStatus ? "selected" : ""}>${o.label}</option>`).join("")}
         </select>
+        <div id="oneonone-auto-note-${s.staffId}" class="hint" style="display:none;">${t("gm_oneonone_auto")}</div>
         ${(s.leaderQualitative || s.hrQualitative) ? `
         <div style="background:var(--sand); border-radius:12px; padding:12px; margin:10px 0;">
           <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:var(--teal);">📋 Catatan dari Leader/HR (referensi — belum tentu perlu ditulis ulang)</div>
@@ -9687,23 +9701,44 @@ function toggleDecisionForm(staffId) {
   }
 }
 
-/** Order-independent sync of field visibility + Not Extended's mutual exclusivity against
- *  whatever's CURRENTLY checked — used both right after the form opens (Edit mode can come
- *  in with boxes pre-checked) and, via toggleDecisionCheckbox, after each individual click. */
+const DECISION_CHOICES = ["continue_none", "mentoring_coaching", "extend_contract", "extend_probation", "transfer", "demotion", "not_extended"];
+const DECISION_EXCLUSIVE = ["continue_none", "not_extended"];
+const DECISION_FORCED = ["not_extended", "extend_probation", "transfer", "demotion"];
+
+function decisionOptionLabel(o) { return state.lang === "en" && o.labelEn ? o.labelEn : o.label; }
+function decisionHasExtensionClient(d) { return d.indexOf("extend_contract") !== -1 || d.indexOf("extend_probation") !== -1; }
+function decisionHasMutationClient(d) { return d.indexOf("transfer") !== -1 || d.indexOf("demotion") !== -1; }
+function decisionForcesOneOnOne(d) { return d.some(v => DECISION_FORCED.indexOf(v) !== -1); }
+
+/** The 1-on-1 that goes with the choices: forced ones are always "done", the others use the select. */
+function oneOnOneForChoices(staffId) {
+  if (decisionForcesOneOnOne(getCheckedDecisions(staffId))) return "done";
+  const el = document.getElementById(`oneonone-select-${staffId}`);
+  return el ? el.value : "";
+}
+
+/** Order-independent sync of field visibility, the exclusive choices, and the forced 1-on-1 against what is checked now. */
 function syncDecisionCheckboxState(staffId) {
-  const isChecked = (v) => { const el = document.getElementById(`decision-check-${v}-${staffId}`); return el && el.checked; };
-  const setDisabled = (v, val) => { const el = document.getElementById(`decision-check-${v}-${staffId}`); if (el) el.disabled = val; };
-
-  const othersChecked = ["mentoring_coaching", "extend_contract", "demote_mutate"].some(isChecked);
-  setDisabled("not_extended", othersChecked);
-  ["mentoring_coaching", "extend_contract", "demote_mutate"].forEach(v => setDisabled(v, isChecked("not_extended")));
-
+  const isChecked = (v) => { const el = document.getElementById(`decision-check-${v}-${staffId}`); return !!(el && el.checked); };
+  const setDisabled = (v, val) => { const el = document.getElementById(`decision-check-${v}-${staffId}`); if (el) el.disabled = !!val; };
+  const checked = DECISION_CHOICES.filter(isChecked);
+  const exclusiveChecked = checked.some(c => DECISION_EXCLUSIVE.indexOf(c) !== -1);
+  DECISION_CHOICES.forEach(v => {
+    if (checked.indexOf(v) !== -1) { setDisabled(v, false); return; }
+    // an exclusive choice blocks everything else; anything else blocks the exclusive choices
+    setDisabled(v, DECISION_EXCLUSIVE.indexOf(v) !== -1 ? checked.length > 0 : exclusiveChecked);
+  });
   const trainingEl = document.getElementById(`training-fields-${staffId}`);
   const extendEl = document.getElementById(`extend-fields-${staffId}`);
   const mutationEl = document.getElementById(`mutation-fields-${staffId}`);
   if (trainingEl) trainingEl.style.display = isChecked("mentoring_coaching") ? "block" : "none";
-  if (extendEl) extendEl.style.display = isChecked("extend_contract") ? "block" : "none";
-  if (mutationEl) mutationEl.style.display = isChecked("demote_mutate") ? "block" : "none";
+  if (extendEl) extendEl.style.display = decisionHasExtensionClient(checked) ? "block" : "none";
+  if (mutationEl) mutationEl.style.display = decisionHasMutationClient(checked) ? "block" : "none";
+  const forced = decisionForcesOneOnOne(checked);
+  const sel = document.getElementById(`oneonone-select-${staffId}`);
+  if (sel) { if (forced) sel.value = "done"; sel.disabled = forced; }
+  const note = document.getElementById(`oneonone-auto-note-${staffId}`);
+  if (note) note.style.display = forced ? "block" : "none";
 }
 
 /** Fetches and renders the calibration suggestion once per staff (not re-fetched on every
@@ -9754,29 +9789,17 @@ function applyCalibrationSuggestion(staffId, adjustment, evaluatorName, evaluato
 }
 
 function toggleDecisionCheckbox(staffId, changedValue) {
-  const el = document.getElementById(`decision-check-${changedValue}-${staffId}`);
-  if (el && el.checked) {
-    if (changedValue === "not_extended") {
-      ["mentoring_coaching", "extend_contract", "demote_mutate"].forEach(v => {
-        const other = document.getElementById(`decision-check-${v}-${staffId}`);
-        if (other) other.checked = false;
-      });
-    } else {
-      const notExtendedEl = document.getElementById(`decision-check-not_extended-${staffId}`);
-      if (notExtendedEl) notExtendedEl.checked = false;
-    }
-  }
   syncDecisionCheckboxState(staffId);
 }
 
 function getCheckedDecisions(staffId) {
-  const values = ["mentoring_coaching", "extend_contract", "demote_mutate", "not_extended"];
+  const values = DECISION_CHOICES;
   return values.filter(v => { const el = document.getElementById(`decision-check-${v}-${staffId}`); return el && el.checked; });
 }
 
 async function submitDecisionEdit(staffId) {
   const decisions = getCheckedDecisions(staffId);
-  const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
+  const oneOnOneStatus = oneOnOneForChoices(staffId);
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
   if (!decisions.length) { showToast(t("gm_decision_required"), "error"); return; }
   if (!oneOnOneStatus) { showToast(t("gm_oneonone_required"), "error"); return; }
@@ -9788,7 +9811,7 @@ async function submitDecisionEdit(staffId) {
     if (!trainingNotes || !trainingNotes.trim()) { showToast("Isi dulu apa yang perlu di-training/coaching.", "error"); return; }
     payload.trainingNotes = trainingNotes;
   }
-  if (decisions.indexOf("extend_contract") !== -1) {
+  if (decisionHasExtensionClient(decisions)) {
     const extensionValue = document.getElementById(`extension-value-${staffId}`).value;
 
     const extensionUnit = document.getElementById(`extension-unit-${staffId}`).value;
@@ -9796,7 +9819,7 @@ async function submitDecisionEdit(staffId) {
     payload.extensionValue = extensionValue;
     payload.extensionUnit = extensionUnit;
   }
-  if (decisions.indexOf("demote_mutate") !== -1) {
+  if (decisionHasMutationClient(decisions)) {
     const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
     if (!mutationToPosition) { showToast(t("gm_mutation_position_required"), "error"); return; }
     payload.mutationToPosition = mutationToPosition;
@@ -9826,7 +9849,7 @@ async function submitDecisionEdit(staffId) {
 
 async function submitDecision(staffId) {
   const decisions = getCheckedDecisions(staffId);
-  const oneOnOneStatus = document.getElementById(`oneonone-select-${staffId}`).value;
+  const oneOnOneStatus = oneOnOneForChoices(staffId);
   const notes = document.getElementById(`decision-notes-${staffId}`).value;
   if (!decisions.length) { showToast(t("gm_decision_required"), "error"); return; }
   if (!oneOnOneStatus) { showToast(t("gm_oneonone_required"), "error"); return; }
@@ -9838,14 +9861,14 @@ async function submitDecision(staffId) {
     if (!trainingNotes || !trainingNotes.trim()) { showToast("Isi dulu apa yang perlu di-training/coaching.", "error"); return; }
     payload.trainingNotes = trainingNotes;
   }
-  if (decisions.indexOf("extend_contract") !== -1) {
+  if (decisionHasExtensionClient(decisions)) {
     const extensionValue = document.getElementById(`extension-value-${staffId}`).value;
     const extensionUnit = document.getElementById(`extension-unit-${staffId}`).value;
     if (!extensionValue || Number(extensionValue) <= 0) { showToast(t("gm_extend_duration_required"), "error"); return; }
     payload.extensionValue = extensionValue;
     payload.extensionUnit = extensionUnit;
   }
-  if (decisions.indexOf("demote_mutate") !== -1) {
+  if (decisionHasMutationClient(decisions)) {
     const mutationToPosition = document.getElementById(`mutation-to-${staffId}`).value;
     if (!mutationToPosition) { showToast(t("gm_mutation_position_required"), "error"); return; }
     payload.mutationToPosition = mutationToPosition;

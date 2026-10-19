@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-364-profile-side-by-side — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-365-simple-training — LIVE</div>
 
 <script>
 // =================================================================
@@ -1958,7 +1958,8 @@ const TRN = {
     card_decide: "Usulan menunggu", card_confirm: "Menunggu konfirmasi", card_calm: "Tidak ada training yang mendesak.",
     sec_overdue: "Terlambat", sec_soon: "Jatuh tempo dalam 14 hari", sec_proposal: "Usulan menunggu keputusan", sec_confirm: "Menunggu konfirmasi selesai",
     sec_active: "Sedang berjalan", sec_todo: "Belum dimulai", sec_done: "Selesai & terkonfirmasi", sec_rejected: "Usulan ditolak",
-    sum_overdue: "Terlambat", sum_proposal: "Usulan", sum_confirm: "Konfirmasi", sum_active: "Berjalan", sum_done: "Terkonfirmasi",
+    sum_overdue: "Terlambat", sum_proposal: "Menunggu persetujuan", sum_confirm: "Menunggu konfirmasi", sum_active: "Sedang berjalan", sum_done: "Terkonfirmasi",
+    tip_overdue: "Training yang tenggatnya sudah lewat dan belum selesai.", tip_proposal: "Usulan training dari karyawan yang menunggu keputusan leader atau HR (setujui atau tolak).", tip_confirm: "Training yang sudah ditandai selesai oleh karyawan, tapi belum dikonfirmasi leader atau HR.", tip_active: "Training yang sudah dimulai dan belum selesai.", tip_done: "Training yang sudah selesai dan sudah dikonfirmasi.", detail_show: "Lihat langkah & materi", detail_hide: "Tutup langkah & materi",
     due_label: "Tenggat", due_none: "Tanpa tenggat", days_late: "terlambat {n} hari", days_left: "{n} hari lagi", days_today: "hari ini",
     owner_label: "Penanggung jawab", owner_none: "Belum ditentukan", progress_label: "Catatan kemajuan", progress_ph: "Apa yang sudah dijalani / hasilnya",
     proposed_by: "Diusulkan oleh", btn_start: "Mulai", btn_finish: "Tandai selesai", btn_confirm: "Konfirmasi selesai", btn_approve: "Setujui", btn_reject: "Tolak",
@@ -1983,7 +1984,8 @@ const TRN = {
     card_decide: "Proposals waiting", card_confirm: "Waiting to be confirmed", card_calm: "Nothing urgent in training right now.",
     sec_overdue: "Overdue", sec_soon: "Due within 14 days", sec_proposal: "Proposals waiting for a decision", sec_confirm: "Waiting to be confirmed as done",
     sec_active: "In progress", sec_todo: "Not started", sec_done: "Done & confirmed", sec_rejected: "Rejected proposals",
-    sum_overdue: "Overdue", sum_proposal: "Proposals", sum_confirm: "To confirm", sum_active: "In progress", sum_done: "Confirmed",
+    sum_overdue: "Overdue", sum_proposal: "Waiting approval", sum_confirm: "Waiting confirmation", sum_active: "In progress", sum_done: "Confirmed",
+    tip_overdue: "Training whose due date has passed and is not finished.", tip_proposal: "A training an employee proposed, waiting for a leader or HR to approve or reject it.", tip_confirm: "Training the employee marked as done, waiting for a leader or HR to confirm it.", tip_active: "Training that has started and is not finished yet.", tip_done: "Training that is finished and confirmed.", detail_show: "Show steps & materials", detail_hide: "Hide steps & materials",
     due_label: "Due", due_none: "No due date", days_late: "{n} days overdue", days_left: "{n} days left", days_today: "today",
     owner_label: "Owner", owner_none: "Not set yet", progress_label: "Progress note", progress_ph: "What has been done / the result",
     proposed_by: "Proposed by", btn_start: "Start", btn_finish: "Mark as done", btn_confirm: "Confirm done", btn_approve: "Approve", btn_reject: "Reject",
@@ -2162,25 +2164,29 @@ async function trnToggleStep(id, idx, done) {
 
 function trnCard(item, opts) {
   const u = trnUrgency(item);
-  const edge = u === "overdue" ? "var(--bad)" : u === "soon" ? "#F2A65A" : u === "proposal" || u === "confirm" ? "var(--teal)" : u === "done" ? "var(--ok)" : "var(--line)";
+  const edge = u === "overdue" ? "#B8352B" : u === "soon" ? "#B7791F" : u === "proposal" ? "#6C4FB6" : u === "confirm" ? "#B7791F" : u === "done" ? "#0E7C5A" : "var(--line)";
   const id = escapeHtml(item.trainingId);
-  const who = opts.mine ? "" : `<div class="hint" style="font-size:12px;">${escapeHtml(item.staffName)}</div>`;
+  const who = opts.mine ? "" : `<div style="font-size:12px; color:var(--muted); margin-top:2px;">${escapeHtml(item.staffName)}</div>`;
   const reason = trnReason(item);
-  const reasonHtml = reason ? `<div style="font-size:12px; color:var(--teal); font-weight:700; margin-top:4px;">${escapeHtml(reason)}</div>` : "";
-  const note = item.progressNote ? `<div style="font-size:13px; margin-top:6px; white-space:pre-wrap;">${escapeHtml(item.progressNote)}</div>` : "";
-  let actions = "";
+  const reasonHtml = reason ? `<div style="font-size:12px; color:var(--muted); margin-top:4px;">${escapeHtml(reason)}</div>` : "";
+  const pct = item.progress || 0;
+  const bar = `<div style="display:flex; align-items:center; gap:8px; margin-top:10px;"><div style="flex:1; height:6px; background:#EFE6D8; border-radius:3px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:var(--teal);"></div></div><span style="font-size:12px; color:var(--muted); min-width:34px; text-align:right;">${pct}%</span></div>`;
+  const note = item.progressNote ? `<div style="font-size:13px; margin-top:8px; white-space:pre-wrap;">${escapeHtml(item.progressNote)}</div>` : "";
+  const detail = `<details style="margin-top:10px;"><summary style="font-size:13px; color:var(--teal); cursor:pointer; font-weight:700;">${trn("detail_show")}</summary>
+      <div style="margin-top:8px;">${trnStepsHtml(item, opts)}${trnMaterialsHtml(item.materials)}</div></details>`;
+  let action = "";
   if (opts.mine && item.approvalStatus === "" && item.status === "Belum Dimulai") {
-    actions = `<button class="secondary" style="margin-top:8px;" onclick="trnStart('${id}')">${trn("btn_start")}</button>`;
+    action = `<button class="secondary" style="margin-top:10px;" onclick="trnStart('${id}')">${trn("btn_start")}</button>`;
   }
   if (opts.mine && item.approvalStatus === "" && item.status === "Sedang Berjalan") {
-    actions = `<textarea id="trn-note-${id}" rows="2" placeholder="${trn("progress_ph")}" style="width:100%; margin-top:8px;"></textarea>
+    action = `<textarea id="trn-note-${id}" rows="2" placeholder="${trn("progress_ph")}" style="width:100%; margin-top:10px;"></textarea>
       <button class="primary" style="margin-top:6px;" onclick="trnFinish('${id}')">${trn("btn_finish")}</button>`;
   }
   if (opts.mine && item.status === "Selesai" && !item.confirmedBy) {
-    actions = `<div class="hint" style="margin-top:6px;">${trn("done_hint")}</div>`;
+    action = `<div class="hint" style="margin-top:10px;">${trn("done_hint")}</div>`;
   }
   if (opts.review && item.approvalStatus === "Diusulkan") {
-    actions = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+    action = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px;">
       <input id="trn-owner-${id}" type="text" placeholder="${trn("field_owner")}">
       <input id="trn-due-${id}" type="date" title="${trn("field_due")}">
       </div>
@@ -2190,44 +2196,67 @@ function trnCard(item, opts) {
       </div>`;
   }
   if (opts.review && item.approvalStatus === "" && item.status === "Selesai" && !item.confirmedBy) {
-    actions = `<button class="primary" style="margin-top:8px;" onclick="trnConfirm('${id}')">${trn("btn_confirm")}</button>`;
+    action = `<button class="primary" style="margin-top:10px;" onclick="trnConfirm('${id}')">${trn("btn_confirm")}</button>`;
   }
   if (opts.review && item.approvalStatus === "" && item.status !== "Selesai") {
-    actions += `<div style="margin-top:8px; display:flex; gap:8px; align-items:center;"><span class="hint">${trn("change_status")}</span>
-      <select onchange="trnSetStatus('${id}', '${escapeHtml(item.staffId)}', this.value)">
+    action += `<div style="margin-top:10px;"><select title="${escapeAttr(trn("change_status"))}" onchange="trnSetStatus('${id}', '${escapeHtml(item.staffId)}', this.value)">
         ${["Belum Dimulai", "Sedang Berjalan", "Selesai"].map(s => `<option value="${s}" ${s === item.status ? "selected" : ""}>${trnStatusText(s)}</option>`).join("")}
       </select></div>`;
   }
-  return `<div class="card" style="border-left:6px solid ${edge}; margin-bottom:10px; padding:12px 14px;">
-    <div style="display:flex; justify-content:space-between; gap:8px; align-items:flex-start;">
-      <div style="min-width:0;">
-        <div style="font-weight:800; font-size:15px; overflow-wrap:anywhere;">${escapeHtml(item.topic)}</div>
-        ${who}${reasonHtml}
-      </div>
+  return `<div class="card" style="border-left:4px solid ${edge}; padding:14px 16px; margin-bottom:10px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <div style="min-width:0; font-weight:800; font-size:16px; overflow-wrap:anywhere;">${escapeHtml(item.topic)}</div>
       <span class="badge">${trnPriorityText(item.priority)}</span>
     </div>
-    <div style="margin-top:6px; font-size:13px;">${trnDueText(item)}</div>
-    <div style="font-size:13px; margin-top:4px;">${trn("owner_label")}: ${item.owner ? escapeHtml(item.owner) : `<span class="hint">${trn("owner_none")}</span>`} · ${trnStatusText(item.status)}</div>
-    ${trnProgressHtml(item, opts)}
-    ${trnMaterialsHtml(item.materials)}
-    ${note}
-    ${actions}
+    ${who}${reasonHtml}
+    <div style="margin-top:8px; font-size:14px;">${trnDueText(item)}</div>
+    <div style="font-size:13px; color:var(--muted); margin-top:3px;">${trn("owner_label")}: ${item.owner ? escapeHtml(item.owner) : trn("owner_none")} · ${trnStatusText(item.status)}</div>
+    ${bar}${note}${detail}${action}
   </div>`;
 }
 
+/** The steps of a training, with a tick box for each step the person may tick. */
+function trnStepsHtml(item, opts) {
+  const id = escapeHtml(item.trainingId);
+  const steps = item.steps || [];
+  if (!steps.length) return "";
+  const canTick = (s) => {
+    if (item.approvalStatus !== "") return false;
+    if (/sign-?off/i.test(s.label)) return !!opts.review;
+    return !!(opts.mine || opts.review);
+  };
+  return `<div style="margin-bottom:6px;">${steps.map((s, idx) => `
+    <label style="display:flex; gap:8px; align-items:center; font-size:13px; padding:3px 0;">
+      <input type="checkbox" ${s.done ? "checked" : ""} ${canTick(s) ? "" : "disabled"} onchange="trnToggleStep('${id}', ${idx}, this.checked)">
+      <span>${escapeHtml(s.label)}</span>
+    </label>`).join("")}</div>`;
+}
 function trnSummaryTiles(s) {
-  const tile = (n, label, color) => `<div style="flex:1; min-width:110px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px;">
-      <div style="font-size:24px; font-weight:800; color:${color};">${n || 0}</div><div class="hint" style="font-size:12px;">${label}</div></div>`;
-  return `<div class="card" style="margin-bottom:6px;"><div style="font-weight:800; margin-bottom:8px;">${trn("summary_title")}</div>
+  const tile = (n, labelKey, color, tipKey) => `<div style="flex:1 1 130px; min-width:130px; background:#fff; border:1px solid var(--line); border-left:5px solid ${color}; border-radius:10px; padding:10px 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:24px; font-weight:800; color:${color};">${n || 0}</span>
+        <button type="button" title="${escapeAttr(trn(tipKey))}" onclick="trnTip('${tipKey}')" aria-label="${escapeAttr(trn(tipKey))}" style="width:22px; height:22px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:12px; cursor:pointer; padding:0;">?</button>
+      </div>
+      <div style="font-size:13px; color:var(--ink); margin-top:2px;">${trn(labelKey)}</div>
+    </div>`;
+  return `<div class="card" style="margin-bottom:8px;">
+    <div style="font-weight:800; margin-bottom:10px;">${trn("summary_title")}</div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-      ${tile(s.overdue, trn("sum_overdue"), (s.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)")}
-      ${tile(s.proposed, trn("sum_proposal"), "var(--teal)")}
-      ${tile(s.doneNotConfirmed, trn("sum_confirm"), "var(--teal)")}
-      ${tile(s.inProgress, trn("sum_active"), "var(--ink)")}
-      ${tile(s.confirmed, trn("sum_done"), "var(--ok)")}
-    </div></div>`;
+      ${tile(s.overdue, "sum_overdue", "#B8352B", "tip_overdue")}
+      ${tile(s.proposed, "sum_proposal", "#6C4FB6", "tip_proposal")}
+      ${tile(s.doneNotConfirmed, "sum_confirm", "#B7791F", "tip_confirm")}
+      ${tile(s.inProgress, "sum_active", "#2E6FBF", "tip_active")}
+      ${tile(s.confirmed, "sum_done", "#0E7C5A", "tip_done")}
+    </div>
+    <div id="trn-tip" style="display:none; margin-top:10px; font-size:13px; color:var(--ink); background:#F5EBDC; border-radius:8px; padding:8px 10px;"></div>
+  </div>`;
 }
 
+/** Shows the explanation of one category under the summary. */
+function trnTip(key) {
+  const el = document.getElementById("trn-tip");
+  if (el) { el.textContent = trn(key); el.style.display = "block"; }
+}
 async function trnPost(action, payload) {
   const res = await apiPost(action, payload);
   if (res.error || res.success === false) { showToast(trn("failed") + friendlyError(res.error), "error"); return false; }

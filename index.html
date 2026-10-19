@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-357-wipe-and-reopen — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-358-cycle-leader-flags — LIVE</div>
 
 <script>
 // =================================================================
@@ -1046,6 +1046,11 @@ const translations = {
     gm_open_window_failed_prefix: "Gagal membuka jendela approval:",
     gm_approve_all_working: "⏳ Memproses Approve Semua… (jangan tutup halaman, jangan klik lagi)",
     gm_decision_saving: "⏳ Menyimpan keputusan… (tunggu sebentar, jangan klik lagi)",
+    gm_leader_not_filled: "⚠️ Leader tidak mengisi appraisal untuk {name}",
+    gm_leader_unassigned: "⚠️ Belum ada leader yang ditugaskan untuk {name}",
+    gm_leader_label: "Leader",
+    gm_compressed_badge: "⏱ Siklus dipersingkat",
+    gm_compressed_hint: "Kontrak berakhir bulan ini, jadi siklus appraisal-nya dipersingkat.",
     gm_approve_all_busy: "Ada proses lain yang masih berjalan di server (biasanya Approve Semua sebelumnya). Tunggu 2–3 menit, JANGAN klik berulang, lalu muat ulang halaman dan coba lagi. Yang sudah ter-approve tidak diproses ulang.",
     gm_approve_all_already_running: "Approve Semua masih berjalan — tunggu sampai selesai, jangan klik lagi.",
     gm_approve_all_nothing: "Tidak ada appraisal yang menunggu di-approve di {month}. Cek dulu bulan yang dipilih — atau semuanya memang sudah di-approve.",
@@ -1626,6 +1631,11 @@ const translations = {
     gm_open_window_failed_prefix: "Failed to open the approval window:",
     gm_approve_all_working: "⏳ Running Approve All… (keep the page open, don't click again)",
     gm_decision_saving: "⏳ Saving decision… (please wait, don't click again)",
+    gm_leader_not_filled: "⚠️ Leader has not filled in the appraisal for {name}",
+    gm_leader_unassigned: "⚠️ No leader is assigned to {name}",
+    gm_leader_label: "Leader",
+    gm_compressed_badge: "⏱ Shortened cycle",
+    gm_compressed_hint: "The contract ends this month, so this appraisal cycle is shortened.",
     gm_approve_all_busy: "Another action is still running on the server (usually an earlier Approve All). Wait 2–3 minutes, do NOT click repeatedly, then reload the page and try again. People already approved are not processed again.",
     gm_approve_all_already_running: "Approve All is still running — wait for it to finish, don't click again.",
     gm_approve_all_nothing: "Nothing is waiting to be approved in {month}. Check the selected month — or everything is already approved.",
@@ -5924,9 +5934,9 @@ async function renderDevTools() {
     </div>
     <div class="card">
       <h2>🛠️ Koreksi Penilaian</h2>
-      <div class="hint" style="margin-bottom:10px;">Satu alat untuk membetulkan penilaian yang salah. <b>Hapus isian</b>: isian satu slot dihapus (dicadangkan) lalu orangnya mengisi ulang. <b>Buka kirim ulang</b>: isian lama tetap ada, orangnya boleh mengirim lagi. <b>Batalkan approval</b>: nilai akhir kembali ke Pending (bulan apa pun sampai bulan ini). Pratinjau dulu: tidak mengubah apa pun.</div>
+      <div class="hint" style="margin-bottom:10px;">Satu alat untuk membetulkan penilaian yang salah. <b>Hapus isian lalu buka akses otomatis</b>: isian satu slot dihapus (dicadangkan), lalu orangnya bisa langsung mengisi ulang. Akses dibuka otomatis hanya untuk orang yang jendela waktunya sudah tutup; kalau masih dalam jendela normal, tidak ada yang berubah selain isian yang dihapus. <b>Batalkan approval</b>: nilai akhir kembali ke Pending dan harus di-approve ulang; isiannya tetap.</div>
       <label>Tindakan</label>
-      <select id="kc-action" onchange="kcSync()"><option value="wipe">Hapus isian lalu isi ulang</option><option value="wipe_reopen">Hapus isian lalu buka kirim ulang (satu langkah)</option><option value="reopen">Buka kirim ulang (isian lama tetap ada)</option><option value="revert">Batalkan approval (kembali ke Pending)</option></select>
+      <select id="kc-action" onchange="kcSync()"><option value="wipe_reopen">Hapus isian lalu buka akses otomatis</option><option value="revert">Batalkan approval (kembali ke Pending)</option></select>
       <div id="kc-slot-wrap"><label style="margin-top:8px; display:block;">Slot</label>
       <select id="kc-slot" onchange="kcSync()"><option value="self">Self Appraisal</option><option value="leader">Leader</option><option value="hr">HR</option></select></div>
       <label style="margin-top:8px; display:block;">Siapa</label>
@@ -6274,7 +6284,7 @@ const kcEl = (id) => document.getElementById(id);
 function kcParseNiks(text) { return Array.from(new Set(String(text || "").split(/[\s,;]+/).map(x => x.trim()).filter(Boolean))); }
 function kcMonthNow() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
 function kcParams() {
-  const action = (kcEl("kc-action") || {}).value || "wipe", pick = (kcEl("kc-pick") || {}).value || "mismatched";
+  const action = (kcEl("kc-action") || {}).value || "wipe_reopen", pick = (kcEl("kc-pick") || {}).value || "mismatched";
   return {
     action, pick,
     slot: action === "revert" ? "" : ((kcEl("kc-slot") || {}).value || "self"),
@@ -6294,7 +6304,7 @@ function kcRequest(params, apply, extra) {
 }
 function kcNote(html) { const el = kcEl("kc-note"); if (el) el.innerHTML = html; }
 function kcSetButtons() {
-  const pv = kcEl("kc-preview-btn"), ap = kcEl("kc-apply-btn"), n = _kc.sel.size, action = (kcEl("kc-action") || {}).value || "wipe";
+  const pv = kcEl("kc-preview-btn"), ap = kcEl("kc-apply-btn"), n = _kc.sel.size, action = (kcEl("kc-action") || {}).value || "wipe_reopen";
   if (pv) pv.disabled = _kc.busy;
   if (ap) { ap.disabled = _kc.busy || !_kc.plan || n === 0; ap.textContent = `${KC_VERB[action] || KC_VERB.wipe} yang dipilih (${n})`; }
 }
@@ -6309,7 +6319,7 @@ function kcInvalidate() {
 /** Which fields make sense for the chosen action / way of picking people. */
 function kcSync() {
   const pickEl = kcEl("kc-pick"); if (!pickEl) return;
-  const action = (kcEl("kc-action") || {}).value || "wipe", revert = action === "revert";
+  const action = (kcEl("kc-action") || {}).value || "wipe_reopen", revert = action === "revert";
   const want = revert
     ? [["nik", "Per NIK (tempel satu atau banyak)"], ["all", "Unit: semua yang sudah di-approve pada bulan itu"]]
     : [["nik", "Per NIK (tempel satu atau banyak)"], ["mismatched", "Unit: hanya yang isiannya TIDAK cocok dengan struktur KPI sekarang (disarankan)"], ["all", "Unit: semua yang sudah mengisi bulan ini"]];
@@ -9488,16 +9498,19 @@ async function renderGm() {
       </div>
       <div id="gm-list-container">
       ${list.map(s => `
-        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-approved="${s.approvalStatus === 'Approved'}" data-name="${escapeAttr(s.name)}" data-score="${s.finalScore || 0}" class="clickable-card" style="border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
+        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-approved="${s.approvalStatus === 'Approved'}" data-name="${escapeAttr(s.name)}" data-score="${s.finalScore || 0}" class="clickable-card" style="${s.cycleType === 'compressed' ? 'background:#FFF4DC; border-left:6px solid var(--amber);' : ''} border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
           <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
             <div style="display:flex; align-items:center; gap:10px;">
               <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />
               <div id="photo-fallback-${s.staffId}" style="width:44px; height:44px; border-radius:10px; background:var(--sand); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:16px;">${s.name.charAt(0)}</div>
               <div>
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
+                ${s.cycleType === "compressed" ? `<div style="margin-top:4px;"><span title="${t("gm_compressed_hint")}" style="display:inline-block; background:var(--amber); color:#fff; font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px;">${t("gm_compressed_badge")}</span></div>` : ""}
                 <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
-                <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.leaderEvaluatorName || "-"})</span></div>
+                <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} ${Number(s.leaderTotal || 0) === 0
+                  ? `<span style="color:var(--red); font-weight:700;">⚠️ ${(s.leaderEvaluatorName ? t("gm_leader_not_filled") : t("gm_leader_unassigned")).split("{name}").join(escapeHtml(s.name))}${s.leaderEvaluatorName ? ` (${t("gm_leader_label")}: ${escapeHtml(s.leaderEvaluatorName)})` : ""}</span>`
+                  : `<span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.leaderEvaluatorName || "-"})</span>`}</div>
                 <div class="dept" style="margin-top:2px;">HR: ${s.hrStageActive === false
                   ? `<span style="color:var(--text-muted);">— (tidak ada tahap HR untuk posisi ini)</span>`
                   : Number(s.hrTotal || 0) === 0

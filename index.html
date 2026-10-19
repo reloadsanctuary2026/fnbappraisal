@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-371-overview-table-or-cards — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-372-approval-desktop — LIVE</div>
 
 <script>
 // =================================================================
@@ -9591,14 +9591,14 @@ async function renderGm() {
       ${list.map(s => `
         <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-approved="${s.approvalStatus === 'Approved'}" data-name="${escapeAttr(s.name)}" data-score="${s.finalScore || 0}" class="clickable-card" style="${s.cycleType === 'compressed' ? 'background:#FFFBF3; box-shadow:inset 3px 0 0 #E8C36A;' : ''} border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
           <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start; justify-content:space-between;">
-            <div style="display:flex; align-items:flex-start; gap:12px; flex:1 1 260px; min-width:0;">
+            <div style="display:flex; align-items:flex-start; gap:12px; flex:1 1 0; min-width:280px;">
               <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />
               <div id="photo-fallback-${s.staffId}" style="width:44px; height:44px; border-radius:10px; background:var(--sand); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:16px;">${s.name.charAt(0)}</div>
               <div>
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
-                ${s.cycleType === "compressed" ? `<div style="margin-top:4px;"><span title="${t("gm_compressed_hint")}" style="display:inline-block; background:var(--amber); color:#fff; font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px;">${t("gm_compressed_badge")}</span></div>` : ""}
+                <div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px 10px; align-items:center;">${s.cycleType === "compressed" ? `<span title="${t("gm_compressed_hint")}" style="display:inline-block; background:var(--amber); color:#fff; font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px;">${t("gm_compressed_badge")}</span>` : ""}${deadlineLineHtml(s.executiveDeadline)}</div>
                 <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:6px 14px; margin-top:8px; font-size:13px;">
+                <div style="display:flex; flex-direction:column; gap:4px; margin-top:8px; font-size:13px;">
                 <div class="dept">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} ${Number(s.leaderTotal || 0) === 0
                   ? `<span style="color:var(--red); font-weight:700;">⚠️ ${(s.leaderEvaluatorName ? t("gm_leader_not_filled") : t("gm_leader_unassigned")).split("{name}").join(escapeHtml(s.name))}${s.leaderEvaluatorName ? ` (${t("gm_leader_label")}: ${escapeHtml(s.leaderEvaluatorName)})` : ""}</span>`
@@ -9609,7 +9609,6 @@ async function renderGm() {
                     ? `<span style="color:var(--red); font-weight:700;">⚠️ HR tidak mengisi${state.month >= "2026-10" ? " — bobot HR tidak dihitung, dialihkan ke Leader" : ""}</span>`
                     : `${Number(s.hrTotal).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span>`}</div>
                 </div>
-                ${deadlineLineHtml(s.executiveDeadline)}
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">${t("gm_decision_label_inline")} <strong>${findDecisionLabels(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>

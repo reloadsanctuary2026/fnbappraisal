@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-365-simple-training — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-367-mobile-relayout — LIVE</div>
 
 <script>
 // =================================================================
@@ -2399,16 +2399,17 @@ async function renderTrainingOverview() {
 function renderTrainingOverviewBody(ov, openKey) {
   const t = ov.totals || {};
   const unitKeys = Array.from(new Set((ov.departments || []).map(d => d.businessUnit))).sort();
+  const multi = unitKeys.length > 1;   // tabs and unit names only when there is more than one unit to choose from
   const unit = state._ovUnit && unitKeys.indexOf(state._ovUnit) !== -1 ? state._ovUnit : "all";
   state._ovUnit = unit;
   const depts = (ov.departments || []).filter(d => unit === "all" || d.businessUnit === unit);
   const open = openKey ? depts.find(d => d.key === openKey) : null;
   const people = open ? (ov.people || []).filter(p => p.businessUnit + "|" + p.department === open.key).sort((a, b) => (b.overdue - a.overdue) || a.name.localeCompare(b.name)) : [];
-  const bar = (v) => `<div style="height:6px; background:#EFE6D8; border-radius:3px; overflow:hidden;"><div style="width:${v}%; height:100%; background:var(--teal);"></div></div>`;
-  const num = (v, bad) => `<td style="text-align:right; padding:8px 6px; font-variant-numeric:tabular-nums; ${bad ? "color:var(--bad); font-weight:800;" : ""}">${v}</td>`;
-  const tabs = [`<button class="${unit === "all" ? "primary" : "secondary"}" onclick="trnSetOvUnit('all')">${trn("ov_all")}</button>`]
-    .concat(unitKeys.map(u => `<button class="${unit === u ? "primary" : "secondary"}" onclick="trnSetOvUnit('${escapeHtml(u)}')">${escapeHtml(BUSINESS_UNIT_LABELS_UI[u] || u)}</button>`))
-    .join("");
+  const bar = (v) => `<div style="display:flex; align-items:center; gap:8px;"><div style="flex:1; height:6px; background:#EFE6D8; border-radius:3px; overflow:hidden;"><div style="width:${v}%; height:100%; background:var(--teal);"></div></div><span style="font-size:12px; color:var(--muted); min-width:34px; text-align:right;">${v}%</span></div>`;
+  const cell = (v, bad) => `<td style="text-align:right; padding:10px 8px; font-variant-numeric:tabular-nums; ${bad ? "color:var(--bad); font-weight:800;" : ""}">${v}</td>`;
+  const pill = (active, label, onclick) => `<button type="button" onclick="${onclick}" style="padding:5px 14px; border-radius:999px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; border:1.5px solid ${active ? "#0E7C5A" : "var(--line)"}; background:${active ? "#0E7C5A" : "#fff"}; color:${active ? "#fff" : "var(--ink)"};">${label}</button>`;
+  const tabs = multi ? `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">${pill(unit === "all", trn("ov_all"), "trnSetOvUnit('all')")}${unitKeys.map(u => pill(unit === u, escapeHtml(BUSINESS_UNIT_LABELS_UI[u] || u), `trnSetOvUnit('${escapeHtml(u)}')`)).join("")}</div>` : "";
+  const th = (label, align) => `<th style="text-align:${align || "right"}; padding:8px; font-size:12px; font-weight:700; color:var(--muted); white-space:nowrap; border-bottom:1px solid var(--line);">${label}</th>`;
   app.innerHTML = topbar(trn("title_overview")) + `
     <button class="ghost" onclick="goToRoleMenu()">&larr; ${t_back()}</button>
     <div class="card" style="margin-top:8px;">
@@ -2416,30 +2417,30 @@ function renderTrainingOverviewBody(ov, openKey) {
         <div><div style="font-size:22px; font-weight:800;">${t.total || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_total")}</div></div>
         <div><div style="font-size:22px; font-weight:800; color:${(t.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)"};">${t.overdue || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_overdue")}</div></div>
         <div><div style="font-size:22px; font-weight:800;">${t.active || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_active")}</div></div>
-        <div><div style="font-size:22px; font-weight:800; color:var(--teal);">${t.proposed || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_proposed")}</div></div>
-        <div><div style="font-size:22px; font-weight:800; color:var(--ok);">${t.confirmed || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_confirmed")}</div></div>
+        <div><div style="font-size:22px; font-weight:800; color:#6C4FB6;">${t.proposed || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_proposed")}</div></div>
+        <div><div style="font-size:22px; font-weight:800; color:#0E7C5A;">${t.confirmed || 0}</div><div class="hint" style="font-size:12px;">${trn("ov_confirmed")}</div></div>
       </div>
     </div>
     <div class="card" style="margin-top:8px;">
-      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">${tabs}</div>
-      <div style="font-weight:800; margin-bottom:4px;">${trn("ov_departments")} <span class="hint" style="font-weight:400;">· ${trn("ov_tap")}</span></div>
-      ${depts.length ? `<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed;">
-        <colgroup><col style="width:34%"><col style="width:11%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:10%"><col style="width:20%"></colgroup>
-        <tr style="color:var(--muted); font-size:12px;">
-          <th style="text-align:left; padding:6px;">${trn("ov_c_dept")}</th>
-          <th style="text-align:right; padding:6px;">${trn("ov_c_people")}</th>
-          <th style="text-align:right; padding:6px;">${trn("ov_c_total")}</th>
-          <th style="text-align:right; padding:6px;">${trn("ov_c_overdue")}</th>
-          <th style="text-align:right; padding:6px;">${trn("ov_c_active")}</th>
-          <th style="text-align:right; padding:6px;">${trn("ov_c_proposed")}</th>
-          <th style="text-align:left; padding:6px;">${trn("ov_c_progress")}</th>
-        </tr>
-        ${depts.map(d => `<tr onclick="trnOpenDept('${escapeHtml(d.key)}')" style="cursor:pointer; border-top:1px solid var(--line); ${open && open.key === d.key ? "background:#E3F3EC;" : ""}">
-          <td style="padding:8px 6px;"><b>${escapeHtml(d.name)}</b><div class="hint" style="font-size:11px;">${escapeHtml(BUSINESS_UNIT_LABELS_UI[d.businessUnit] || d.businessUnit)}</div></td>
-          ${num(d.people)}${num(d.total)}${num(d.overdue, d.overdue > 0)}${num(d.active)}${num(d.proposed)}
-          <td style="padding:8px 6px;">${bar(d.progress)}<div class="hint" style="font-size:11px; margin-top:2px;">${d.progress}%</div></td>
+      ${tabs}
+      <div style="font-weight:800; margin-bottom:2px;">${trn("ov_departments")}</div>
+      <div class="hint" style="font-size:12px; margin-bottom:8px;">${trn("ov_tap")}</div>
+      ${depts.length ? `<style>.ov-table{display:block}.ov-cards{display:none}@media (max-width:640px){.ov-table{display:none}.ov-cards{display:block}}</style><div class="ov-table" style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; min-width:560px;">
+        <colgroup><col style="width:28%"><col style="width:10%"><col style="width:10%"><col style="width:11%"><col style="width:12%"><col style="width:11%"><col style="width:18%"></colgroup>
+        <tr>${th(trn("ov_c_dept"), "left")}${th(trn("ov_c_people"))}${th(trn("ov_c_total"))}${th(trn("ov_c_overdue"))}${th(trn("ov_c_active"))}${th(trn("ov_c_proposed"))}${th(trn("ov_c_progress"), "left")}</tr>
+        ${depts.map(d => `<tr onclick="trnOpenDept('${escapeHtml(d.key)}')" style="cursor:pointer; border-bottom:1px solid var(--line); ${open && open.key === d.key ? "background:#E3F3EC;" : ""}">
+          <td style="padding:10px 8px;"><div style="font-weight:700;">${escapeHtml(d.name)}</div>${multi ? `<div class="hint" style="font-size:11px;">${escapeHtml(BUSINESS_UNIT_LABELS_UI[d.businessUnit] || d.businessUnit)}</div>` : ""}</td>
+          ${cell(d.people)}${cell(d.total)}${cell(d.overdue, d.overdue > 0)}${cell(d.active)}${cell(d.proposed)}
+          <td style="padding:10px 8px;">${bar(d.progress)}</td>
         </tr>`).join("")}
-      </table></div>` : `<div class="hint">${trn("ov_none")}</div>`}
+      </table></div><div class="ov-cards">${depts.map(d => `
+        <div onclick="trnOpenDept('${escapeHtml(d.key)}')" style="border:1px solid ${open && open.key === d.key ? "#0E7C5A" : "var(--line)"}; border-radius:12px; padding:12px 14px; margin-bottom:10px; background:#fff; cursor:pointer;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;"><div style="min-width:0;"><div style="font-weight:800;">${escapeHtml(d.name)}</div>${multi ? `<div class="hint" style="font-size:11px;">${escapeHtml(BUSINESS_UNIT_LABELS_UI[d.businessUnit] || d.businessUnit)}</div>` : ""}</div><div style="font-size:12px; color:var(--muted); white-space:nowrap;">${d.people} ${trn("ov_c_people").toLowerCase()}</div></div>
+          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:10px; text-align:center;">
+            ${[[d.total, "ov_c_total", false], [d.overdue, "ov_c_overdue", d.overdue > 0], [d.active, "ov_c_active", false], [d.proposed, "ov_c_proposed", false]].map(([v, k, bad]) => `<div><div style="font-weight:800; font-size:16px; color:${bad ? "var(--bad)" : "var(--ink)"};">${v}</div><div style="font-size:11px; color:var(--muted);">${trn(k)}</div></div>`).join("")}
+          </div>
+          <div style="margin-top:10px;">${bar(d.progress)}</div>
+        </div>`).join("")}</div>` : `<div class="hint">${trn("ov_none")}</div>`}
     </div>
     ${open ? `<div class="card" style="margin-top:8px;">
       <div style="font-weight:800; margin-bottom:6px;">${escapeHtml(open.name)} <span class="hint" style="font-weight:400;">· ${people.length} ${trn("ov_c_people").toLowerCase()}</span></div>
@@ -2448,7 +2449,7 @@ function renderTrainingOverviewBody(ov, openKey) {
         <div style="text-align:right;">${p.total}</div>
         <div style="text-align:right; color:${p.overdue ? "var(--bad)" : "inherit"}; font-weight:${p.overdue ? "800" : "400"};">${p.overdue}</div>
         <div style="text-align:right;">${p.active}</div>
-        <div>${bar(p.progress)}<div class="hint" style="font-size:11px;">${p.progress}%</div></div>
+        <div>${bar(p.progress)}</div>
         <div class="hint" style="font-size:12px;">${p.nextDue ? trn("ov_nearest") + ": " + escapeHtml(noticeDateText(p.nextDue)) : ""}</div>
       </div>`).join("")}
     </div>` : ""}
@@ -9476,7 +9477,7 @@ async function renderGm() {
         ${isEdit ? `<div class="hint" style="font-weight:700; color:var(--coral); margin-bottom:8px;">${t("gm_edit_mode_warning")}</div>` : ""}
         <label>${t("gm_decision_label")}</label>
         <div class="hint" style="margin-top:-4px; margin-bottom:6px;">${t("gm_decision_rule")}</div>
-        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:8px 14px; margin-bottom:10px;">
           ${opts.map(o => `
             <label style="display:flex; align-items:center; gap:8px; font-weight:400; text-transform:none; letter-spacing:normal; font-size:15px; cursor:pointer;">
               <input type="checkbox" id="decision-check-${o.value}-${s.staffId}" value="${o.value}" ${isChecked(o.value) ? "checked" : ""} onchange="toggleDecisionCheckbox('${s.staffId}', '${o.value}')" style="width:18px; height:18px;" />
@@ -9580,15 +9581,16 @@ async function renderGm() {
       <div id="gm-list-container">
       ${list.map(s => `
         <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-approved="${s.approvalStatus === 'Approved'}" data-name="${escapeAttr(s.name)}" data-score="${s.finalScore || 0}" class="clickable-card" style="${s.cycleType === 'compressed' ? 'background:#FFFBF3; box-shadow:inset 3px 0 0 #E8C36A;' : ''} border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
-          <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
-            <div style="display:flex; align-items:center; gap:10px;">
+          <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start; justify-content:space-between;">
+            <div style="display:flex; align-items:flex-start; gap:12px; flex:1 1 260px; min-width:0;">
               <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />
               <div id="photo-fallback-${s.staffId}" style="width:44px; height:44px; border-radius:10px; background:var(--sand); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-weight:800; color:var(--teal); font-size:16px;">${s.name.charAt(0)}</div>
               <div>
                 <div class="name">${s.name} <span style="font-weight:400; color:var(--text-muted);">(${s.department !== "-" ? s.department : s.tier})</span></div>
                 ${s.cycleType === "compressed" ? `<div style="margin-top:4px;"><span title="${t("gm_compressed_hint")}" style="display:inline-block; background:var(--amber); color:#fff; font-size:12px; font-weight:700; padding:2px 9px; border-radius:999px;">${t("gm_compressed_badge")}</span></div>` : ""}
                 <div class="dept" style="margin-top:6px; font-weight:700; color:var(--teal); font-size:15px;">Score ${Number(s.finalScore || 0).toFixed(1)}</div>
-                <div class="dept" style="margin-top:6px;">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:6px 14px; margin-top:8px; font-size:13px;">
+                <div class="dept">Self: ${Number(s.selfTotal || 0).toFixed(1)}</div>
                 <div class="dept" style="margin-top:2px;">${s.leaderEvaluatorTier || "Leader/Management"}: ${Number(s.leaderTotal || 0).toFixed(1)} ${Number(s.leaderTotal || 0) === 0
                   ? `<span style="color:var(--red); font-weight:700;">⚠️ ${(s.leaderEvaluatorName ? t("gm_leader_not_filled") : t("gm_leader_unassigned")).split("{name}").join(escapeHtml(s.name))}${s.leaderEvaluatorName ? ` (${t("gm_leader_label")}: ${escapeHtml(s.leaderEvaluatorName)})` : ""}</span>`
                   : `<span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.leaderEvaluatorName || "-"})</span>`}</div>
@@ -9597,11 +9599,12 @@ async function renderGm() {
                   : Number(s.hrTotal || 0) === 0
                     ? `<span style="color:var(--red); font-weight:700;">⚠️ HR tidak mengisi${state.month >= "2026-10" ? " — bobot HR tidak dihitung, dialihkan ke Leader" : ""}</span>`
                     : `${Number(s.hrTotal).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span>`}</div>
+                </div>
                 ${deadlineLineHtml(s.executiveDeadline)}
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">${t("gm_decision_label_inline")} <strong>${findDecisionLabels(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               ${statusBadge(s.status !== 'Underperform', s.status)}
               ${s.approvalStatus === 'Approved'
                 ? `<span class="badge done">${t("gm_approved_badge")}</span><button class="ghost" style="font-size:12px;" onclick="event.stopPropagation(); toggleDecisionForm('${s.staffId}')">${t("gm_edit_btn")}</button>`

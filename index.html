@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-362-training-panels — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-363-english-pass — LIVE</div>
 
 <script>
 // =================================================================
@@ -522,8 +522,8 @@ function feedbackWhenLabel(dateInput) {
 }
 
 function statusLabelID(status) {
-  const map = { "Submitted": "Sudah Diisi", "Not started": "Belum Diisi", "Approved": "Disetujui", "Pending": "Menunggu" };
-  return map[status] || status;
+  const map = { "Submitted": "st_done", "Not started": "st_todo", "Approved": "st_approved", "Pending": "st_pending" };
+  return map[status] ? t(map[status]) : status;
 }
 
 function findLabel(options, value) {
@@ -1049,6 +1049,8 @@ const translations = {
     gm_leader_not_filled: "⚠️ Leader tidak mengisi appraisal untuk {name}",
     gm_leader_unassigned: "⚠️ Belum ada leader yang ditugaskan untuk {name}",
     gm_leader_label: "Leader",
+    st_done: "Sudah Diisi", st_todo: "Belum Diisi", st_approved: "Disetujui", st_pending: "Menunggu",
+    trend_need_more: "Grafik akan muncul begitu ada 2 bulan data atau lebih.", myeval_notdone_btn: "Belum Diisi Saja",
     gm_compressed_badge: "⏱ Siklus dipersingkat",
     gm_compressed_short: "⏱ Dipersingkat",
     dl_done: "Sudah selesai", dl_until: "Batas: {date}", dl_opens_on: "Dibuka {date}", dl_opens_after: "Dibuka setelah {stage} selesai, paling lambat {date}", dl_closed: "Jendela sudah tutup ({date})", dl_list_title: "Jadwal tahap", stage_self: "Self Appraisal", stage_leader: "Leader", stage_hr: "HR", stage_executive: "Approval",
@@ -1636,6 +1638,8 @@ const translations = {
     gm_leader_not_filled: "⚠️ Leader has not filled in the appraisal for {name}",
     gm_leader_unassigned: "⚠️ No leader is assigned to {name}",
     gm_leader_label: "Leader",
+    st_done: "Submitted", st_todo: "Not filled", st_approved: "Approved", st_pending: "Waiting",
+    trend_need_more: "The chart appears once there are 2 or more months of data.", myeval_notdone_btn: "Not Filled Only",
     gm_compressed_badge: "⏱ Shortened cycle",
     gm_compressed_short: "⏱ Shortened",
     dl_done: "Done", dl_until: "Deadline: {date}", dl_opens_on: "Opens {date}", dl_opens_after: "Opens after {stage} is done, at the latest {date}", dl_closed: "Window closed ({date})", dl_list_title: "Stage schedule", stage_self: "Self Appraisal", stage_leader: "Leader", stage_hr: "HR", stage_executive: "Approval",
@@ -3533,9 +3537,9 @@ async function renderDashboard() {
     } else if (history.length === 1) {
       chartBlock = `
         <div class="card" style="background:linear-gradient(135deg, var(--teal), var(--teal-dark)); border:none; text-align:center;">
-          <div style="color:rgba(255,255,255,0.75); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Skor Bulan ${history[0].month}</div>
+          <div style="color:rgba(255,255,255,0.75); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">${t("gm_trend_score_of_month_prefix")} ${history[0].month}</div>
           <div style="color:#fff; font-size:36px; font-weight:800; margin-top:4px;">${Number(history[0].finalScore || 0).toFixed(1)}</div>
-          <div style="color:rgba(255,255,255,0.7); font-size:12px; margin-top:6px;">Grafik akan muncul begitu ada 2 bulan data atau lebih.</div>
+          <div style="color:rgba(255,255,255,0.7); font-size:12px; margin-top:6px;">${t("trend_need_more")}</div>
         </div>`;
     } else {
       chartBlock = `<div class="card"><div class="hint">Belum ada riwayat skor — grafik akan muncul begitu appraisal pertamamu selesai diproses.</div></div>`;
@@ -3604,7 +3608,7 @@ async function renderDashboard() {
           return `
             <div class="staff-row" style="opacity:0.55; cursor:not-allowed; border-left: 4px solid var(--border);">
               <div class="name">${item.label}</div>
-              <span class="badge pending">Sudah Diisi</span>
+              <span class="badge pending">${t("st_done")}</span>
             </div>`;
         }
         if (item.key === "myFeedback") {
@@ -3728,7 +3732,7 @@ async function renderMyEvaluations(slotFilter) {
         ${[...new Set(list.map(s => s.department !== "-" ? s.department : s.tier))].sort().map(d => `<option value="${escapeAttr(d)}">${d}</option>`).join("")}
       </select>
     </div>
-    <button class="secondary" id="myeval-notdone-btn" onclick="toggleMyEvalFilterBtn('notDoneOnly', 'myeval-notdone-btn')" style="margin-bottom:10px;">Belum Diisi Saja</button>
+    <button class="secondary" id="myeval-notdone-btn" onclick="toggleMyEvalFilterBtn('notDoneOnly', 'myeval-notdone-btn')" style="margin-bottom:10px;">${t("myeval_notdone_btn")}</button>
     <div class="hint">${list.length} orang — klik untuk isi appraisal</div>
     <div id="myeval-list-container">
     ${list.map(s => `

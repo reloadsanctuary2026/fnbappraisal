@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-367-mobile-relayout — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-368-hover-tips — LIVE</div>
 
 <script>
 // =================================================================
@@ -2232,14 +2232,20 @@ function trnStepsHtml(item, opts) {
     </label>`).join("")}</div>`;
 }
 function trnSummaryTiles(s) {
-  const tile = (n, labelKey, color, tipKey) => `<div style="flex:1 1 130px; min-width:130px; background:#fff; border:1px solid var(--line); border-left:5px solid ${color}; border-radius:10px; padding:10px 12px;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="font-size:24px; font-weight:800; color:${color};">${n || 0}</span>
-        <button type="button" title="${escapeAttr(trn(tipKey))}" onclick="trnTip('${tipKey}')" aria-label="${escapeAttr(trn(tipKey))}" style="width:22px; height:22px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:12px; cursor:pointer; padding:0;">?</button>
+  // The "?" shows its explanation the moment the mouse is over the category (or the finger touches it), no click needed.
+  const tile = (n, labelKey, color, tipKey) => `<div class="trn-tile" tabindex="0" style="flex:1 1 130px; min-width:120px; background:#fff; border:1px solid var(--line); border-left:5px solid ${color}; border-radius:10px; padding:10px 12px; position:relative; outline:none;">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:24px; font-weight:800; color:${color}; line-height:1.1;">${n || 0}</span>
+        <span aria-label="${escapeAttr(trn(tipKey))}" style="width:20px; height:20px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:12px; display:inline-flex; align-items:center; justify-content:center; cursor:help;">?</span>
       </div>
-      <div style="font-size:13px; color:var(--ink); margin-top:2px;">${trn(labelKey)}</div>
+      <div style="font-size:13px; color:var(--ink); margin-top:4px;">${trn(labelKey)}</div>
+      <div class="trn-tip-box">${trn(tipKey)}</div>
     </div>`;
-  return `<div class="card" style="margin-bottom:8px;">
+  return `<style>
+      .trn-tile .trn-tip-box{display:none; position:absolute; left:0; top:calc(100% + 6px); z-index:30; width:260px; max-width:86vw; background:#2B2420; color:#fff; padding:9px 11px; border-radius:8px; font-size:12px; line-height:1.45; box-shadow:0 6px 18px rgba(0,0,0,.18);}
+      .trn-tile:hover .trn-tip-box, .trn-tile:focus .trn-tip-box, .trn-tile:focus-within .trn-tip-box{display:block;}
+    </style>
+  <div class="card" style="margin-bottom:8px; overflow:visible;">
     <div style="font-weight:800; margin-bottom:10px;">${trn("summary_title")}</div>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
       ${tile(s.overdue, "sum_overdue", "#B8352B", "tip_overdue")}
@@ -2248,7 +2254,6 @@ function trnSummaryTiles(s) {
       ${tile(s.inProgress, "sum_active", "#2E6FBF", "tip_active")}
       ${tile(s.confirmed, "sum_done", "#0E7C5A", "tip_done")}
     </div>
-    <div id="trn-tip" style="display:none; margin-top:10px; font-size:13px; color:var(--ink); background:#F5EBDC; border-radius:8px; padding:8px 10px;"></div>
   </div>`;
 }
 

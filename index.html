@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-361-stage-deadlines — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-362-training-panels — LIVE</div>
 
 <script>
 // =================================================================
@@ -1895,7 +1895,7 @@ function render() {
   if (state.screen === "trainingNeeds") return renderTrainingNeeds();
   if (state.screen === "myTraining") return renderMyTraining();
   if (state.screen === "trainingOverview") return renderTrainingOverview();
-  if (state.screen === "myDevelopmentPlan") return renderMyDevelopmentPlan();
+  if (state.screen === "myDevelopmentPlan") return renderMyTraining();
   if (state.screen === "form") return renderAppraisalForm({ evaluatorType: state.evaluatorType, target: state.targetStaff });
   if (state.screen === "gm") return renderGm();
   if (state.screen === "notifications") return renderNotifications();
@@ -1948,7 +1948,7 @@ function topbar(title) {
 const BUSINESS_UNIT_LABELS_UI = { fnb: "F&B", gym: "Gym", backoffice: "Back Office" };
 const TRN = {
   id: {
-    menu_mine: "Training Saya", menu_team: "Training & Development", title_mine: "Training Saya", title_team: "Training & Development",
+    menu_mine: "Training Saya", menu_team: "Training & Development", card_mine_title: "Training saya", card_team_title: "Tim kamu", card_org_title: "Seluruh unit", title_mine: "Training Saya", title_team: "Training & Development",
     card_title: "Training & Development", card_mine_btn: "Lihat training saya", card_team_btn: "Kelola training tim",
     card_overdue: "Terlambat", card_soon: "Jatuh tempo ≤ 14 hari", card_active: "Sedang berjalan",
     card_decide: "Usulan menunggu", card_confirm: "Menunggu konfirmasi", card_calm: "Tidak ada training yang mendesak.",
@@ -1973,7 +1973,7 @@ const TRN = {
     materials_field: "Link materi (satu per baris, format: nama|link)", materials_ph: "SOP Latte Art|https://...",
   },
   en: {
-    menu_mine: "My Training", menu_team: "Training & Development", title_mine: "My Training", title_team: "Training & Development",
+    menu_mine: "My Training", menu_team: "Training & Development", card_mine_title: "My training", card_team_title: "My team", card_org_title: "All units", title_mine: "My Training", title_team: "Training & Development",
     card_title: "Training & Development", card_mine_btn: "See my training", card_team_btn: "Manage team training",
     card_overdue: "Overdue", card_soon: "Due in 14 days or less", card_active: "In progress",
     card_decide: "Proposals waiting", card_confirm: "Waiting to be confirmed", card_calm: "Nothing urgent in training right now.",
@@ -2328,31 +2328,23 @@ async function renderTrainingNeeds() {
 }
 
 /** Dashboard card for HR and Executives: the organisation in their reach, the departments that need attention, and their own training only if they have any. */
+/** Card for HR and Executives: the organisation in their reach, plus their own training only when they have some. */
 function buildOrgTrainingCard(ov, mine) {
-  const t = (ov && ov.totals) || {};
+  const t2 = (ov && ov.totals) || {};
   const top = ((ov && ov.departments) || []).filter(d => d.overdue > 0 || d.proposed > 0).slice(0, 3);
-  const tile = (n, label, color) => `<div style="flex:1; min-width:100px;">
-      <div style="font-size:22px; font-weight:800; color:${color};">${n || 0}</div><div class="hint" style="font-size:12px;">${label}</div></div>`;
-  const myActive = mine.filter(i => trnUrgency(i) !== "done").length;
-  const mineBtn = mine.length ? `<button class="secondary" onclick="goToScreen('myTraining')">${trn("card_mine_btn")}</button>` : "";
+  const topList = top.length
+    ? `<div style="margin-top:10px; padding-top:8px; border-top:1px dashed #CFE8DC;">${top.map(d => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:3px 0;"><span>${escapeHtml(d.name)}</span><span style="color:${d.overdue ? "var(--bad)" : "var(--muted)"}; font-weight:700;">${d.overdue} ${trn("card_overdue").toLowerCase()} · ${d.proposed} ${trn("card_decide").toLowerCase()}</span></div>`).join("")}</div>`
+    : "";
+  const orgPanel = trainingPanel(trn("card_org_title"),
+    trainingStat(t2.total, trn("ov_total"), false) + trainingStat(t2.overdue, trn("card_overdue"), (t2.overdue || 0) > 0) + trainingStat(t2.proposed, trn("card_decide"), false),
+    trainingLinkButton(trn("card_org_btn"), "trainingOverview", true)) ;
+  const minePanel = mine.length ? trainingPanel(trn("card_mine_title"),
+    trainingStat(mine.filter(i => trnUrgency(i) === "overdue").length, trn("card_overdue"), false) + trainingStat(mine.filter(i => i.approvalStatus === "" && i.status === "Sedang Berjalan").length, trn("card_active"), false),
+    trainingLinkButton(trn("card_mine_btn"), "myTraining", false)) : "";
   return `<div class="card" style="background:#E3F3EC; border:1px solid #9ED3BF; border-left:6px solid #0E7C5A; padding:14px 16px;">
-    <div style="font-weight:800; color:#0E5C43; font-size:13px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">${trn("card_title")}</div>
-    <div style="display:flex; gap:12px; flex-wrap:wrap;">
-      ${tile(t.total, trn("ov_total"), "var(--ink)")}
-      ${tile(t.overdue, trn("ov_overdue"), (t.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)")}
-      ${tile(t.active, trn("ov_active"), "var(--ink)")}
-      ${tile(t.proposed, trn("ov_proposed"), "var(--teal)")}
-    </div>
-    ${top.length ? `<div style="margin-top:12px; padding-top:10px; border-top:1px dashed #9ED3BF;">
-      <div style="font-size:12px; font-weight:800; color:#0E5C43; margin-bottom:4px;">${trn("card_top_depts")}</div>
-      ${top.map(d => `<div style="display:flex; justify-content:space-between; font-size:13px; padding:3px 0;">
-        <span>${escapeHtml(d.name)}</span><span style="color:${d.overdue ? "var(--bad)" : "var(--muted)"}; font-weight:700;">${d.overdue} ${trn("ov_overdue").toLowerCase()} · ${d.proposed} ${trn("ov_proposed").toLowerCase()}</span></div>`).join("")}
-    </div>` : `<div class="hint" style="margin-top:8px;">${trn("card_calm")}</div>`}
-    ${myActive || mine.length ? `<div class="hint" style="margin-top:8px;">${trn("card_mine_btn")}: ${myActive}</div>` : ""}
-    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-      <button class="primary" onclick="goToScreen('trainingOverview')">${trn("card_org_btn")}</button>
-      ${mineBtn}
-    </div>
+    <div style="font-weight:800; color:#0E5C43; font-size:13px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:10px;">${trn("card_title")}</div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">${orgPanel}${minePanel}</div>
+    ${topList ? `<div style="font-size:12px; font-weight:800; color:#0E5C43; margin-top:12px;">${trn("card_top_depts")}</div>${topList}` : ""}
   </div>`;
 }
 
@@ -2448,33 +2440,41 @@ function trnOpenDept(key) {
 function t_back() { return t("form_back"); }
 
 /** Dashboard card: the most important training numbers, with the entry point. */
+/** One block on the training card: a title that says whose numbers these are, the numbers, and one action. */
+function trainingPanel(title, stats, action) {
+  return `<div style="flex:1 1 240px; min-width:240px; background:#fff; border:1px solid #CFE8DC; border-radius:12px; padding:12px 14px; display:flex; flex-direction:column;">
+    <div style="font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:#0E5C43; margin-bottom:10px;">${title}</div>
+    <div style="display:flex; gap:14px; flex-wrap:wrap; flex:1;">${stats}</div>
+    <div style="margin-top:12px;">${action}</div>
+  </div>`;
+}
+function trainingStat(n, label, bad) {
+  return `<div style="min-width:78px;"><div style="font-size:22px; font-weight:800; line-height:1.1; color:${bad ? "var(--bad)" : "var(--ink)"};">${n || 0}</div><div style="font-size:12px; color:var(--muted); margin-top:3px;">${label}</div></div>`;
+}
+function trainingLinkButton(label, screen, solid) {
+  return `<button onclick="goToScreen('${screen}')" style="width:100%; padding:9px 12px; border-radius:10px; font-weight:700; cursor:pointer; font:inherit; font-size:14px; border:${solid ? "none" : "1.5px solid #0E7C5A"}; background:${solid ? "#0E7C5A" : "#fff"}; color:${solid ? "#fff" : "#0E5C43"};">${label}</button>`;
+}
+
+/** Card for everyone who is not HR or Executive. Their own training is one block; a leader's team is a second block. */
 function buildTrainingCard(mine, teamSummary, isReviewer) {
   const cnt = (list, fn) => list.filter(fn).length;
   const overdue = cnt(mine, i => trnUrgency(i) === "overdue");
   const soon = cnt(mine, i => trnUrgency(i) === "soon");
   const active = cnt(mine, i => i.approvalStatus === "" && i.status === "Sedang Berjalan");
-  const tile = (n, label, color) => `<div style="flex:1; min-width:100px;">
-      <div style="font-size:22px; font-weight:800; color:${color};">${n}</div><div class="hint" style="font-size:12px;">${label}</div></div>`;
-  const nothing = !overdue && !soon && !active && !(teamSummary && (teamSummary.overdue || teamSummary.proposed || teamSummary.doneNotConfirmed));
-  const team = isReviewer && teamSummary ? `
-      <div style="display:flex; gap:12px; margin-top:12px; padding-top:12px; border-top:1px dashed #9ED3BF;">
-        ${tile(teamSummary.overdue || 0, trn("card_overdue") + " (tim)", (teamSummary.overdue || 0) > 0 ? "var(--bad)" : "var(--ink)")}
-        ${tile(teamSummary.proposed || 0, trn("card_decide"), "var(--teal)")}
-        ${tile(teamSummary.doneNotConfirmed || 0, trn("card_confirm"), "var(--teal)")}
-      </div>` : "";
+  const showMine = mine.length > 0 || !isReviewer;
+  const teamHas = !!(teamSummary && (teamSummary.overdue || teamSummary.proposed || teamSummary.doneNotConfirmed));
+  const panels = [];
+  if (showMine) panels.push(trainingPanel(trn("card_mine_title"),
+    trainingStat(overdue, trn("card_overdue"), overdue > 0) + trainingStat(soon, trn("card_soon"), false) + trainingStat(active, trn("card_active"), false),
+    trainingLinkButton(trn("card_mine_btn"), "myTraining", !isReviewer)));
+  if (isReviewer && teamSummary) panels.push(trainingPanel(trn("card_team_title"),
+    trainingStat(teamSummary.overdue, trn("card_overdue"), (teamSummary.overdue || 0) > 0) + trainingStat(teamSummary.proposed, trn("card_decide"), false) + trainingStat(teamSummary.doneNotConfirmed, trn("card_confirm"), false),
+    trainingLinkButton(trn("card_team_btn"), "trainingNeeds", true)));
+  const calm = !overdue && !soon && !active && !teamHas;
   return `<div class="card" style="background:#E3F3EC; border:1px solid #9ED3BF; border-left:6px solid #0E7C5A; padding:14px 16px;">
-    <div style="font-weight:800; color:#0E5C43; font-size:13px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;">${trn("card_title")}</div>
-    <div style="display:flex; gap:12px;">
-      ${tile(overdue, trn("card_overdue"), overdue ? "var(--bad)" : "var(--ink)")}
-      ${tile(soon, trn("card_soon"), soon ? "#8A5A00" : "var(--ink)")}
-      ${tile(active, trn("card_active"), "var(--ink)")}
-    </div>
-    ${nothing && !team ? `<div class="hint" style="margin-top:8px;">${trn("card_calm")}</div>` : ""}
-    ${team}
-    <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;">
-      <button class="primary" onclick="goToScreen('myTraining')">${trn("card_mine_btn")}</button>
-      ${isReviewer ? `<button class="secondary" onclick="goToScreen('trainingNeeds')">${trn("card_team_btn")}</button>` : ""}
-    </div>
+    <div style="font-weight:800; color:#0E5C43; font-size:13px; text-transform:uppercase; letter-spacing:.04em; margin-bottom:10px;">${trn("card_title")}</div>
+    ${panels.length ? `<div style="display:flex; gap:12px; flex-wrap:wrap;">${panels.join("")}</div>` : ""}
+    ${calm ? `<div class="hint" style="margin-top:8px;">${trn("card_calm")}</div>` : ""}
   </div>`;
 }
 
@@ -3373,7 +3373,6 @@ function availableScreensGrouped(user) {
       { key: "self", label: t("menu_self") },
       { key: "myFeedback", label: t("menu_my_feedback") },
       { key: "history", label: t("menu_history") },
-      { key: "myDevelopmentPlan", label: t("menu_dev_plan") },
     ]});
   }
 

@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-368-hover-tips — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-370-overview-cards — LIVE</div>
 
 <script>
 // =================================================================
@@ -2233,21 +2233,25 @@ function trnStepsHtml(item, opts) {
 }
 function trnSummaryTiles(s) {
   // The "?" shows its explanation the moment the mouse is over the category (or the finger touches it), no click needed.
-  const tile = (n, labelKey, color, tipKey) => `<div class="trn-tile" tabindex="0" style="flex:1 1 130px; min-width:120px; background:#fff; border:1px solid var(--line); border-left:5px solid ${color}; border-radius:10px; padding:10px 12px; position:relative; outline:none;">
+  const tile = (n, labelKey, color, tipKey) => `<div class="trn-tile" tabindex="0" style="min-width:0; background:#fff; border:1px solid var(--line); border-left:4px solid ${color}; border-radius:10px; padding:8px 8px 8px 9px; position:relative; outline:none;">
       <div style="display:flex; align-items:center; gap:6px;">
-        <span style="font-size:24px; font-weight:800; color:${color}; line-height:1.1;">${n || 0}</span>
-        <span aria-label="${escapeAttr(trn(tipKey))}" style="width:20px; height:20px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:12px; display:inline-flex; align-items:center; justify-content:center; cursor:help;">?</span>
+        <span class="trn-num" style="color:${color};">${n || 0}</span>
+        <span aria-label="${escapeAttr(trn(tipKey))}" style="width:18px; height:18px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--muted); font-weight:800; font-size:11px; display:inline-flex; align-items:center; justify-content:center; cursor:help; flex-shrink:0;">?</span>
       </div>
-      <div style="font-size:13px; color:var(--ink); margin-top:4px;">${trn(labelKey)}</div>
+      <div class="trn-lbl">${trn(labelKey)}</div>
       <div class="trn-tip-box">${trn(tipKey)}</div>
     </div>`;
   return `<style>
+      .trn-summary-row{display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:6px;}
+      .trn-tile .trn-num{font-size:22px; font-weight:800; line-height:1.1;}
+      .trn-tile .trn-lbl{font-size:12px; color:var(--ink); margin-top:4px; line-height:1.25;}
+      @media (max-width:420px){ .trn-tile .trn-num{font-size:18px;} .trn-tile .trn-lbl{font-size:11px;} .trn-tile{padding:7px 6px 7px 7px;} }
       .trn-tile .trn-tip-box{display:none; position:absolute; left:0; top:calc(100% + 6px); z-index:30; width:260px; max-width:86vw; background:#2B2420; color:#fff; padding:9px 11px; border-radius:8px; font-size:12px; line-height:1.45; box-shadow:0 6px 18px rgba(0,0,0,.18);}
       .trn-tile:hover .trn-tip-box, .trn-tile:focus .trn-tip-box, .trn-tile:focus-within .trn-tip-box{display:block;}
     </style>
   <div class="card" style="margin-bottom:8px; overflow:visible;">
     <div style="font-weight:800; margin-bottom:10px;">${trn("summary_title")}</div>
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <div class="trn-summary-row">
       ${tile(s.overdue, "sum_overdue", "#B8352B", "tip_overdue")}
       ${tile(s.proposed, "sum_proposal", "#6C4FB6", "tip_proposal")}
       ${tile(s.doneNotConfirmed, "sum_confirm", "#B7791F", "tip_confirm")}
@@ -2430,19 +2434,14 @@ function renderTrainingOverviewBody(ov, openKey) {
       ${tabs}
       <div style="font-weight:800; margin-bottom:2px;">${trn("ov_departments")}</div>
       <div class="hint" style="font-size:12px; margin-bottom:8px;">${trn("ov_tap")}</div>
-      ${depts.length ? `<style>.ov-table{display:block}.ov-cards{display:none}@media (max-width:640px){.ov-table{display:none}.ov-cards{display:block}}</style><div class="ov-table" style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; min-width:560px;">
-        <colgroup><col style="width:28%"><col style="width:10%"><col style="width:10%"><col style="width:11%"><col style="width:12%"><col style="width:11%"><col style="width:18%"></colgroup>
-        <tr>${th(trn("ov_c_dept"), "left")}${th(trn("ov_c_people"))}${th(trn("ov_c_total"))}${th(trn("ov_c_overdue"))}${th(trn("ov_c_active"))}${th(trn("ov_c_proposed"))}${th(trn("ov_c_progress"), "left")}</tr>
-        ${depts.map(d => `<tr onclick="trnOpenDept('${escapeHtml(d.key)}')" style="cursor:pointer; border-bottom:1px solid var(--line); ${open && open.key === d.key ? "background:#E3F3EC;" : ""}">
-          <td style="padding:10px 8px;"><div style="font-weight:700;">${escapeHtml(d.name)}</div>${multi ? `<div class="hint" style="font-size:11px;">${escapeHtml(BUSINESS_UNIT_LABELS_UI[d.businessUnit] || d.businessUnit)}</div>` : ""}</td>
-          ${cell(d.people)}${cell(d.total)}${cell(d.overdue, d.overdue > 0)}${cell(d.active)}${cell(d.proposed)}
-          <td style="padding:10px 8px;">${bar(d.progress)}</td>
-        </tr>`).join("")}
-      </table></div><div class="ov-cards">${depts.map(d => `
-        <div onclick="trnOpenDept('${escapeHtml(d.key)}')" style="border:1px solid ${open && open.key === d.key ? "#0E7C5A" : "var(--line)"}; border-radius:12px; padding:12px 14px; margin-bottom:10px; background:#fff; cursor:pointer;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;"><div style="min-width:0;"><div style="font-weight:800;">${escapeHtml(d.name)}</div>${multi ? `<div class="hint" style="font-size:11px;">${escapeHtml(BUSINESS_UNIT_LABELS_UI[d.businessUnit] || d.businessUnit)}</div>` : ""}</div><div style="font-size:12px; color:var(--muted); white-space:nowrap;">${d.people} ${trn("ov_c_people").toLowerCase()}</div></div>
-          <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:10px; text-align:center;">
-            ${[[d.total, "ov_c_total", false], [d.overdue, "ov_c_overdue", d.overdue > 0], [d.active, "ov_c_active", false], [d.proposed, "ov_c_proposed", false]].map(([v, k, bad]) => `<div><div style="font-weight:800; font-size:16px; color:${bad ? "var(--bad)" : "var(--ink)"};">${v}</div><div style="font-size:11px; color:var(--muted);">${trn(k)}</div></div>`).join("")}
+      ${depts.length ? `<div style="display:flex; flex-direction:column; gap:10px;">${depts.map(d => `
+        <div onclick="trnOpenDept('${escapeHtml(d.key)}')" style="background:var(--surface-2); border:0.5px solid ${open && open.key === d.key ? "#0E7C5A" : "var(--border)"}; border-radius:12px; padding:12px 14px; cursor:pointer;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:8px;">
+            <div style="min-width:0;"><div style="font-size:15px; font-weight:500; color:var(--text-primary);">${escapeHtml(d.name)}</div>${multi ? `<div style="font-size:11px; color:var(--text-muted);">${escapeHtml(BUSINESS_UNIT_LABELS_UI[d.businessUnit] || d.businessUnit)}</div>` : ""}</div>
+            <div style="font-size:12px; color:var(--text-muted); white-space:nowrap;">${d.people} ${trn("ov_c_people").toLowerCase()}</div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:6px; margin-top:10px; text-align:center;">
+            ${[[d.total, "ov_c_total", null], [d.overdue, "ov_c_overdue", "#B8352B"], [d.active, "ov_c_active", "#2E6FBF"], [d.proposed, "ov_c_proposed", "#6C4FB6"]].map(([v, k, c]) => `<div><div style="font-size:16px; font-weight:500; color:${c && v > 0 ? c : "var(--text-primary)"};">${v}</div><div style="font-size:11px; color:var(--text-secondary); margin-top:1px;">${trn(k)}</div></div>`).join("")}
           </div>
           <div style="margin-top:10px;">${bar(d.progress)}</div>
         </div>`).join("")}</div>` : `<div class="hint">${trn("ov_none")}</div>`}

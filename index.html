@@ -1050,6 +1050,7 @@ const translations = {
     gm_leader_unassigned: "⚠️ Belum ada leader yang ditugaskan untuk {name}",
     gm_leader_label: "Leader",
     gm_compressed_badge: "⏱ Siklus dipersingkat",
+    gm_compressed_short: "⏱ Dipersingkat",
     gm_compressed_hint: "Kontrak berakhir bulan ini, jadi siklus appraisal-nya dipersingkat.",
     gm_approve_all_busy: "Ada proses lain yang masih berjalan di server (biasanya Approve Semua sebelumnya). Tunggu 2–3 menit, JANGAN klik berulang, lalu muat ulang halaman dan coba lagi. Yang sudah ter-approve tidak diproses ulang.",
     gm_approve_all_already_running: "Approve Semua masih berjalan — tunggu sampai selesai, jangan klik lagi.",
@@ -1635,6 +1636,7 @@ const translations = {
     gm_leader_unassigned: "⚠️ No leader is assigned to {name}",
     gm_leader_label: "Leader",
     gm_compressed_badge: "⏱ Shortened cycle",
+    gm_compressed_short: "⏱ Shortened",
     gm_compressed_hint: "The contract ends this month, so this appraisal cycle is shortened.",
     gm_approve_all_busy: "Another action is still running on the server (usually an earlier Approve All). Wait 2–3 minutes, do NOT click repeatedly, then reload the page and try again. People already approved are not processed again.",
     gm_approve_all_already_running: "Approve All is still running — wait for it to finish, don't click again.",
@@ -2002,6 +2004,12 @@ function trn(key, vars) {
 }
 
 /** Whole days from today to an ISO date (negative = already past). */
+/** The shortened-cycle marker. Shown in every list and screen where a person's name appears for an evaluator, a reviewer or the person themself. */
+function cycleBadgeHtml(x) {
+  if (!x || x.cycleType !== "compressed") return "";
+  return ` <span title="${escapeAttr(t("gm_compressed_hint"))}" style="display:inline-block; vertical-align:middle; margin-left:6px; background:#FFF1CC; color:#8A5A00; border:1px solid #E8C36A; font-size:11px; font-weight:700; padding:1px 8px; border-radius:999px;">${t("gm_compressed_short")}</span>`;
+}
+
 function trnDaysTo(iso) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ""))) return null;
   const d = new Date(iso + "T00:00:00");
@@ -3692,7 +3700,7 @@ async function renderMyEvaluations(slotFilter) {
     ${list.map(s => `
       <div class="staff-row" data-search="${escapeAttr(s.name.toLowerCase())}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-mystatus="${s.status}" data-name="${escapeAttr(s.name)}" onclick="openForm('${s.slot}', '${s.staffId}', '${escapeAttr(s.name)}', '${s.department}', '${s.tier}')">
         <div>
-          <div class="name">${s.name}${s.businessUnit === "backoffice" ? "" : ` <span style="font-weight:700; font-size:11px; color:var(--coral); text-transform:uppercase;">· ${s.slot === "hr" ? "HR" : "Leader/Mgmt"}</span>`}</div>
+          <div class="name">${s.name}${cycleBadgeHtml(s)}${s.businessUnit === "backoffice" ? "" : ` <span style="font-weight:700; font-size:11px; color:var(--coral); text-transform:uppercase;">· ${s.slot === "hr" ? "HR" : "Leader/Mgmt"}</span>`}</div>
           <div class="dept">${s.department !== "-" ? s.department : s.tier} · ${s.tier}</div>
           <div class="dept" style="margin-top:4px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
             ${[
@@ -7565,7 +7573,7 @@ async function renderReview(skipFetch) {
           <div class="staff-row" style="cursor:${hasMissing ? "pointer" : "default"}; display:block;" ${hasMissing ? `onclick="toggleComplianceMissing('${p.staffId}')"` : ""}>
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div>
-                <div class="name">${p.name}</div>
+                <div class="name">${p.name}${cycleBadgeHtml(p)}</div>
                 ${(p.oversees || []).length ? `<div class="cell-sub">${p.oversees.join(", ")}</div>` : ""}
               </div>
               <span class="badge" style="background:${p.percentage >= 100 ? "var(--green-bg)" : p.percentage >= 50 ? "var(--amber-bg)" : "var(--red-bg)"}; color:${barColor};">${p.doneTargets}/${p.totalTargets} (${p.percentage}%)${hasMissing ? (isExpanded ? " ▲" : " ▼") : ""}</span>
@@ -8526,6 +8534,7 @@ async function renderMyAppraisalStatus(target) {
     decisionBlock = `
       <div class="card">
         <h2>Hasil Appraisal Bulan Ini</h2>
+        ${res.cycleType === "compressed" ? `<div class="hint" style="margin-bottom:8px;">${t("gm_compressed_hint")} ${cycleBadgeHtml(res)}</div>` : ""}
         <table class="mini">
           <tr><td>Skor Self</td><td>${Number(d.selfTotal || 0).toFixed(1)}</td></tr>
           <tr><td>Skor Leader/Management</td><td>${Number(d.leaderTotal || 0).toFixed(1)}</td></tr>
@@ -9498,7 +9507,7 @@ async function renderGm() {
       </div>
       <div id="gm-list-container">
       ${list.map(s => `
-        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-approved="${s.approvalStatus === 'Approved'}" data-name="${escapeAttr(s.name)}" data-score="${s.finalScore || 0}" class="clickable-card" style="${s.cycleType === 'compressed' ? 'background:#FFF4DC; border-left:6px solid var(--amber);' : ''} border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
+        <div data-search="${escapeAttr(s.name.toLowerCase())}" data-status="${s.status}" data-department="${escapeAttr(s.department !== "-" ? s.department : s.tier)}" data-approved="${s.approvalStatus === 'Approved'}" data-name="${escapeAttr(s.name)}" data-score="${s.finalScore || 0}" class="clickable-card" style="${s.cycleType === 'compressed' ? 'background:#FFFBF3; box-shadow:inset 3px 0 0 #E8C36A;' : ''} border: 1.5px solid ${s.status === 'Underperform' ? 'var(--amber)' : 'var(--border)'}; border-radius:14px; padding:13px 14px; margin-bottom:8px; cursor:pointer;" onclick="showComparisonModal('${s.staffId}', '${escapeAttr(s.name)}')">
           <div class="staff-row" style="border:none; padding:0; margin:0; cursor:default;">
             <div style="display:flex; align-items:center; gap:10px;">
               <img id="photo-${s.staffId}" alt="" style="width:44px; height:44px; border-radius:10px; object-fit:cover; background:var(--sand); flex-shrink:0; display:none;" onerror="this.style.display='none';" />

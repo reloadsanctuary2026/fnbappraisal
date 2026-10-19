@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-356-approve-feedback — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-357-wipe-and-reopen — LIVE</div>
 
 <script>
 // =================================================================
@@ -5926,7 +5926,7 @@ async function renderDevTools() {
       <h2>🛠️ Koreksi Penilaian</h2>
       <div class="hint" style="margin-bottom:10px;">Satu alat untuk membetulkan penilaian yang salah. <b>Hapus isian</b>: isian satu slot dihapus (dicadangkan) lalu orangnya mengisi ulang. <b>Buka kirim ulang</b>: isian lama tetap ada, orangnya boleh mengirim lagi. <b>Batalkan approval</b>: nilai akhir kembali ke Pending (bulan apa pun sampai bulan ini). Pratinjau dulu: tidak mengubah apa pun.</div>
       <label>Tindakan</label>
-      <select id="kc-action" onchange="kcSync()"><option value="wipe">Hapus isian lalu isi ulang</option><option value="reopen">Buka kirim ulang (isian lama tetap ada)</option><option value="revert">Batalkan approval (kembali ke Pending)</option></select>
+      <select id="kc-action" onchange="kcSync()"><option value="wipe">Hapus isian lalu isi ulang</option><option value="wipe_reopen">Hapus isian lalu buka kirim ulang (satu langkah)</option><option value="reopen">Buka kirim ulang (isian lama tetap ada)</option><option value="revert">Batalkan approval (kembali ke Pending)</option></select>
       <div id="kc-slot-wrap"><label style="margin-top:8px; display:block;">Slot</label>
       <select id="kc-slot" onchange="kcSync()"><option value="self">Self Appraisal</option><option value="leader">Leader</option><option value="hr">HR</option></select></div>
       <label style="margin-top:8px; display:block;">Siapa</label>
@@ -5942,7 +5942,7 @@ async function renderDevTools() {
       <div id="kc-notify-wrap">
         <label style="margin-top:8px; display:block;">Tenggat isi ulang (untuk pesan ke staf, boleh kosong)</label>
         <input type="text" id="kc-deadline" maxlength="60" placeholder="Contoh: Jumat 10 Okt" />
-        <label style="display:flex; align-items:center; gap:8px; margin:10px 0 0; font-weight:400;"><input type="checkbox" id="kc-notify" checked /> Kirim notifikasi ke orangnya</label>
+        <label style="display:flex; align-items:center; gap:8px; margin:10px 0 0; font-weight:400;"><input type="checkbox" id="kc-notify" /> Kirim notifikasi ke orangnya</label>
       </div>
       <div class="row-flex" style="gap:8px; margin-top:10px; flex-wrap:wrap;">
         <button class="secondary" id="kc-preview-btn" style="flex:1 1 auto; white-space:nowrap;" onclick="doKcPreview()">🔍 Pratinjau</button>
@@ -6285,7 +6285,8 @@ function kcParams() {
   };
 }
 function kcRequest(params, apply, extra) {
-  const body = { requesterId: state.user.staffId, action: params.action, businessUnit: params.unit, scope: params.scope, apply };
+  const body = { requesterId: state.user.staffId, action: params.action === "wipe_reopen" ? "wipe" : params.action, businessUnit: params.unit, scope: params.scope, apply };
+  if (params.action === "wipe_reopen") body.reopen = true;
   if (params.slot) body.slot = params.slot;
   if (params.niks) body.staffIds = params.niks;
   if (params.month) body.month = params.month;
@@ -6393,7 +6394,9 @@ async function doKcApply() {
   const notify = slotOn && !!(kcEl("kc-notify") || {}).checked;
   const deadlineText = slotOn ? (((kcEl("kc-deadline") || {}).value || "").trim()) : "";
   const who = `${ids.length} orang`, slotLabel = KC_SLOTS[params.slot] || "";
-  const question = params.action === "wipe"
+  const question = params.action === "wipe_reopen"
+    ? `Hapus isian ${slotLabel} ${who} bulan ini dan buka kirim ulang?\n\nIsian mereka DIHAPUS (beserta total dan nilai akhir sementaranya) dan mereka bisa langsung mengirim ulang, walau jendela waktu sudah tutup${notify ? " (mereka diberi notifikasi)" : ""}.\nSemua tercatat di log audit dan cadangan.`
+    : params.action === "wipe"
     ? `Hapus isian ${slotLabel} ${who} bulan ini?\n\nIsian mereka DIHAPUS (beserta total dan nilai akhir sementaranya) dan mereka HARUS mengisi ulang${notify ? " (mereka diberi notifikasi)" : ""}.\nSemua baris yang dihapus dicadangkan di sheet Reset_Backup.`
     : (params.action === "reopen"
       ? `Buka kirim ulang ${slotLabel} ${who}?\n\nIsian lama TETAP ada sampai mereka mengirim lagi; kiriman baru menggantikannya. Mereka bisa mengirim walau jendela waktu sudah tutup${notify ? " (mereka diberi notifikasi)" : ""}.`

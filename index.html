@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-358-cycle-leader-flags — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-361-stage-deadlines — LIVE</div>
 
 <script>
 // =================================================================
@@ -1051,6 +1051,7 @@ const translations = {
     gm_leader_label: "Leader",
     gm_compressed_badge: "⏱ Siklus dipersingkat",
     gm_compressed_short: "⏱ Dipersingkat",
+    dl_done: "Sudah selesai", dl_until: "Batas: {date}", dl_opens_on: "Dibuka {date}", dl_opens_after: "Dibuka setelah {stage} selesai, paling lambat {date}", dl_closed: "Jendela sudah tutup ({date})", dl_list_title: "Jadwal tahap", stage_self: "Self Appraisal", stage_leader: "Leader", stage_hr: "HR", stage_executive: "Approval",
     gm_compressed_hint: "Kontrak berakhir bulan ini, jadi siklus appraisal-nya dipersingkat.",
     gm_approve_all_busy: "Ada proses lain yang masih berjalan di server (biasanya Approve Semua sebelumnya). Tunggu 2–3 menit, JANGAN klik berulang, lalu muat ulang halaman dan coba lagi. Yang sudah ter-approve tidak diproses ulang.",
     gm_approve_all_already_running: "Approve Semua masih berjalan — tunggu sampai selesai, jangan klik lagi.",
@@ -1637,6 +1638,7 @@ const translations = {
     gm_leader_label: "Leader",
     gm_compressed_badge: "⏱ Shortened cycle",
     gm_compressed_short: "⏱ Shortened",
+    dl_done: "Done", dl_until: "Deadline: {date}", dl_opens_on: "Opens {date}", dl_opens_after: "Opens after {stage} is done, at the latest {date}", dl_closed: "Window closed ({date})", dl_list_title: "Stage schedule", stage_self: "Self Appraisal", stage_leader: "Leader", stage_hr: "HR", stage_executive: "Approval",
     gm_compressed_hint: "The contract ends this month, so this appraisal cycle is shortened.",
     gm_approve_all_busy: "Another action is still running on the server (usually an earlier Approve All). Wait 2–3 minutes, do NOT click repeatedly, then reload the page and try again. People already approved are not processed again.",
     gm_approve_all_already_running: "Approve All is still running — wait for it to finish, don't click again.",
@@ -2008,6 +2010,39 @@ function trn(key, vars) {
 function cycleBadgeHtml(x) {
   if (!x || x.cycleType !== "compressed") return "";
   return ` <span title="${escapeAttr(t("gm_compressed_hint"))}" style="display:inline-block; vertical-align:middle; margin-left:6px; background:#FFF1CC; color:#8A5A00; border:1px solid #E8C36A; font-size:11px; font-weight:700; padding:1px 8px; border-radius:999px;">${t("gm_compressed_short")}</span>`;
+}
+
+/** Translated text with {placeholders} filled in. */
+function tv(key, vars) {
+  let text = t(key);
+  Object.keys(vars || {}).forEach(k => { text = text.split("{" + k + "}").join(String(vars[k])); });
+  return text;
+}
+
+/** One line that says where a stage stands and by when. Shown the same way everywhere. */
+function deadlineLineHtml(d) {
+  if (!d || d.status === "na") return "";
+  const stageName = (k) => t("stage_" + k) === "stage_" + k ? k : t("stage_" + k);
+  const line = (color, text) => `<div style="font-size:12px; color:${color}; margin-top:3px;">${text}</div>`;
+  if (d.status === "done") return line("var(--ok)", "✓ " + t("dl_done"));
+  if (d.status === "closed") return line("var(--bad)", tv("dl_closed", { date: noticeDateText(d.close) }));
+  if (d.status === "open") return line("var(--ink)", tv("dl_until", { date: noticeDateText(d.close) }));
+  // upcoming: say the opening honestly
+  const opening = d.dependsOn
+    ? tv("dl_opens_after", { stage: stageName(d.dependsOn), date: noticeDateText(d.open) })
+    : tv("dl_opens_on", { date: noticeDateText(d.open) });
+  return line("var(--muted)", `${opening} · ${tv("dl_until", { date: noticeDateText(d.close) })}`);
+}
+
+/** The whole schedule of one person, for the self status screen. */
+function deadlineListHtml(dl) {
+  if (!dl) return "";
+  const rows = ["self", "leader", "hr", "executive"].filter(k => dl[k] && dl[k].status !== "na").map(k => `
+    <div style="display:flex; justify-content:space-between; gap:10px; padding:6px 0; border-top:1px solid var(--line); font-size:13px;">
+      <b>${escapeHtml(t("stage_" + k))}</b>
+      <div style="text-align:right;">${deadlineLineHtml(dl[k]) || ""}</div>
+    </div>`).join("");
+  return rows ? `<div class="card" style="margin-bottom:12px;"><div style="font-weight:800; margin-bottom:4px;">${t("dl_list_title")}</div>${rows}</div>` : "";
 }
 
 function trnDaysTo(iso) {
@@ -3702,6 +3737,7 @@ async function renderMyEvaluations(slotFilter) {
         <div>
           <div class="name">${s.name}${cycleBadgeHtml(s)}${s.businessUnit === "backoffice" ? "" : ` <span style="font-weight:700; font-size:11px; color:var(--coral); text-transform:uppercase;">· ${s.slot === "hr" ? "HR" : "Leader/Mgmt"}</span>`}</div>
           <div class="dept">${s.department !== "-" ? s.department : s.tier} · ${s.tier}</div>
+          ${deadlineLineHtml(s.deadline)}
           <div class="dept" style="margin-top:4px; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
             ${[
               { label: "Self", done: s.selfDone, active: !s.activeStages || s.activeStages.self },
@@ -8568,6 +8604,7 @@ async function renderMyAppraisalStatus(target) {
       <div class="hint" style="font-size:14px; margin-bottom:12px;">${res.selfDone
         ? `Appraisal kamu bulan ini (${res.month}) sudah terkirim dan sedang berjalan lewat proses berikut:`
         : `Appraisal kamu bulan ini (${res.month}) <strong style="color:var(--coral);">BELUM kamu isi</strong> — Self Appraisal kamu masih kosong. Proses lain gak bisa lanjut sampai ini keisi:`}</div>
+      ${deadlineListHtml(res.deadlines)}
       ${!res.selfDone ? `<button class="primary" onclick="renderAppraisalForm({evaluatorType:'self', target:state.user})" style="margin-bottom:14px;">✍️ Isi Self Appraisal Sekarang</button>` : ""}
       <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:14px;">
         ${[
@@ -9525,6 +9562,7 @@ async function renderGm() {
                   : Number(s.hrTotal || 0) === 0
                     ? `<span style="color:var(--red); font-weight:700;">⚠️ HR tidak mengisi${state.month >= "2026-10" ? " — bobot HR tidak dihitung, dialihkan ke Leader" : ""}</span>`
                     : `${Number(s.hrTotal).toFixed(1)} <span style="font-style:italic; font-weight:700;">${t("gm_appraised_by_prefix")} ${s.hrEvaluatorName || "-"})</span>`}</div>
+                ${deadlineLineHtml(s.executiveDeadline)}
                 ${s.approvalStatus === 'Approved' && s.decision ? `<div class="dept" style="margin-top:6px;">${t("gm_decision_label_inline")} <strong>${findDecisionLabels(state.decisionOptionsByTier[s.tier], s.decision)}</strong></div>` : ""}
               </div>
             </div>

@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-15-372-approval-desktop — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-19-373-weekly-kpi — LIVE</div>
 
 <script>
 // =================================================================
@@ -6105,6 +6105,7 @@ async function renderDevTools() {
         <label style="display:flex; align-items:center; gap:6px; font-weight:400;"><input type="checkbox" id="kpi-import-unit-gym" /> Gym</label>
         <label style="display:flex; align-items:center; gap:6px; font-weight:400;"><input type="checkbox" id="kpi-import-unit-backoffice" /> Back Office</label>
       </div>
+      <label style="display:flex; align-items:center; gap:6px; font-weight:400; margin-top:10px;"><input type="checkbox" id="kpi-import-weekly" /> Jadikan sumber impor mingguan (otomatis tiap Senin 02:00; hasilnya dikabarkan ke Superadmin)</label>
       <button class="primary" id="kpi-import-btn" style="margin-top:8px;" onclick="doImportKpiFromWorkbook()">Import Sekarang</button>
       <div id="kpi-import-result" class="hint" style="margin-top:8px;"></div>
       <div style="border-top:1px solid var(--border); margin:16px 0 12px;"></div>
@@ -6775,7 +6776,8 @@ async function doImportKpiFromWorkbook() {
   btn.innerHTML = `<span class="btn-spinner"></span>Mengimpor...`;
   noteEl.textContent = "";
   try {
-    const res = await apiPost("importKpiFromWorkbook", { requesterId: state.user.staffId, sheetIdOrUrl, businessUnitFilter: businessUnitFilter.length ? businessUnitFilter : undefined });
+    const saveAsWeekly = !!(document.getElementById("kpi-import-weekly") && document.getElementById("kpi-import-weekly").checked);
+    const res = await apiPost("importKpiFromWorkbook", { requesterId: state.user.staffId, sheetIdOrUrl, businessUnitFilter: businessUnitFilter.length ? businessUnitFilter : undefined, saveAsWeekly });
     if (res.error && !res.results) {
       noteEl.textContent = `Gagal: ${res.detail || friendlyError(res.error)}`;
     } else {

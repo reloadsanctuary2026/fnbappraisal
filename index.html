@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-19-373-weekly-kpi — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-19-374-correction-prev-month — LIVE</div>
 
 <script>
 // =================================================================
@@ -6034,7 +6034,7 @@ async function renderDevTools() {
       <select id="kc-unit" onchange="kcInvalidate()"><option value="fnb">F&amp;B</option><option value="gym">Gym</option><option value="backoffice">Back Office</option></select></div>
       <div id="kc-niks-wrap" style="display:none;"><label style="margin-top:8px; display:block;">NIK (satu atau banyak — pisahkan dengan koma, spasi, atau baris baru)</label>
       <textarea id="kc-niks" rows="3" oninput="kcInvalidate()" placeholder="Contoh: 1354, 1022" style="display:block; width:100%; box-sizing:border-box; padding:10px 12px; font:inherit; font-size:14px; border:1.5px solid var(--border); border-radius:12px; resize:vertical;"></textarea></div>
-      <div id="kc-month-wrap" style="display:none;"><label style="margin-top:8px; display:block;">Bulan yang approval-nya dibatalkan</label>
+      <div id="kc-month-wrap" style="display:none;"><label style="margin-top:8px; display:block;">Bulan (bulan berjalan, atau bulan sebelumnya)</label>
       <input type="month" id="kc-month" onchange="kcInvalidate()" /></div>
       <label style="margin-top:8px; display:block;">Alasan (wajib, tercatat di log audit)</label>
       <input type="text" id="kc-reason" maxlength="300" placeholder="Contoh: Struktur KPI Waiter berubah setelah mereka mengisi." />
@@ -6373,6 +6373,7 @@ const KC_VERB = { wipe: "🗑️ Hapus isian", reopen: "🔓 Buka kirim ulang", 
 const kcEl = (id) => document.getElementById(id);
 function kcParseNiks(text) { return Array.from(new Set(String(text || "").split(/[\s,;]+/).map(x => x.trim()).filter(Boolean))); }
 function kcMonthNow() { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+function kcMonthPrev() { const d = new Date(); const p = new Date(d.getFullYear(), d.getMonth() - 1, 1); return p.getFullYear() + "-" + String(p.getMonth() + 1).padStart(2, "0"); }
 function kcParams() {
   const action = (kcEl("kc-action") || {}).value || "wipe_reopen", pick = (kcEl("kc-pick") || {}).value || "mismatched";
   return {
@@ -6381,7 +6382,7 @@ function kcParams() {
     unit: pick === "nik" ? "all" : ((kcEl("kc-unit") || {}).value || "fnb"),
     scope: pick === "mismatched" ? "mismatched" : "all",
     niks: pick === "nik" ? kcParseNiks((kcEl("kc-niks") || {}).value) : null,
-    month: action === "revert" ? ((kcEl("kc-month") || {}).value || "") : "",
+    month: (kcEl("kc-month") || {}).value || "",
   };
 }
 function kcRequest(params, apply, extra) {
@@ -6418,8 +6419,8 @@ function kcSync() {
   pickEl.value = want.some(([v]) => v === cur) ? cur : (revert ? "nik" : "mismatched");
   const pick = pickEl.value, slot = (kcEl("kc-slot") || {}).value || "self";
   const show = (id, on) => { const el = kcEl(id); if (el) el.style.display = on ? "" : "none"; };
-  show("kc-slot-wrap", !revert); show("kc-unit-wrap", pick !== "nik"); show("kc-niks-wrap", pick === "nik"); show("kc-month-wrap", revert); show("kc-notify-wrap", !revert && slot === "self");
-  const mo = kcEl("kc-month"); if (mo) { mo.max = kcMonthNow(); if (!mo.value) mo.value = kcMonthNow(); }
+  show("kc-slot-wrap", !revert); show("kc-unit-wrap", pick !== "nik"); show("kc-niks-wrap", pick === "nik"); show("kc-month-wrap", true); show("kc-notify-wrap", !revert && slot === "self");
+  const mo = kcEl("kc-month"); if (mo) { mo.max = kcMonthNow(); mo.min = revert ? "" : kcMonthPrev(); if (!mo.value || (!revert && mo.value < kcMonthPrev() && mo.value !== kcMonthNow())) mo.value = kcMonthNow(); }
   kcInvalidate();
 }
 function kcPersonHtml(p) {

@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-10-19-374-correction-prev-month — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-375-calibration-provisional — LIVE</div>
 
 <script>
 // =================================================================
@@ -1006,6 +1006,7 @@ const translations = {
     gm_calibration_evaluator_label: "Evaluator:",
     gm_calibration_evaluator_avg_label: "Rata-rata nilai yang biasa dia berikan:",
     gm_calibration_company_avg_label: "Rata-rata nilai semua evaluator:",
+    gm_calibration_provisional: "Sementara: belum cukup penilaian yang sudah di-approve, jadi nilai bulan ini yang sudah disubmit ikut dihitung.",
     gm_calibration_sample_suffix: "penilaian sebelumnya)",
     gm_calibration_suggested_adj_label: "Saran koreksi:",
     gm_calibration_points_suffix: "poin",
@@ -1595,6 +1596,7 @@ const translations = {
     gm_calibration_evaluator_label: "Evaluator:",
     gm_calibration_evaluator_avg_label: "The average score this evaluator usually gives:",
     gm_calibration_company_avg_label: "Average score across all evaluators:",
+    gm_calibration_provisional: "Provisional: not enough approved scores yet, so this month's submitted scores are included.",
     gm_calibration_sample_suffix: "previous evaluations)",
     gm_calibration_suggested_adj_label: "Suggested correction:",
     gm_calibration_points_suffix: "points",
@@ -9879,6 +9881,7 @@ async function loadCalibrationSuggestion(staffId) {
       <div style="font-size:13px; margin-bottom:2px;">${t("gm_calibration_evaluator_label")} <strong>${escapeHtml(res.evaluatorName)}</strong></div>
       <div style="font-size:13px; margin-bottom:2px;">${t("gm_calibration_evaluator_avg_label")} <strong>${res.evaluatorAverage}</strong></div>
       <div style="font-size:13px; margin-bottom:10px;">${t("gm_calibration_company_avg_label")} <strong>${res.companyAverage}</strong> (${res.sampleSize} ${t("gm_calibration_sample_suffix")}</div>
+      ${res.provisional ? `<div style="font-size:12px; color:#8A5A00; background:#FFF4DC; border-radius:8px; padding:6px 8px; margin-bottom:10px;">${t("gm_calibration_provisional")}</div>` : ""}
       <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
         <div style="font-weight:700; color:${positive ? "var(--green)" : "var(--red)"};">${t("gm_calibration_suggested_adj_label")} ${positive ? "+" : ""}${res.suggestedAdjustment} ${t("gm_calibration_points_suffix")}</div>
         <button type="button" class="secondary" style="padding:6px 12px; font-size:12px; width:auto;" onclick="applyCalibrationSuggestion('${staffId}', ${res.suggestedAdjustment}, '${escapeAttr(res.evaluatorName)}', ${res.evaluatorAverage}, ${res.companyAverage})">${t("gm_calibration_use_btn")}</button>

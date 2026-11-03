@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-375-calibration-provisional — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-376-hide-decision-notes — LIVE</div>
 
 <script>
 // =================================================================
@@ -8644,7 +8644,7 @@ async function renderMyAppraisalStatus(target) {
         ${d.mutationToPosition ? `<div class="hint" style="font-size:14px;">Mutasi: ${d.mutationFromPosition} → ${d.mutationToPosition}</div>` : ""}
         ${d.extensionDuration ? `<div class="hint" style="font-size:14px;">Perpanjangan Probation/Kontrak: ${d.extensionDuration}</div>` : ""}
         <div class="hint" style="font-size:14px; margin-top:8px;">1-on-1: <strong>${oneOnOneLabel}</strong></div>
-        ${d.decisionNotes ? `<div class="hint" style="font-size:14px; margin-top:8px;">Catatan: "${d.decisionNotes}"</div>` : ""}
+        <!-- catatan keputusan tidak ditampilkan ke staf -->
         <div class="hint" style="margin-top:10px; font-size:12px;">Disetujui oleh ${d.approvedBy || "-"}</div>
       </div>`;
   }

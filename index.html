@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-376-hide-decision-notes — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-378-calibration-text — LIVE</div>
 
 <script>
 // =================================================================
@@ -1011,10 +1011,7 @@ const translations = {
     gm_calibration_suggested_adj_label: "Saran koreksi:",
     gm_calibration_points_suffix: "poin",
     gm_calibration_use_btn: "Pakai saran ini",
-    gm_calibration_applied_reason_prefix: "Penyesuaian berdasarkan pola historis evaluator",
-    gm_calibration_applied_reason_avg: "rata-rata",
-    gm_calibration_applied_reason_vs_company: "dibanding rata-rata perusahaan",
-  gm_calibration_applied_reason_plain: "Evaluator {name} biasanya memberi nilai {avg}, sedangkan rata-rata semua evaluator {company}. Skor akhir dikoreksi {adj} poin agar lebih adil.",
+  gm_calibration_applied_reason_plain: "Skor disesuaikan {adj} poin untuk menjaga standar penilaian tetap seragam antar evaluator.",
   gm_calibration_target_label: "Skor akhir setelah dikoreksi",
   gm_calibration_now_label: "sekarang",
   gm_calibration_no_final: "Skor akhir orang ini belum dihitung, jadi saran belum bisa dipakai.",
@@ -1054,7 +1051,7 @@ const translations = {
     trend_need_more: "Grafik akan muncul begitu ada 2 bulan data atau lebih.", myeval_notdone_btn: "Belum Diisi Saja",
     gm_compressed_badge: "⏱ Siklus dipersingkat",
     gm_compressed_short: "⏱ Dipersingkat",
-    dl_done: "Sudah selesai", dl_until: "Batas: {date}", dl_opens_on: "Dibuka {date}", dl_opens_after: "Dibuka setelah {stage} selesai, paling lambat {date}", dl_closed: "Jendela sudah tutup ({date})", dl_list_title: "Jadwal tahap", stage_self: "Self Appraisal", stage_leader: "Leader", stage_hr: "HR", stage_executive: "Approval",
+    dl_done: "Sudah selesai", dl_until: "Batas: {date}", dl_opens_on: "Dibuka {date}", dl_opens_after: "Dibuka {date}, atau lebih awal begitu {stage} selesai", dl_closed: "Jendela sudah tutup ({date})", dl_list_title: "Jadwal tahap", stage_self: "Self Appraisal", stage_leader: "Leader", stage_hr: "HR", stage_executive: "Approval",
     gm_compressed_hint: "Kontrak berakhir bulan ini, jadi siklus appraisal-nya dipersingkat.",
     gm_approve_all_busy: "Ada proses lain yang masih berjalan di server (biasanya Approve Semua sebelumnya). Tunggu 2–3 menit, JANGAN klik berulang, lalu muat ulang halaman dan coba lagi. Yang sudah ter-approve tidak diproses ulang.",
     gm_approve_all_already_running: "Approve Semua masih berjalan — tunggu sampai selesai, jangan klik lagi.",
@@ -1601,10 +1598,7 @@ const translations = {
     gm_calibration_suggested_adj_label: "Suggested correction:",
     gm_calibration_points_suffix: "points",
     gm_calibration_use_btn: "Use this suggestion",
-    gm_calibration_applied_reason_prefix: "Adjustment based on the evaluator's historical pattern",
-    gm_calibration_applied_reason_avg: "average",
-    gm_calibration_applied_reason_vs_company: "versus the company average",
-  gm_calibration_applied_reason_plain: "Evaluator {name} usually gives an average of {avg}, while the average across all evaluators is {company}. The final score is corrected by {adj} points to make it fair.",
+  gm_calibration_applied_reason_plain: "The score is adjusted by {adj} points to keep scoring consistent across evaluators.",
   gm_calibration_target_label: "Final score after correction",
   gm_calibration_now_label: "now",
   gm_calibration_no_final: "This person's final score is not calculated yet, so the suggestion cannot be used.",
@@ -1644,7 +1638,7 @@ const translations = {
     trend_need_more: "The chart appears once there are 2 or more months of data.", myeval_notdone_btn: "Not Filled Only",
     gm_compressed_badge: "⏱ Shortened cycle",
     gm_compressed_short: "⏱ Shortened",
-    dl_done: "Done", dl_until: "Deadline: {date}", dl_opens_on: "Opens {date}", dl_opens_after: "Opens after {stage} is done, at the latest {date}", dl_closed: "Window closed ({date})", dl_list_title: "Stage schedule", stage_self: "Self Appraisal", stage_leader: "Leader", stage_hr: "HR", stage_executive: "Approval",
+    dl_done: "Done", dl_until: "Deadline: {date}", dl_opens_on: "Opens {date}", dl_opens_after: "Opens {date}, or earlier once {stage} is done", dl_closed: "Window closed ({date})", dl_list_title: "Stage schedule", stage_self: "Self Appraisal", stage_leader: "Leader", stage_hr: "HR", stage_executive: "Approval",
     gm_compressed_hint: "The contract ends this month, so this appraisal cycle is shortened.",
     gm_approve_all_busy: "Another action is still running on the server (usually an earlier Approve All). Wait 2–3 minutes, do NOT click repeatedly, then reload the page and try again. People already approved are not processed again.",
     gm_approve_all_already_running: "Approve All is still running — wait for it to finish, don't click again.",
@@ -9899,9 +9893,6 @@ function applyCalibrationSuggestion(staffId, adjustment, evaluatorName, evaluato
   const adj = Number(adjustment) || 0;
   if (targetEl) targetEl.value = String(Math.round((current + adj) * 10) / 10);
   if (reasonEl) reasonEl.value = t("gm_calibration_applied_reason_plain")
-    .replace("{name}", evaluatorName)
-    .replace("{avg}", evaluatorAverage)
-    .replace("{company}", companyAverage)
     .replace("{adj}", (adj > 0 ? "+" : "") + adj);
 }
 

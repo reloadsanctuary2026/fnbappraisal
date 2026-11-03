@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-382-popup-redesign — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-384-coaching — LIVE</div>
 
 <script>
 // =================================================================
@@ -1051,7 +1051,7 @@ const translations = {
     pop_criteria_title: "Perbandingan per kriteria", pop_col_criterion: "Kriteria", pop_col_change: "Perubahan", pop_col_previous: "Sebelumnya",
     pop_no_change: "Tetap", pop_weak_note: "{n} kriteria masih bernilai 3 atau kurang: {list}.", pop_no_data: "Belum tersedia detail per kriteria untuk periode ini.",
     pop_historical_note: "Periode sebelumnya tidak memiliki detail per kriteria karena diinput melalui Input Data Historis (hanya total per section).",
-    pop_change_vs: "Perubahan dibanding {month}", pop_trend_title: "Tren skor", pop_close: "Tutup", pop_score_last_approved: "Skor terakhir di-approve",
+    pop_change_vs: "Perubahan dibanding {month}", pop_coaching_title: "Catatan pengembangan", pop_coaching_intro: "Fokus pada kriteria berikut untuk mencapai level berikutnya:", pop_next_target: "Target berikutnya", pop_no_prev_month: "Belum ada data penilaian per kriteria untuk {month}, sehingga perbandingan belum tersedia.", pop_trend_title: "Tren skor", pop_close: "Tutup", pop_score_last_approved: "Skor terakhir di-approve",
     st_done: "Sudah Diisi", st_todo: "Belum Diisi", st_approved: "Disetujui", st_pending: "Menunggu",
     trend_need_more: "Grafik akan muncul begitu ada 2 bulan data atau lebih.", myeval_notdone_btn: "Belum Diisi Saja",
     gm_compressed_badge: "⏱ Siklus dipersingkat",
@@ -1643,7 +1643,7 @@ const translations = {
     pop_criteria_title: "Criteria comparison", pop_col_criterion: "Criterion", pop_col_change: "Change", pop_col_previous: "Previous",
     pop_no_change: "No change", pop_weak_note: "{n} criteria remain at a score of 3 or below: {list}.", pop_no_data: "No per-criterion detail is available for this period.",
     pop_historical_note: "The previous period has no per-criterion detail because it was entered through Historical Data Input (section totals only).",
-    pop_change_vs: "Change versus {month}", pop_trend_title: "Score trend", pop_close: "Close", pop_score_last_approved: "Last approved score",
+    pop_change_vs: "Change versus {month}", pop_coaching_title: "Development notes", pop_coaching_intro: "Focus on the following criteria to reach the next level:", pop_next_target: "Next target", pop_no_prev_month: "No per-criterion assessment data is available for {month}, so a comparison is not yet possible.", pop_trend_title: "Score trend", pop_close: "Close", pop_score_last_approved: "Last approved score",
     st_done: "Submitted", st_todo: "Not filled", st_approved: "Approved", st_pending: "Waiting",
     trend_need_more: "The chart appears once there are 2 or more months of data.", myeval_notdone_btn: "Not Filled Only",
     gm_compressed_badge: "⏱ Shortened cycle",
@@ -9734,7 +9734,7 @@ async function showComparisonModal(staffId, name) {
   } else {
     trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">${t("gm_trend_no_history")}</div>`;
   }
-  if (history.length > 1) trendBlock += buildScoreChartSvg(history);
+  if (history.length > 1) trendBlock += `<div class="cmp-desktop">${buildScoreChartSvg(history)}</div>`;
 
   // Per-criterion comparison: each change is shown as a signed number, green for an improvement, red for a decline.
   let criterionBlock = "";
@@ -9752,21 +9752,27 @@ async function showComparisonModal(staffId, name) {
       <table style="width:100%; border-collapse:collapse; font-size:13px;">
         <tr style="color:var(--text-muted); font-size:12px;">
           <th style="text-align:left; padding:6px 4px; border-bottom:1px solid var(--line);">${t("pop_col_criterion")}</th>
-          <th style="text-align:right; padding:6px 4px; border-bottom:1px solid var(--line);">${monthLabelID(critRes.prevMonth)}</th>
+          <th class="cmp-desktop" style="text-align:right; padding:6px 4px; border-bottom:1px solid var(--line);">${monthLabelID(critRes.prevMonth)}</th>
           <th style="text-align:right; padding:6px 4px; border-bottom:1px solid var(--line);">${monthLabelID(critRes.currentMonth)}</th>
           <th style="text-align:right; padding:6px 4px; border-bottom:1px solid var(--line);">${t("pop_col_change")}</th>
         </tr>
         ${critRes.rows.map(r => {
           const weak = r.current !== null && r.current <= 3;
           return `<tr style="${weak ? "background:#FBEAEA;" : ""}">
-            <td style="padding:7px 4px; border-bottom:1px solid var(--line);">${escapeHtml(r.criterion)}</td>
-            <td style="text-align:right; padding:7px 4px; border-bottom:1px solid var(--line); color:var(--text-muted);">${r.previous !== null ? r.previous : "—"}</td>
+            <td style="padding:7px 4px; border-bottom:1px solid var(--line);">${escapeHtml(r.criterion)}${r.nextLevel && weak ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${t("pop_next_target")}: ${escapeHtml(r.nextLevel)}</div>` : ""}</td>
+            <td class="cmp-desktop" style="text-align:right; padding:7px 4px; border-bottom:1px solid var(--line); color:var(--text-muted);">${r.previous !== null ? r.previous : "—"}</td>
             <td style="text-align:right; padding:7px 4px; border-bottom:1px solid var(--line); font-weight:700;">${r.current !== null ? r.current : "—"}</td>
             <td style="text-align:right; padding:7px 4px; border-bottom:1px solid var(--line);">${changeCell(r)}</td>
           </tr>`;
         }).join("")}
       </table>
       ${stillWeak.length ? `<div style="color:#B8352B; font-size:13px; font-weight:600; margin-top:10px;">${tv("pop_weak_note", { n: stillWeak.length, list: stillWeak.map(r => escapeHtml(r.criterion)).join(", ") })}</div>` : ""}
+      ${stillWeak.length ? `<div style="margin-top:12px; padding:10px 12px; background:var(--surface-2); border:0.5px solid var(--border); border-radius:10px;">
+        <div style="font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">${t("pop_coaching_title")}</div>
+        <div style="font-size:13px; color:var(--text-primary); margin-bottom:6px;">${t("pop_coaching_intro")}</div>
+        ${stillWeak.filter(r => r.nextLevel).map(r => `<div style="font-size:13px; margin-top:6px;"><strong>${escapeHtml(r.criterion)}</strong><div style="color:var(--text-secondary);">${escapeHtml(r.nextLevel)}</div></div>`).join("")}
+      </div>` : ""}
+      ${critRes.hasPrevious === false ? `<div style="margin-top:10px; font-size:13px; color:var(--text-muted);">${tv("pop_no_prev_month", { month: monthLabelID(critRes.prevMonth) })}</div>` : ""}
       ${critRes.rows.some(r => r.previous === null) ? `<div style="margin-top:8px; font-size:12px; color:var(--text-muted); font-style:italic;">${t("pop_historical_note")}</div>` : ""}
     `;
   } else {
@@ -9793,7 +9799,11 @@ async function showComparisonModal(staffId, name) {
     <style>
       .cmp-card{max-width:min(1040px, 96vw); width:100%; background:#fff; max-height:90vh; overflow-y:auto; padding:24px;}
       .cmp-grid{display:grid; grid-template-columns:minmax(300px, 1fr) minmax(0, 1.45fr); gap:28px; align-items:start;}
-      @media (max-width:760px){ .cmp-grid{grid-template-columns:1fr;} }
+      @media (max-width:760px){
+        .cmp-grid{grid-template-columns:1fr; gap:14px;}
+        .cmp-card{padding:16px;}
+        .cmp-desktop{display:none !important;}
+      }
     </style>
     <div class="card cmp-card" onclick="event.stopPropagation();">
       <div class="cmp-grid">
@@ -9805,7 +9815,7 @@ async function showComparisonModal(staffId, name) {
         <h2 style="margin:0;">${name}</h2>
         <div class="hint" style="font-size:12px; margin-top:2px;">${s.department !== "-" ? s.department : s.tier} · ${t("gm_contract_end_label")} ${s.contractEndDate ? fullDateLabelID(s.contractEndDate) : "-"}</div>
       </div>
-      <div style="margin-top:6px; font-size:12px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted);">${t("pop_trend_title")}</div>
+      <div class="cmp-desktop" style="margin-top:6px; font-size:12px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted);">${t("pop_trend_title")}</div>
       ${trendBlock}
       </div>
       <div>

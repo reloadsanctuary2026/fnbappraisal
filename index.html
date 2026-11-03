@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-384-coaching — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-385-criterion-clean — LIVE</div>
 
 <script>
 // =================================================================
@@ -9738,8 +9738,14 @@ async function showComparisonModal(staffId, name) {
 
   // Per-criterion comparison: each change is shown as a signed number, green for an improvement, red for a decline.
   let criterionBlock = "";
+  let coachingBlock = "";
   if (critRes.found && critRes.rows.length) {
     const stillWeak = critRes.rows.filter(r => r.current !== null && r.current <= 3);
+    coachingBlock = stillWeak.length ? `<div style="margin-top:12px; padding:10px 12px; background:var(--surface-2); border:0.5px solid var(--border); border-radius:10px;">
+        <div style="font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">${t("pop_coaching_title")}</div>
+        <div style="font-size:13px; color:var(--text-primary); margin-bottom:6px;">${t("pop_coaching_intro")}</div>
+        ${stillWeak.filter(r => r.nextLevel).map(r => `<div style="font-size:13px; margin-top:6px;"><strong>${escapeHtml(r.criterion)}</strong><div style="color:var(--text-secondary);">${escapeHtml(r.nextLevel)}</div></div>`).join("")}
+      </div>` : "";
     const changeCell = (r) => {
       if (r.previous === null || r.current === null) return `<span style="color:var(--text-muted);">—</span>`;
       const d = Math.round((r.current - r.previous) * 10) / 10;
@@ -9767,11 +9773,6 @@ async function showComparisonModal(staffId, name) {
         }).join("")}
       </table>
       ${stillWeak.length ? `<div style="color:#B8352B; font-size:13px; font-weight:600; margin-top:10px;">${tv("pop_weak_note", { n: stillWeak.length, list: stillWeak.map(r => escapeHtml(r.criterion)).join(", ") })}</div>` : ""}
-      ${stillWeak.length ? `<div style="margin-top:12px; padding:10px 12px; background:var(--surface-2); border:0.5px solid var(--border); border-radius:10px;">
-        <div style="font-size:12px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">${t("pop_coaching_title")}</div>
-        <div style="font-size:13px; color:var(--text-primary); margin-bottom:6px;">${t("pop_coaching_intro")}</div>
-        ${stillWeak.filter(r => r.nextLevel).map(r => `<div style="font-size:13px; margin-top:6px;"><strong>${escapeHtml(r.criterion)}</strong><div style="color:var(--text-secondary);">${escapeHtml(r.nextLevel)}</div></div>`).join("")}
-      </div>` : ""}
       ${critRes.hasPrevious === false ? `<div style="margin-top:10px; font-size:13px; color:var(--text-muted);">${tv("pop_no_prev_month", { month: monthLabelID(critRes.prevMonth) })}</div>` : ""}
       ${critRes.rows.some(r => r.previous === null) ? `<div style="margin-top:8px; font-size:12px; color:var(--text-muted); font-style:italic;">${t("pop_historical_note")}</div>` : ""}
     `;
@@ -9817,10 +9818,11 @@ async function showComparisonModal(staffId, name) {
       </div>
       <div class="cmp-desktop" style="margin-top:6px; font-size:12px; font-weight:800; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted);">${t("pop_trend_title")}</div>
       ${trendBlock}
+      ${coachingBlock}
+      ${decisionBlock}
       </div>
       <div>
       ${criterionBlock}
-      ${decisionBlock}
       </div>
       </div>
       <button class="secondary" style="width:100%; margin-top:16px;" onclick="document.getElementById('comparison-modal').remove()">${t("pop_close")}</button>

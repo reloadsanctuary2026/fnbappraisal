@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-379-calibration-decimal — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-381-popup-window — LIVE</div>
 
 <script>
 // =================================================================
@@ -1047,6 +1047,7 @@ const translations = {
     gm_leader_not_filled: "⚠️ Leader tidak mengisi appraisal untuk {name}",
     gm_leader_unassigned: "⚠️ Belum ada leader yang ditugaskan untuk {name}",
     gm_leader_label: "Leader",
+    gm_trend_last_approved: "Terakhir di-approve:",
     st_done: "Sudah Diisi", st_todo: "Belum Diisi", st_approved: "Disetujui", st_pending: "Menunggu",
     trend_need_more: "Grafik akan muncul begitu ada 2 bulan data atau lebih.", myeval_notdone_btn: "Belum Diisi Saja",
     gm_compressed_badge: "⏱ Siklus dipersingkat",
@@ -1634,6 +1635,7 @@ const translations = {
     gm_leader_not_filled: "⚠️ Leader has not filled in the appraisal for {name}",
     gm_leader_unassigned: "⚠️ No leader is assigned to {name}",
     gm_leader_label: "Leader",
+    gm_trend_last_approved: "Last approved:",
     st_done: "Submitted", st_todo: "Not filled", st_approved: "Approved", st_pending: "Waiting",
     trend_need_more: "The chart appears once there are 2 or more months of data.", myeval_notdone_btn: "Not Filled Only",
     gm_compressed_badge: "⏱ Shortened cycle",
@@ -9696,10 +9698,10 @@ async function showComparisonModal(staffId, name) {
   const s = (state._currentGmList || []).find(x => String(x.staffId) === String(staffId)) || {};
   const [res, critRes, photoRes] = await Promise.all([
     apiGet("getMyAppraisalHistory", { staffId }),
-    apiGet("getCriterionHistoryComparison", { staffId, evaluatorType: "leader" }),
+    apiGet("getCriterionHistoryComparison", { staffId, evaluatorType: "leader", month: state.month }),
     apiGet("getStaffPhoto", { staffId }),
   ]);
-  const history = (res.history || []).filter(m => m.approvalStatus === "Approved");
+  const history = (res.history || []).filter(m => m.approvalStatus === "Approved" && (!state.month || String(m.month) < String(state.month)));
   const existing = document.getElementById("comparison-modal");
   if (existing) existing.remove();
 
@@ -9718,7 +9720,7 @@ async function showComparisonModal(staffId, name) {
     const pct = Number(prev.finalScore) !== 0 ? (diff / Number(prev.finalScore) * 100) : 0;
     trendBlock += `<div class="hint" style="text-align:center; margin-bottom:12px; font-weight:700; color:${diff >= 0 ? "var(--green)" : "var(--red)"};">${diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(1)} ${t("gm_trend_points_suffix")} (${Math.abs(pct).toFixed(1)}%) ${t("gm_trend_from_last_month")}</div>`;
   } else if (last3.length === 1) {
-    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">${t("gm_trend_score_of_month_prefix")} ${monthLabelID(last3[0].month)}: <strong style="font-size:20px;">${Number(last3[0].finalScore).toFixed(1)}</strong><br/>${t("gm_trend_no_previous")}</div>`;
+    trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">${t("gm_trend_last_approved")} ${monthLabelID(last3[0].month)}: <strong style="font-size:20px;">${Number(last3[0].finalScore).toFixed(1)}</strong><br/>${t("gm_trend_no_previous")}</div>`;
   } else {
     trendBlock = `<div class="hint" style="text-align:center; margin-bottom:12px;">${t("gm_trend_no_history")}</div>`;
   }

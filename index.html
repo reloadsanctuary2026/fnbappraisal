@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-03-385-criterion-clean — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-387-browser-reports — LIVE</div>
 
 <script>
 // =================================================================
@@ -1048,6 +1048,7 @@ const translations = {
     gm_leader_unassigned: "⚠️ Belum ada leader yang ditugaskan untuk {name}",
     gm_leader_label: "Leader",
     gm_trend_last_approved: "Terakhir di-approve:",
+    report_popup_blocked: "Popup diblokir. Izinkan popup untuk situs ini, lalu coba lagi.", report_open_hint: "Laporan dibuka di tab baru. Klik Print / Cetak, lalu pilih Simpan sebagai PDF.",
     pop_criteria_title: "Perbandingan per kriteria", pop_col_criterion: "Kriteria", pop_col_change: "Perubahan", pop_col_previous: "Sebelumnya",
     pop_no_change: "Tetap", pop_weak_note: "{n} kriteria masih bernilai 3 atau kurang: {list}.", pop_no_data: "Belum tersedia detail per kriteria untuk periode ini.",
     pop_historical_note: "Periode sebelumnya tidak memiliki detail per kriteria karena diinput melalui Input Data Historis (hanya total per section).",
@@ -1640,6 +1641,7 @@ const translations = {
     gm_leader_unassigned: "⚠️ No leader is assigned to {name}",
     gm_leader_label: "Leader",
     gm_trend_last_approved: "Last approved:",
+    report_popup_blocked: "Pop-up blocked. Allow pop-ups for this site, then try again.", report_open_hint: "The report opened in a new tab. Click Print / Cetak, then choose Save as PDF.",
     pop_criteria_title: "Criteria comparison", pop_col_criterion: "Criterion", pop_col_change: "Change", pop_col_previous: "Previous",
     pop_no_change: "No change", pop_weak_note: "{n} criteria remain at a score of 3 or below: {list}.", pop_no_data: "No per-criterion detail is available for this period.",
     pop_historical_note: "The previous period has no per-criterion detail because it was entered through Historical Data Input (section totals only).",
@@ -7756,7 +7758,7 @@ async function renderReview(skipFetch) {
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div class="hint">${total} ${t("review_record_count_suffix")}</div>
           ${(state.user.isHR || state.user.isExecutive) ? `<div class="row-flex" style="gap:6px; flex-wrap:wrap; justify-content:flex-end;">
-            <button class="primary" id="report-performance-btn" onclick="openReportScopePicker('performance', 'decision-scope-panel')">${t("report_performance_btn")}</button>
+            <button class="primary" id="report-performance-btn" onclick="openExecutiveSummaryReport()">${t("report_performance_btn")}</button>
             <button class="primary" id="report-decision-btn" onclick="openReportScopePicker('decision', 'decision-scope-panel')">${t("report_decision_btn")}</button>
             <button class="primary" id="report-training-btn" onclick="openReportScopePicker('training', 'decision-scope-panel')">${t("report_training_btn")}</button>
           </div>` : ""}
@@ -7920,38 +7922,40 @@ async function submitReportScope(panelId) {
   const noteEl = document.getElementById(noteId);
   if (!keys.length) { if (noteEl) noteEl.textContent = t("decision_scope_none"); return; }
   const month = kind === "feedback" ? (state._feedbackMonth || state.month) : state.month;
+  // The report opens in its own tab. It is opened right now, while this tap is still fresh, so the browser does not treat it as a
+  // blocked pop-up; it is filled in once the data arrives.
+  const reportWindow = window.open("", "_blank");
+  if (!reportWindow) { if (noteEl) noteEl.textContent = t("report_popup_blocked"); return; }
+  reportWindow.document.write(`<!DOCTYPE html><meta charset="utf-8"><title>Reload 360</title><body style="font-family:system-ui,sans-serif;padding:40px;color:#555;">${escapeHtml(t("gm_export_decision_generating"))}</body>`);
   if (kind === "feedback") {
     // Ask before building if some feedback in THESE departments is still untagged.
     const st = await apiPost("reportFeedbackStatus", { month, departments: keys });
-    if (st.error || st.success === false) { if (noteEl) noteEl.textContent = friendlyError(st.error); return; }
-    if (st.untagged > 0 && !confirm(t("feedback_untagged_confirm").replace("{n}", st.untagged))) return;
+    if (st.error || st.success === false) { reportWindow.close(); if (noteEl) noteEl.textContent = friendlyError(st.error); return; }
+    if (st.untagged > 0 && !confirm(t("feedback_untagged_confirm").replace("{n}", st.untagged))) { reportWindow.close(); return; }
   }
   panel.innerHTML = "";
-  await doGenerateReport(kind, noteId, month, keys);
+  await doGenerateReport(kind, noteId, month, keys, reportWindow);
 }
 
-/** One download path for the three reports. The PDF is built on the server and sent back; nothing is written to a spreadsheet. */
-async function doGenerateReport(kind, noteId, month, departments) {
-  const lang = state.lang === "en" ? "en" : "id"; // the screen's own language, no separate question
+/** One path for the three reports: fetch the data, lay it out in the report's own tab, and let the browser print it to PDF.
+ *  Nothing is written to a spreadsheet. */
+async function doGenerateReport(kind, noteId, month, departments, reportWindow) {
+  const lang = state.lang === "en" ? "en" : "id"; // the screen's own language; the report holds both and has an ID/EN switch
   const noteEl = document.getElementById(noteId || "review-report-note");
-  if (!noteEl) return;
+  if (!noteEl) { if (reportWindow) reportWindow.close(); return; }
   noteEl.innerHTML = '<span class="btn-spinner dark"></span>' + t("gm_export_decision_generating");
-  const payload = { kind, lang, month: month || state.month };
+  const payload = { kind, month: month || state.month };
   if (departments) payload.departments = departments;
-  const res = await apiPost("generateReportPdf", payload);
+  const res = await apiPost("getReportData", payload);
   if (res.error || res.success === false) {
+    if (reportWindow) reportWindow.close();
     noteEl.textContent = t("gm_export_decision_failed_prefix") + " " + friendlyError(res.error);
     return;
   }
-  const bytes = atob(res.fileBase64);
-  const numbers = new Array(bytes.length);
-  for (let i = 0; i < bytes.length; i++) numbers[i] = bytes.charCodeAt(i);
-  const url = URL.createObjectURL(new Blob([new Uint8Array(numbers)], { type: res.mimeType }));
-  const a = document.createElement("a");
-  a.href = url; a.download = res.fileName;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  noteEl.textContent = `✅ ${res.fileName}`;
+  reportWindow.document.open();
+  reportWindow.document.write(buildBrowserReport(kind, res, lang));
+  reportWindow.document.close();
+  noteEl.textContent = "✓ " + t("report_open_hint");
 }
 
 async function doExportDecisionLog() {
@@ -8399,12 +8403,24 @@ function buildReportPane(res, lang, photos) {
 
 /** The whole standalone report document: both languages inside, switchable with no script (two radio
  *  inputs + sibling selectors), so it also works when scripts are blocked and prints exactly what is shown. */
-function buildReportDocument(res, initialLang, photos) {
-  const rangeLabel = (lang) => res.rangeStart === res.rangeEnd ? reportMonthLabel(res.rangeStart, lang) : `${reportMonthLabel(res.rangeStart, lang)} — ${reportMonthLabel(res.rangeEnd, lang)}`;
-  const title = `${REPORT_TEXT[initialLang].docTitle} — ${rangeLabel(initialLang)}`;
+/** BusinessUnit_ReportType_Month_Year_TimeGenerated, e.g. F&B_ComprehensivePerformanceReport_Oct_2026_0130pm.
+ *  The browser proposes the page title as the file name when the report is printed to PDF. */
+function reportDocFileName(res, now, typeCode) {
+  const order = ["fnb", "gym", "backoffice"];
+  const units = (res.units || []).slice().sort((a, b) => { const ia = order.indexOf(a), ib = order.indexOf(b); return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || String(a).localeCompare(String(b)); });
+  const unitPart = units.map(u => String(BUSINESS_UNIT_LABELS_UI[u] || u).replace(/\s+/g, "")).join("_") || "All";
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const parts = String(res.rangeEnd || "").split("-");
+  const when = now || new Date();
+  const h12 = when.getHours() % 12 || 12;
+  const time = String(h12).padStart(2, "0") + String(when.getMinutes()).padStart(2, "0") + (when.getHours() >= 12 ? "pm" : "am");
+  return `${unitPart}_${typeCode || "ComprehensivePerformanceReport"}_${months[Number(parts[1]) - 1] || ""}_${parts[0] || ""}_${time}`;
+}
+
+function reportDocumentShell(title, initialLang, photos, paneId, paneEn, extraCss) {
   return `<!DOCTYPE html>
 <html lang="${initialLang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${escapeHtml(title)}</title><style>${REPORT_CSS}${reportPhotoCss(photos)}</style></head>
+<title>${escapeHtml(title)}</title><style>${REPORT_CSS}${reportPhotoCss(photos || {})}${extraCss || ""}</style></head>
 <body>
   <input type="radio" name="rl" id="rl-id" class="rl" ${initialLang === "id" ? "checked" : ""}>
   <input type="radio" name="rl" id="rl-en" class="rl" ${initialLang === "en" ? "checked" : ""}>
@@ -8413,11 +8429,280 @@ function buildReportDocument(res, initialLang, photos) {
     <button class="printbtn" onclick="window.print()">🖨️ Print / Cetak</button>
   </div>
   <main class="sheet">
-    ${buildReportPane(res, "id", photos)}
-    ${buildReportPane(res, "en", photos)}
+    ${paneId}
+    ${paneEn}
   </main>
 </body></html>`;
 }
+
+function buildReportDocument(res, initialLang, photos) {
+  return reportDocumentShell(reportDocFileName(res), initialLang, photos, buildReportPane(res, "id", photos), buildReportPane(res, "en", photos));
+}
+
+/* ===================== Reports shown and printed in the browser: Decision, Feedback, Training =====================
+ * Same document frame, stylesheet, components and ID/EN + Print toolbar as the Comprehensive report. */
+const REPORT_EXTRA_CSS = `
+.chip.c-green{background:#E3F3EC;color:#0E7C5A}
+.chip.c-amber{background:#FFF4DC;color:#8A5A00}
+.chip.c-blue{background:#E6F0FA;color:#2E6FBF}
+.chip.c-purple{background:#EFE9FB;color:#6C4FB6}
+.chip.c-red{background:#FBEAEA;color:#B8352B}
+.chip.c-grey{background:#F1EBE0;color:#4A3F34}
+.p-score.neutral{color:var(--teal)}
+.p-note{grid-column:1/-1;font-size:12px;color:#6B6158}
+.p-topic{grid-column:1/-1;font-size:13px;font-weight:600;color:#2A2F2E}
+.grp{margin:16px 0 2px;font-weight:800;font-size:15px;color:var(--teal);break-after:avoid}
+.grp .note{font-weight:400}
+.grp-unit{margin:22px 0 4px;font-size:17px;font-weight:800;color:var(--teal);border-bottom:2px solid var(--teal);padding-bottom:4px;break-after:avoid}
+.tdept{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--line);break-inside:avoid}
+.tdept .pbar{grid-column:1/-1}
+.pbar{height:8px;background:#EFE6D8;border-radius:4px;overflow:hidden;margin-top:4px}
+.pbar i{display:block;height:100%;background:var(--teal)}
+`;
+
+const REPORT_TEXT_X = {
+  id: {
+    decTitle: "Laporan Rekomendasi Keputusan", decOverview: "Ringkasan", decTotal: "Total orang", decDecided: "Sudah ada keputusan", decPending: "Belum final",
+    decDistTitle: "Sebaran keputusan", decDistLead: "Setiap orang dihitung berdasarkan keputusan terkuatnya.", decNone: "Tidak ada orang di pilihan ini.",
+    decNoDecision: "Keputusan tidak tercatat", notePrefix: "Catatan approval", pendingLine: "Belum final ({n}): {names}", people: "orang",
+    cat: { green: "Lanjut, tidak ada tindakan", amber: "Lanjut, dengan catatan coaching", blue: "Perpanjangan kontrak / probation", purple: "Mutasi / demosi", red: "Tidak diperpanjang", grey: "Keputusan tidak tercatat" },
+    fbTitle: "Laporan Feedback", fbOverview: "Ringkasan", fbReceived: "Feedback masuk", fbTagged: "Sudah di-tag", fbUntagged: "Belum di-tag",
+    fbUntaggedNote: "{n} feedback belum di-tag. Tema di bawah hanya mencakup yang sudah di-tag.", fbThemes: "Tema feedback", fbThemesLead: "Porsi tiap tema dari feedback yang sudah di-tag.",
+    fbCenter: "feedback", fbNoIssue: "Tanpa isu", fbRowMeta: "{n} karyawan dari {total} responden", fbDonutNote: "Diagram: porsi tiap tema dari seluruh tema yang disebut. Daftar: persentase responden yang menyebut tema tersebut (satu orang bisa menyebut lebih dari satu tema).", fbEmployees: "karyawan", fbPriority: "Prioritas", fbActions: "Action Tracker", fbNoActions: "Belum ada tindak lanjut yang tercatat.",
+    fbNone: "Belum ada feedback pada periode ini.", fbOwner: "PIC", fbTarget: "Target", fbStatus: "Status",
+    trTitle: "Laporan Training & Development", trOverview: "Ringkasan", trTotal: "Training", trActive: "Sedang berjalan", trOverdue: "Terlambat", trDone: "Selesai terkonfirmasi", trProposed: "Menunggu persetujuan",
+    trByDept: "Per department", trByDeptLead: "Rata-rata progres training yang sedang dijalankan.", trList: "Daftar training", trNone: "Tidak ada training di pilihan ini.",
+    trItems: "training", trLateDays: "Terlambat {n} hari", trDue: "Tenggat", trNoDue: "Tanpa tenggat", trAvgProgress: "progres rata-rata",
+    trReasonCoaching: "Dari keputusan coaching {month}", trProposedBy: "Diusulkan oleh {name}", trAssignedBy: "Ditugaskan oleh {name}",
+    trStatus: { "Belum Dimulai": "Belum dimulai", "Sedang Berjalan": "Sedang berjalan", "Selesai": "Selesai" }, trConfirmed: "Selesai & terkonfirmasi", trWaitConfirm: "Menunggu konfirmasi", trWaitApproval: "Menunggu persetujuan", trRejected: "Ditolak",
+    trPriority: { Rendah: "Prioritas rendah", Sedang: "Prioritas sedang", Tinggi: "Prioritas tinggi" },
+  },
+  en: {
+    decTitle: "Decision Recommendation Report", decOverview: "Summary", decTotal: "Total people", decDecided: "With a decision", decPending: "Not final yet",
+    decDistTitle: "Decision breakdown", decDistLead: "Each person is counted under their strongest decision.", decNone: "No one in this selection.",
+    decNoDecision: "Decision not recorded", notePrefix: "Approval note", pendingLine: "Not final ({n}): {names}", people: "people",
+    cat: { green: "Continue, no action", amber: "Continue, with coaching note", blue: "Contract / probation extension", purple: "Transfer / demotion", red: "Not extended", grey: "Decision not recorded" },
+    fbTitle: "Feedback Report", fbOverview: "Summary", fbReceived: "Feedback received", fbTagged: "Tagged", fbUntagged: "Not tagged yet",
+    fbUntaggedNote: "{n} feedback items are not tagged yet. The themes below only cover what is tagged.", fbThemes: "Feedback themes", fbThemesLead: "Share of each theme among the tagged feedback.",
+    fbCenter: "feedback", fbNoIssue: "No issue", fbRowMeta: "{n} employees out of {total} respondents", fbDonutNote: "Chart: each theme's share of all themes mentioned. List: the percentage of respondents who mentioned that theme (one person can mention more than one).", fbEmployees: "employees", fbPriority: "Priority", fbActions: "Action Tracker", fbNoActions: "No follow-up has been recorded yet.",
+    fbNone: "There is no feedback for this period yet.", fbOwner: "Owner", fbTarget: "Target", fbStatus: "Status",
+    trTitle: "Training & Development Report", trOverview: "Summary", trTotal: "Trainings", trActive: "In progress", trOverdue: "Overdue", trDone: "Confirmed done", trProposed: "Waiting approval",
+    trByDept: "By department", trByDeptLead: "Average progress of the trainings that are under way.", trList: "Training list", trNone: "No training in this selection.",
+    trItems: "trainings", trLateDays: "{n} days overdue", trDue: "Due", trNoDue: "No due date", trAvgProgress: "average progress",
+    trReasonCoaching: "From coaching decision {month}", trProposedBy: "Proposed by {name}", trAssignedBy: "Assigned by {name}",
+    trStatus: { "Belum Dimulai": "Not started", "Sedang Berjalan": "In progress", "Selesai": "Done" }, trConfirmed: "Done & confirmed", trWaitConfirm: "Waiting confirmation", trWaitApproval: "Waiting approval", trRejected: "Rejected",
+    trPriority: { Rendah: "Low priority", Sedang: "Medium priority", Tinggi: "High priority" },
+  },
+};
+
+const REPORT_UNIT_ORDER_UI = ["fnb", "gym", "backoffice"];
+function reportFill(text, vars) { return String(text).replace(/\{(\w+)\}/g, (_, k) => (vars[k] === undefined ? "" : vars[k])); }
+
+/** The page header every report starts with: the Reload logo, the title, the period and the date it was made. */
+function reportPaneHeadHtml(lang, title, monthKey) {
+  const T = REPORT_TEXT[lang], e = escapeHtml;
+  const today = new Date().toLocaleDateString(T.locale, { day: "numeric", month: "long", year: "numeric" });
+  return `<div class="head"><img src="${RELOAD_LOGO_BASE64}" alt=""><div><h1>${e(title)}</h1><div class="sub">${e(T.period)}: ${e(reportMonthLabel(monthKey, lang))} · ${e(T.generated)}: ${e(today)}</div></div></div>`;
+}
+
+/** People grouped as unit -> department, in the order F&B, Gym, Back Office. */
+function reportGroupByUnitDept(list, unitOf, deptOf) {
+  const tree = {};
+  list.forEach(p => { const u = unitOf(p), d = deptOf(p); (tree[u] = tree[u] || {}); (tree[u][d] = tree[u][d] || []).push(p); });
+  const units = Object.keys(tree).sort((a, b) => { const ia = REPORT_UNIT_ORDER_UI.indexOf(a), ib = REPORT_UNIT_ORDER_UI.indexOf(b); return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b); });
+  return { tree, units };
+}
+
+// ---------- Decision ----------
+function reportDecisionCategory(codes) {
+  codes = codes || [];
+  if (codes.indexOf("not_extended") !== -1) return "red";
+  if (codes.indexOf("transfer") !== -1 || codes.indexOf("demotion") !== -1 || codes.indexOf("demote_mutate") !== -1) return "purple";
+  if (codes.some(c => String(c).indexOf("extend") === 0)) return "blue";
+  if (codes.indexOf("mentoring_coaching") !== -1) return "amber";
+  if (codes.indexOf("continue_none") !== -1) return "green";
+  return "grey";
+}
+const REPORT_DECISION_COLORS = { green: "#0E7C5A", amber: "#E0A526", blue: "#2E6FBF", purple: "#6C4FB6", red: "#B8352B", grey: "#B9AFA3" };
+
+function buildDecisionPane(data, lang) {
+  const T = REPORT_TEXT[lang], X = REPORT_TEXT_X[lang], e = escapeHtml;
+  const people = data.people || [];
+  const decided = people.filter(p => p.approved), pending = people.filter(p => !p.approved);
+  const stat = (num, label, cls) => `<div class="stat ${cls || ""}"><div class="num">${num}</div><div class="lbl">${e(label)}</div></div>`;
+  const counts = { green: 0, amber: 0, blue: 0, purple: 0, red: 0, grey: 0 };
+  decided.forEach(p => { counts[reportDecisionCategory(p.decisionCodes)]++; });
+  const order = ["green", "amber", "blue", "purple", "red", "grey"].filter(k => counts[k] > 0);
+  const seg = (k) => `<i style="width:${(counts[k] / decided.length) * 100}%; background:${REPORT_DECISION_COLORS[k]}"></i>`;
+  const legend = (k) => `<span><span class="dot" style="background:${REPORT_DECISION_COLORS[k]}"></span><b>${counts[k]}</b> ${e(X.cat[k])}</span>`;
+  const chipClass = (code) => "c-" + reportDecisionCategory([code]);
+  const row = (p) => {
+    const labels = (p.decisionLabels && p.decisionLabels[lang]) || [];
+    const codes = p.decisionCodes || [];
+    const chips = labels.length ? labels.map((l, i) => `<span class="chip ${chipClass(codes[i])}">${e(l)}</span>`).join("") : `<span class="chip c-grey">${e(X.decNoDecision)}</span>`;
+    return `<div class="person">
+      <div><div class="p-name">${e(p.name)}</div><div class="p-meta">${e(p.jobTitle || "")}</div></div>
+      <div class="p-score neutral">${Number(p.final).toFixed(1)}</div>
+      <div class="p-tags">${chips}</div>
+      ${p.notes ? `<div class="p-note">${e(X.notePrefix)}: ${e(p.notes)}</div>` : ""}
+    </div>`;
+  };
+  const g = reportGroupByUnitDept(people, p => p.businessUnit, p => p.department);
+  const body = g.units.map(u => {
+    const depts = Object.keys(g.tree[u]).sort();
+    return (g.units.length > 1 ? `<div class="grp-unit">${e(BUSINESS_UNIT_LABELS_UI[u] || u)}</div>` : "") + depts.map(d => {
+      const list = g.tree[u][d];
+      const done = list.filter(p => p.approved).sort((a, b) => a.name.localeCompare(b.name));
+      const left = list.filter(p => !p.approved).sort((a, b) => a.name.localeCompare(b.name));
+      return `<div class="grp">${e(d === "-" ? "—" : d)} <span class="note">(${list.length} ${e(X.people)})</span></div>
+        ${done.map(row).join("")}
+        ${left.length ? `<div class="note" style="margin-top:8px;">${e(reportFill(X.pendingLine, { n: left.length, names: left.map(p => p.name).join(" · ") }))}</div>` : ""}`;
+    }).join("");
+  }).join("");
+  return `
+    <section class="pane pane-${lang}">
+      ${reportPaneHeadHtml(lang, X.decTitle, data.month)}
+      <h2>${e(X.decOverview)}</h2>
+      <div class="cards">${stat(people.length, X.decTotal)}${stat(decided.length, X.decDecided, "good")}${stat(pending.length, X.decPending)}</div>
+      ${decided.length ? `<h2>${e(X.decDistTitle)}</h2><p class="lead">${e(X.decDistLead)}</p>
+        <div class="dist">${order.map(seg).join("")}</div><div class="legend">${order.map(legend).join("")}</div>` : ""}
+      ${people.length ? body : `<div class="info soft">${e(X.decNone)}</div>`}
+      <div class="foot">${e(T.footer)}</div>
+    </section>`;
+}
+
+// ---------- Feedback ----------
+function buildFeedbackPane(data, lang) {
+  const T = REPORT_TEXT[lang], X = REPORT_TEXT_X[lang], e = escapeHtml;
+  const stat = (num, label, cls) => `<div class="stat ${cls || ""}"><div class="num">${num}</div><div class="lbl">${e(label)}</div></div>`;
+  const untagged = Math.max(0, (data.totalRespondents || 0) - (data.taggedCount || 0));
+  const priClass = (v) => { const s = String(v || "").toLowerCase(); return /high|tinggi|urgent/.test(s) ? "c-red" : /med|sedang/.test(s) ? "c-amber" : "c-grey"; };
+  const statusClass = (v) => { const s = String(v || "").toLowerCase(); return /done|selesai|complete/.test(s) ? "c-green" : /progress|berjalan/.test(s) ? "c-blue" : /open|belum|new|baru/.test(s) ? "c-amber" : "c-grey"; };
+  let themesHtml = "";
+  if (!data.found) {
+    themesHtml = `<div class="info soft">${e(X.fbNone)}</div>`;
+  } else {
+    const counted = (data.summary || []).filter(x => x.employeeCount > 0);
+    const themes = counted.filter(x => x.code !== "OKY").sort((a, b) => b.employeeCount - a.employeeCount);
+    const oky = counted.find(x => x.code === "OKY");
+    const slices = oky ? themes.concat([oky]) : themes;
+    const shares = reportRoundShares(slices.map(x => x.employeeCount));
+    let acc = 0;
+    const stops = slices.map((x, i) => { const from = acc; acc += shares[i]; return `${REPORT_FB_COLORS[x.code] || REPORT_FB_COLORS._} ${from}% ${acc}%`; }).join(", ");
+    const donut = slices.length ? `
+      <div class="fb">
+        <div class="donut" style="background:conic-gradient(${stops})"><div class="donut-c"><b>${data.totalRespondents}</b> <span>${e(X.fbCenter)}</span></div></div>
+        <ul class="legend-list">${slices.map((x, i) => `<li><span class="sw" style="background:${REPORT_FB_COLORS[x.code] || REPORT_FB_COLORS._}"></span><span>${e(x.code === "OKY" ? X.fbNoIssue : x.label)}</span> <b>${shares[i]}%</b></li>`).join("")}</ul>
+      </div>
+      <div class="note">${e(X.fbDonutNote)}</div>` : "";
+    const rows = (data.summary || []).slice().sort((a, b) => b.pct - a.pct).filter(r => r.employeeCount > 0);
+    themesHtml = donut + rows.map(r => `<div class="person">
+      <div><div class="p-name">${e(r.label)}</div><div class="p-meta">${e(reportFill(X.fbRowMeta, { n: r.employeeCount, total: data.totalRespondents }))}</div></div>
+      <div class="p-score neutral">${(r.pct * 100).toFixed(1)}%</div>
+      ${r.priority ? `<div class="p-tags"><span class="chip ${priClass(r.priority)}">${e(X.fbPriority)}: ${e(r.priority)}</span></div>` : ""}
+    </div>`).join("");
+  }
+  const actions = data.actions || [];
+  const actionsHtml = actions.length ? actions.map(a => `<div class="person">
+      <div><div class="p-name">${e(a.issue)}</div><div class="p-meta">${e(a.action)}</div></div>
+      <div class="p-tags">
+        ${a.owner ? `<span class="chip c-grey">${e(X.fbOwner)}: ${e(a.owner)}</span>` : ""}
+        ${a.target ? `<span class="chip c-grey">${e(X.fbTarget)}: ${e(a.target)}</span>` : ""}
+        ${a.status ? `<span class="chip ${statusClass(a.status)}">${e(a.status)}</span>` : ""}
+      </div>
+    </div>`).join("") : `<div class="info soft">${e(X.fbNoActions)}</div>`;
+  return `
+    <section class="pane pane-${lang}">
+      ${reportPaneHeadHtml(lang, X.fbTitle, data.month)}
+      <h2>${e(X.fbOverview)}</h2>
+      <div class="cards">${stat(data.totalRespondents || 0, X.fbReceived)}${stat(data.taggedCount || 0, X.fbTagged, "good")}${stat(untagged, X.fbUntagged, untagged > 0 ? "bad" : "")}</div>
+      ${untagged ? `<div class="note">${e(reportFill(X.fbUntaggedNote, { n: untagged }))}</div>` : ""}
+      <h2>${e(X.fbThemes)}</h2><p class="lead">${e(X.fbThemesLead)}</p>
+      ${themesHtml}
+      <h2>${e(X.fbActions)}</h2>
+      ${actionsHtml}
+      <div class="foot">${e(T.footer)}</div>
+    </section>`;
+}
+
+// ---------- Training ----------
+function buildTrainingPane(data, lang) {
+  const T = REPORT_TEXT[lang], X = REPORT_TEXT_X[lang], e = escapeHtml;
+  const items = data.items || [];
+  const stat = (num, label, cls) => `<div class="stat ${cls || ""}"><div class="num">${num}</div><div class="lbl">${e(label)}</div></div>`;
+  const urg = (i) => trnUrgency(i);
+  const running = (i) => i.approvalStatus === "" && i.status === "Sedang Berjalan";
+  const counts = {
+    total: items.length, active: items.filter(running).length, overdue: items.filter(i => urg(i) === "overdue").length,
+    done: items.filter(i => urg(i) === "done").length, proposed: items.filter(i => urg(i) === "proposal").length,
+  };
+  const active = (i) => i.approvalStatus === "";
+  const reasonOf = (i) => {
+    const src = String(i.source || "");
+    if (src.indexOf("decision:") === 0) return reportFill(X.trReasonCoaching, { month: reportMonthLabel(src.slice(9), lang) });
+    if (i.proposedBy) return reportFill(X.trProposedBy, { name: i.proposedBy });
+    if (i.recordedBy) return reportFill(X.trAssignedBy, { name: i.recordedBy });
+    return "";
+  };
+  const statusChip = (i) => {
+    const u = urg(i);
+    if (u === "done") return `<span class="chip c-green">${e(X.trConfirmed)}</span>`;
+    if (u === "confirm") return `<span class="chip c-blue">${e(X.trWaitConfirm)}</span>`;
+    if (u === "proposal") return `<span class="chip c-blue">${e(X.trWaitApproval)}</span>`;
+    if (u === "rejected") return `<span class="chip c-grey">${e(X.trRejected)}</span>`;
+    return `<span class="chip ${i.status === "Sedang Berjalan" ? "c-blue" : "c-grey"}">${e(X.trStatus[i.status] || i.status || "")}</span>`;
+  };
+  const dueChip = (i) => {
+    if (!i.dueDate) return `<span class="chip c-grey">${e(X.trNoDue)}</span>`;
+    const days = trnDaysTo(i.dueDate);
+    const label = new Date(i.dueDate + "T00:00:00").toLocaleDateString(T.locale, { day: "numeric", month: "short", year: "numeric" });
+    if (urg(i) === "overdue") return `<span class="chip c-red">${e(X.trDue)} ${e(label)} · ${e(reportFill(X.trLateDays, { n: Math.abs(days) }))}</span>`;
+    return `<span class="chip ${urg(i) === "soon" ? "c-amber" : "c-grey"}">${e(X.trDue)} ${e(label)}</span>`;
+  };
+  const ORDER = { overdue: 0, soon: 1, confirm: 2, proposal: 3, active_or_todo: 4, done: 5, rejected: 6 };
+  const row = (i) => {
+    const showPct = active(i);
+    return `<div class="person">
+      <div><div class="p-name">${e(i.name)}</div><div class="p-meta">${e(i.jobTitle || "")}</div></div>
+      <div class="p-score neutral">${showPct ? (i.progress || 0) + "%" : "—"}</div>
+      <div class="p-topic">${e(i.topic)}</div>
+      <div class="p-tags">${statusChip(i)}${dueChip(i)}${i.priority ? `<span class="chip c-grey">${e(X.trPriority[i.priority] || i.priority)}</span>` : ""}</div>
+      ${reasonOf(i) ? `<div class="p-note">${e(reasonOf(i))}</div>` : ""}
+    </div>`;
+  };
+  const g = reportGroupByUnitDept(items, i => i.businessUnit, i => i.department);
+  const deptRows = [];
+  g.units.forEach(u => Object.keys(g.tree[u]).sort().forEach(d => {
+    const list = g.tree[u][d], act = list.filter(active);
+    const avg = act.length ? Math.round(act.reduce((s, i) => s + (i.progress || 0), 0) / act.length) : 0;
+    deptRows.push({ unit: u, dept: d, n: list.length, avg: avg, overdue: list.filter(i => urg(i) === "overdue").length });
+  }));
+  const deptHtml = deptRows.map(r => `<div class="tdept">
+      <div><b>${e(r.dept === "-" ? "—" : r.dept)}</b> <span class="note">· ${r.n} ${e(X.trItems)}${g.units.length > 1 ? " · " + e(BUSINESS_UNIT_LABELS_UI[r.unit] || r.unit) : ""}</span>${r.overdue ? ` <span class="pill bad">${r.overdue} ${e(X.trOverdue)}</span>` : ""}</div>
+      <div class="p-score neutral" style="font-size:15px;">${r.avg}%</div>
+      <div class="pbar"><i style="width:${r.avg}%"></i></div>
+    </div>`).join("");
+  const body = g.units.map(u => (g.units.length > 1 ? `<div class="grp-unit">${e(BUSINESS_UNIT_LABELS_UI[u] || u)}</div>` : "") + Object.keys(g.tree[u]).sort().map(d => {
+    const list = g.tree[u][d].slice().sort((a, b) => (ORDER[urg(a)] - ORDER[urg(b)]) || a.name.localeCompare(b.name));
+    return `<div class="grp">${e(d === "-" ? "—" : d)} <span class="note">(${list.length} ${e(X.trItems)})</span></div>${list.map(row).join("")}`;
+  }).join("")).join("");
+  return `
+    <section class="pane pane-${lang}">
+      ${reportPaneHeadHtml(lang, X.trTitle, data.month)}
+      <h2>${e(X.trOverview)}</h2>
+      <div class="cards">${stat(counts.total, X.trTotal)}${stat(counts.active, X.trActive)}${stat(counts.overdue, X.trOverdue, counts.overdue > 0 ? "bad" : "")}${stat(counts.done, X.trDone, "good")}${stat(counts.proposed, X.trProposed)}</div>
+      ${items.length ? `<h2>${e(X.trByDept)}</h2><p class="lead">${e(X.trByDeptLead)}</p>${deptHtml}<h2>${e(X.trList)}</h2>${body}` : `<div class="info soft">${e(X.trNone)}</div>`}
+      <div class="foot">${e(T.footer)}</div>
+    </section>`;
+}
+
+/** Builds the whole standalone document for one of the three reports: both languages inside, ID/EN and Print on top. */
+function buildBrowserReport(kind, data, lang) {
+  const spec = { decision: [buildDecisionPane, "DecisionRecommendationReport"], feedback: [buildFeedbackPane, "FeedbackReport"], training: [buildTrainingPane, "TrainingDevelopmentReport"] }[kind];
+  const title = reportDocFileName({ units: data.units, rangeEnd: data.month }, null, spec[1]);
+  return reportDocumentShell(title, lang, {}, spec[0](data, "id"), spec[0](data, "en"), REPORT_EXTRA_CSS);
+}
+
 
 async function openExecutiveSummaryReport() {
   const lang = await askExportLanguage();

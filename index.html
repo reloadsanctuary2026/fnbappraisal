@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-387-browser-reports — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-388-feedback-status — LIVE</div>
 
 <script>
 // =================================================================
@@ -7191,6 +7191,12 @@ async function renderStaffFeedback() {
     summaryRes = await apiGet("getIssueSummary", { requesterId: state.user.staffId, month: state._feedbackMonth, businessUnit: unit || "" });
   }
   const feedback = inMonth.filter(f => !hasTabs || unitOf(f) === unit);
+  // Tag status: Semua / Belum di-tag / Sudah di-tag. Only the view is filtered; nothing is removed when a card is tagged.
+  const tagFilter = state._tagFilter || "all";
+  const catLabel = (code) => { const c = ((catRes && catRes.categories) || []).find(x => x.code === code); return c ? (code === "OKY" ? "Tanpa isu" : c.label) : code; };
+  const taggedN = feedback.filter(f => !!f.primaryIssue).length, untaggedN = feedback.length - taggedN;
+  const shown = feedback.filter(f => tagFilter === "all" || (tagFilter === "tagged") === !!f.primaryIssue);
+  const filterBtn = (key, label, n) => `<button class="${tagFilter === key ? "primary btn-auto" : "secondary"}" style="flex:0 0 auto;" onclick="setFeedbackTagFilter('${key}')">${label} (${n})</button>`;
   const unitTitle = hasTabs ? ` — ${unitLabels[unit]}` : "";
   const unitTabsHtml = hasTabs ? `
     <div class="card">
@@ -7251,7 +7257,8 @@ async function renderStaffFeedback() {
           <button class="primary btn-auto" id="tag-save-btn" onclick="doSaveAllTags()" disabled>Simpan semua tag (0)</button>
           <span class="hint" id="tag-save-note" style="margin:0;"></span>
         </div>` : ""}
-      ${feedback.map(f => `
+      ${feedback.length ? `<div class="row-flex" style="gap:6px; flex-wrap:wrap; margin-bottom:10px;">${filterBtn("all", "Semua", feedback.length)}${filterBtn("untagged", "Belum di-tag", untaggedN)}${filterBtn("tagged", "Sudah di-tag", taggedN)}</div>` : ""}
+      ${shown.map(f => `
         <div class="tag-card" ${canTagAnyFeedback() && f.canTag ? `data-staff="${escapeHtml(f.staffId)}" data-name="${escapeHtml(f.staffName)}"` : ""}>
           <div class="tag-head">
             ${canTagAnyFeedback() && f.canTag ? `<input type="checkbox" class="tag-sel" aria-label="Pilih" onchange="fbTagToggle(this)">` : ""}
@@ -7264,6 +7271,7 @@ async function renderStaffFeedback() {
             </div>
           </div>
           <div style="font-size:14px; color:var(--text); margin:8px 0; white-space:pre-wrap;">"${escapeHtml(f.feedback)}"</div>
+          <div style="margin-bottom:6px;">${f.primaryIssue ? `<span class="chip dec" style="background:#E3F3EC; color:#0E7C5A;">✓ Sudah di-tag: ${escapeHtml(catLabel(f.primaryIssue))}${f.secondaryIssue ? " / " + escapeHtml(catLabel(f.secondaryIssue)) : ""}</span>` : `<span class="chip weak">Belum di-tag</span>`}</div>
           ${canTagAnyFeedback() && f.canTag ? `
             <div class="tag-grid">
               <select class="tag-primary" data-orig="${escapeHtml(f.primaryIssue || "")}" onchange="fbTagRefresh()">${catOptions(f.primaryIssue)}</select>
@@ -7272,6 +7280,7 @@ async function renderStaffFeedback() {
           ` : (f.primaryIssue ? `<div class="hint">Tag: ${escapeHtml(f.primaryIssue)}${f.secondaryIssue ? " / " + escapeHtml(f.secondaryIssue) : ""}</div>` : `<div class="hint">Belum di-tag.</div>`)}
         </div>`).join("")}
       ${!feedback.length ? '<div class="hint">Belum ada feedback bulan ini.</div>' : ""}
+      ${feedback.length && !shown.length ? '<div class="hint">Tidak ada feedback di filter ini.</div>' : ""}
     </div>
 
     <div class="card">
@@ -7293,6 +7302,12 @@ async function renderStaffFeedback() {
     </div>
   `;
   if (canTagAnyFeedback()) fbTagRestorePending();
+}
+
+function setFeedbackTagFilter(key) {
+  if (typeof fbTagConfirmDiscard === "function" && !fbTagConfirmDiscard()) return;
+  state._tagFilter = key;
+  renderStaffFeedback();
 }
 
 async function changeFeedbackUnit(unit) {

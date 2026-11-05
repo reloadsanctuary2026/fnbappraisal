@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-389-comprehensive-scope — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-390-button-row — LIVE</div>
 
 <script>
 // =================================================================
@@ -7774,13 +7774,13 @@ async function renderReview(skipFetch) {
           <div class="hint">${total} ${t("review_record_count_suffix")}</div>
           ${(state.user.isHR || state.user.isExecutive) ? `<div class="row-flex" style="gap:6px; flex-wrap:wrap; justify-content:flex-end;">
             <button class="primary" id="report-performance-btn" onclick="openReportScopePicker('performance', 'performance-scope-panel')">${t("report_performance_btn")}</button>
-        <div id="performance-scope-panel"></div>
             <button class="primary" id="report-decision-btn" onclick="openReportScopePicker('decision', 'decision-scope-panel')">${t("report_decision_btn")}</button>
             <button class="primary" id="report-training-btn" onclick="openReportScopePicker('training', 'decision-scope-panel')">${t("report_training_btn")}</button>
           </div>` : ""}
         </div>
         <div class="hint" id="review-report-note"></div>
         <div id="decision-scope-panel"></div>
+        <div id="performance-scope-panel"></div>
       </div>
       <div id="review-list-container">
         ${deptKeys.map((dept, di) => {

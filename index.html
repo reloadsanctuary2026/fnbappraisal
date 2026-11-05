@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-388-feedback-status — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-389-comprehensive-scope — LIVE</div>
 
 <script>
 // =================================================================
@@ -7773,7 +7773,8 @@ async function renderReview(skipFetch) {
         <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px;">
           <div class="hint">${total} ${t("review_record_count_suffix")}</div>
           ${(state.user.isHR || state.user.isExecutive) ? `<div class="row-flex" style="gap:6px; flex-wrap:wrap; justify-content:flex-end;">
-            <button class="primary" id="report-performance-btn" onclick="openExecutiveSummaryReport()">${t("report_performance_btn")}</button>
+            <button class="primary" id="report-performance-btn" onclick="openReportScopePicker('performance', 'performance-scope-panel')">${t("report_performance_btn")}</button>
+        <div id="performance-scope-panel"></div>
             <button class="primary" id="report-decision-btn" onclick="openReportScopePicker('decision', 'decision-scope-panel')">${t("report_decision_btn")}</button>
             <button class="primary" id="report-training-btn" onclick="openReportScopePicker('training', 'decision-scope-panel')">${t("report_training_btn")}</button>
           </div>` : ""}
@@ -7933,6 +7934,11 @@ async function submitReportScope(panelId) {
   if (!panel) return;
   const kind = panel.dataset.kind;
   const keys = [...panel.querySelectorAll(".scope-dept:checked")].map(b => b.dataset.key);
+  if (kind === "performance") {
+    if (!keys.length) return;
+    panel.innerHTML = "";
+    return openExecutiveSummaryReport(keys);
+  }
   const noteId = kind === "feedback" ? "feedback-report-note" : "review-report-note";
   const noteEl = document.getElementById(noteId);
   if (!keys.length) { if (noteEl) noteEl.textContent = t("decision_scope_none"); return; }
@@ -8719,7 +8725,7 @@ function buildBrowserReport(kind, data, lang) {
 }
 
 
-async function openExecutiveSummaryReport() {
+async function openExecutiveSummaryReport(departments) {
   const lang = await askExportLanguage();
   if (!lang) return;
   // Opened right away (still inside the tap that chose the language) so mobile browsers don't treat it as a
@@ -8729,7 +8735,8 @@ async function openExecutiveSummaryReport() {
   reportWindow.document.write(`<!DOCTYPE html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><body style="font-family:system-ui,sans-serif; padding:28px; color:#6B5D4F;">${escapeHtml(REPORT_TEXT[lang].loading)}</body>`);
 
   const endMonth = state._reviewEndMonth || state.month;
-  const res = await apiGet("getExecutiveSummaryReport", { requesterId: state.user.staffId, month: state.month, endMonth });
+  const scopeParams = (Array.isArray(departments) && departments.length) ? { departments: departments.join(",") } : {};
+  const res = await apiGet("getExecutiveSummaryReport", Object.assign({ requesterId: state.user.staffId, month: state.month, endMonth }, scopeParams));
   if (res.error || res.success === false) {
     reportWindow.close();
     showToast("Gagal memuat laporan: " + friendlyError(res.error));

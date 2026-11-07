@@ -398,7 +398,7 @@
 </head>
 <body>
 <div id="app"></div>
-<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-393-one-month-rule — LIVE</div>
+<div style="position:fixed; bottom:4px; left:8px; font-size:10px; color:#bbb; z-index:1000; font-family:monospace; pointer-events:none;">index v2026-11-04-394-contract-reminders — LIVE</div>
 
 <script>
 // =================================================================
@@ -1247,6 +1247,7 @@ const translations = {
     selfcompliance_view_missing: "Lihat {n} orang yang belum mengisi",
     selfcompliance_all_done: "Semua sudah mengisi.",
     selfcompliance_contract_pending: "{n} orang menunggu update kontrak dari HR (belum bisa mengisi)",
+    selfcompliance_contract_deadline: "Tenggat update kontrak: {date}. Setelah itu orang ini tidak bisa mengisi Self Appraisal di siklus ini.",
     selfcompliance_contract_pending_note: "Kontrak orang-orang ini di HR Sheet belum diperpanjang, sehingga sistem belum membuka Self Appraisal untuk mereka bulan ini. Ini bukan kelalaian mereka — informasikan ke HR untuk memperbarui data kontraknya.",
     selfcompliance_new_hire: "{n} orang belum genap 1 bulan kerja (belum masuk siklus penilaian)",
     selfcompliance_new_hire_note: "Orang-orang ini baru bergabung bulan ini, jadi belum masuk siklus appraisal bulan ini sama sekali. Appraisal pertama mereka otomatis mulai tanggal 1 bulan depan — tidak perlu tindakan apapun.",
@@ -1845,6 +1846,7 @@ const translations = {
     selfcompliance_view_missing: "View {n} people who haven't submitted",
     selfcompliance_all_done: "Everyone has submitted.",
     selfcompliance_contract_pending: "{n} people waiting on a contract update from HR (can't submit yet)",
+    selfcompliance_contract_deadline: "Contract update deadline: {date}. After that they cannot submit Self Appraisal in this cycle.",
     selfcompliance_contract_pending_note: "These people's contracts haven't been renewed in the HR Sheet yet, so the system hasn't opened Self Appraisal for them this month. This isn't their fault — let HR know to update the contract data.",
     selfcompliance_new_hire: "{n} people have not yet completed one month of work (not part of the appraisal cycle yet)",
     selfcompliance_new_hire_note: "These people just joined this month, so they aren't part of this month's appraisal cycle at all. Their first appraisal automatically starts on the 1st of next month — no action needed.",
@@ -7597,6 +7599,7 @@ function renderSelfAppraisalComplianceCard(res, unit) {
               <details style="margin-top:6px;">
                 <summary style="cursor:pointer; font-size:13px; color:var(--amber); font-weight:600;">${t("selfcompliance_contract_pending").replace("{n}", bucket.contractPending.length)}</summary>
                 <div class="hint" style="margin:6px 0 4px;">${t("selfcompliance_contract_pending_note")}</div>
+                ${res.contractUpdateDeadline ? `<div class="hint" style="margin:0 0 6px; font-weight:700; color:var(--amber);">${t("selfcompliance_contract_deadline").replace("{date}", new Date(res.contractUpdateDeadline + "T00:00:00").toLocaleDateString(state.lang === "en" ? "en-GB" : "id-ID", { day: "numeric", month: "long", year: "numeric" }))}</div>` : ""}
                 <ul style="margin:4px 0 0; padding-left:20px; font-size:13px; line-height:1.9; overflow-wrap:anywhere;">
                   ${bucket.contractPending.map(m => `<li>${escapeHtml(m.name)}${m.department && m.department !== "-" ? ` <span style="color:var(--text-muted);">— ${escapeHtml(m.department)}</span>` : ""}</li>`).join("")}
                 </ul>
